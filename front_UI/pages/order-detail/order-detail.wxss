@@ -1,0 +1,233 @@
+page {
+  background: #f5f5f5;
+  padding-bottom: 140rpx;
+}
+
+/* ========== 状态追踪区 ========== */
+.status-tracker {
+  background: linear-gradient(135deg, #f5a623 0%, #e6951c 100%);
+  padding: 60rpx 40rpx 40rpx;
+}
+
+.status-bg {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 40rpx;
+}
+
+.status-icon {
+  font-size: 80rpx;
+  margin-bottom: 16rpx;
+}
+
+.status-text {
+  font-size: 36rpx;
+  font-weight: bold;
+  color: #fff;
+}
+
+/* ========== 时间线 ========== */
+.timeline {
+  background: rgba(255,255,255,0.15);
+  border-radius: 16rpx;
+  padding: 30rpx;
+}
+
+.timeline-item {
+  display: flex;
+  align-items: flex-start;
+  padding: 16rpx 0;
+  opacity: 0.5;
+}
+
+.timeline-item.done {
+  opacity: 1;
+}
+
+.timeline-dot {
+  width: 20rpx;
+  height: 20rpx;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.4);
+  margin-right: 20rpx;
+  margin-top: 6rpx;
+  flex-shrink: 0;
+}
+
+.timeline-item.done .timeline-dot {
+  background: #fff;
+}
+
+.timeline-item.active .timeline-dot {
+  background: #ffd700;
+  box-shadow: 0 0 12rpx rgba(255,215,0,0.8);
+}
+
+.timeline-content {
+  flex: 1;
+}
+
+.timeline-title {
+  font-size: 28rpx;
+  color: #fff;
+  display: block;
+  margin-bottom: 4rpx;
+}
+
+.timeline-time {
+  font-size: 22rpx;
+  color: rgba(255,255,255,0.8);
+}
+
+/* ========== 信息卡片 ========== */
+.info-card {
+  background: #fff;
+  margin: 20rpx 24rpx;
+  border-radius: 16rpx;
+  padding: 28rpx 24rpx;
+  box-shadow: 0 2rpx 12rpx rgba(0,0,0,0.04);
+}
+
+.card-title {
+  font-size: 30rpx;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 20rpx;
+}
+
+/* ========== 门店信息 ========== */
+.store-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12rpx;
+}
+
+.store-name {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #333;
+}
+
+.pickup-time {
+  font-size: 28rpx;
+  color: #f5a623;
+  font-weight: bold;
+}
+
+.store-addr {
+  font-size: 26rpx;
+  color: #999;
+}
+
+/* ========== 商品列表 ========== */
+.goods-list {
+  border-bottom: 1rpx solid #f5f5f5;
+}
+
+.goods-item {
+  display: flex;
+  align-items: center;
+  padding: 16rpx 0;
+}
+
+.goods-img {
+  width: 80rpx;
+  height: 80rpx;
+  border-radius: 10rpx;
+  background: #f5f5f5;
+}
+
+.goods-info {
+  flex: 1;
+  margin-left: 16rpx;
+}
+
+.goods-name {
+  font-size: 28rpx;
+  color: #333;
+  display: block;
+  margin-bottom: 6rpx;
+}
+
+.goods-price {
+  font-size: 26rpx;
+  color: #f5a623;
+  font-weight: bold;
+}
+
+.goods-qty {
+  font-size: 26rpx;
+  color: #999;
+}
+
+.goods-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 20rpx;
+  font-size: 28rpx;
+  color: #666;
+}
+
+.total-price {
+  font-size: 36rpx;
+  font-weight: bold;
+  color: #333;
+}
+
+/* ========== 订单信息 ========== */
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 12rpx 0;
+  border-bottom: 1rpx solid #f5f5f5;
+}
+
+.info-row:last-child {
+  border-bottom: none;
+}
+
+.info-label {
+  font-size: 26rpx;
+  color: #999;
+}
+
+.info-value {
+  font-size: 26rpx;
+  color: #333;
+}
+
+/* ========== 底部操作栏 ========== */
+.bottom-actions {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 120rpx;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0 30rpx;
+  box-shadow: 0 -4rpx 20rpx rgba(0,0,0,0.08);
+  gap: 20rpx;
+}
+
+.action-btn {
+  font-size: 28rpx;
+  padding: 20rpx 40rpx;
+  border-radius: 50rpx;
+}
+
+.action-btn.secondary {
+  border: 2rpx solid #ddd;
+  color: #666;
+}
+
+.action-btn.primary {
+  background: linear-gradient(135deg, #f5a623 0%, #e6951c 100%);
+  color: #fff;
+  font-weight: bold;
+}

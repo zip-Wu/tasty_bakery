@@ -1,0 +1,17 @@
+/**app.wxss**/
+.container {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: 200rpx 0;
+  box-sizing: border-box;
+}
+
+/* TabBar 页面根元素使用此类，防止内容被底部悬浮导航栏遮挡 */
+.tab-bar-page {
+  padding-bottom: 180rpx; /* 悬浮tabBar(110) + 间距(24+24) + 购物车栏预留 */
+  box-sizing: border-box;
+  min-height: 100vh;
+}

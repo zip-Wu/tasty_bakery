@@ -1,0 +1,58 @@
+<!-- 首页 - 囤囤馒头风格 -->
+<view class="home-page tab-bar-page">
+  <!-- 顶部大Banner - 占位图 -->
+  <view class="banner-section">
+    <image class="banner-img" src="https://picsum.photos/750/400?random=1" mode="aspectFill"></image>
+  </view>
+
+  <!-- 两大功能入口：门店自提 / 邮寄服务 -->
+  <view class="service-cards">
+    <view class="service-card" bindtap="goToOrder">
+      <view class="service-icon-wrap pickup">
+        <text class="service-emoji-large">🛒</text>
+      </view>
+      <text class="service-name">门店自提</text>
+    </view>
+    <view class="service-card" bindtap="goDelivery">
+      <view class="service-icon-wrap delivery">
+        <text class="service-emoji-large">🏍️</text>
+      </view>
+      <text class="service-name">邮寄服务</text>
+    </view>
+  </view>
+
+  <!-- 会员提示条 -->
+  <view class="member-tip-bar" bindtap="goMember">
+    <text class="member-tip-text">Hi,注册会员后才有积分哦~</text>
+    <view class="member-code-btn">
+      <text class="code-icon">📱</text>
+      <text class="code-text">会员码</text>
+    </view>
+  </view>
+
+  <!-- 积分商城 + 充值中心 -->
+  <view class="func-row">
+    <view class="func-item" bindtap="goToPointMall">
+      <text class="func-name">积分商城</text>
+      <text class="func-arrow">›</text>
+      <view class="func-icon-float">🛍️</view>
+    </view>
+    <view class="func-item" bindtap="goRecharge">
+      <text class="func-name">充值中心</text>
+      <text class="func-arrow">›</text>
+      <view class="func-icon-float">🍑</view>
+    </view>
+  </view>
+
+  <!-- 活动/公告横幅区 - 占位图 -->
+  <scroll-view scroll-x enhanced show-scrollbar="{{false}}" class="activity-scroll">
+    <view class="activity-list">
+      <view class="activity-item" wx:for="{{activities}}" wx:key="id">
+        <image class="activity-img" src="{{item.image}}" mode="aspectFill"></image>
+      </view>
+    </view>
+  </scroll-view>
+
+  <!-- 自定义悬浮TabBar -->
+  <custom-tab-bar></custom-tab-bar>
+</view>
