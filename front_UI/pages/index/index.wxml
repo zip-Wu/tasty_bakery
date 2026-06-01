@@ -1,0 +1,72 @@
+<view class="container tab-bar-page">
+  <!-- 顶部门店栏 -->
+  <view class="store-bar">
+    <view class="store-info">
+      <text class="store-name">{{store.name}} ></text>
+      <text class="store-distance">{{store.distance}}</text>
+    </view>
+    <view class="store-tag">门店自提</view>
+  </view>
+
+  <!-- 主内容区：左分类 + 右商品 -->
+  <view class="main-content">
+    <!-- 左侧分类 -->
+    <scroll-view class="category-list" scroll-y="{{true}}">
+      <view
+        class="category-item {{currentCategory === item ? 'active' : ''}}"
+        wx:for="{{categories}}"
+        wx:key="*this"
+        bindtap="switchCategory"
+        data-category="{{item}}"
+      >
+        <text class="category-name">{{item}}</text>
+      </view>
+    </scroll-view>
+
+    <!-- 右侧商品 -->
+    <scroll-view class="goods-list" scroll-y="{{true}}">
+      <!-- 商品列表 -->
+      <block wx:for="{{filteredBreadList}}" wx:key="id">
+        <view class="goods-item">
+          <image class="goods-img" src="{{item.image}}" mode="aspectFill"></image>
+          <view class="goods-info">
+            <text class="goods-name">{{item.name}}</text>
+            <text class="goods-desc">{{item.desc || ''}}</text>
+            <view class="goods-bottom">
+              <text class="goods-price">¥{{item.price}}</text>
+              <view class="goods-action">
+                <view class="count-btn minus" wx:if="{{cart[item.id] > 0}}" bindtap="minusFromCart" data-id="{{item.id}}">-</view>
+                <text class="goods-count" wx:if="{{cart[item.id] > 0}}">{{cart[item.id]}}</text>
+                <view class="count-btn plus" bindtap="addToCart" data-id="{{item.id}}">+</view>
+              </view>
+            </view>
+          </view>
+        </view>
+      </block>
+
+      <!-- 空状态 -->
+      <view class="empty-goods" wx:if="{{filteredBreadList.length === 0}}">
+        <text class="empty-icon">🍞</text>
+        <text class="empty-text">暂无商品</text>
+      </view>
+    </scroll-view>
+  </view>
+
+  <!-- 底部购物车栏 -->
+  <view class="cart-bar">
+    <view class="cart-info">
+      <view class="cart-icon">
+        <text class="cart-icon-text">🛒</text>
+        <view class="cart-badge" wx:if="{{cartCount > 0}}">{{cartCount}}</view>
+      </view>
+      <view class="cart-price-wrap">
+        <text class="cart-total">¥{{cartTotal}}</text>
+        <text class="cart-count-text">已选 {{cartCount}} 件</text>
+      </view>
+    </view>
+    <view class="checkout-btn {{cartCount > 0 ? 'active' : ''}}" bindtap="goToCheckout">去结算</view>
+  </view>
+
+  <!-- 自定义悬浮TabBar -->
+  <custom-tab-bar></custom-tab-bar>
+</view>

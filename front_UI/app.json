@@ -1,0 +1,47 @@
+{
+  "pages": [
+    "pages/home/home",
+    "pages/index/index",
+    "pages/store-select/store-select",
+    "pages/order-confirm/order-confirm",
+    "pages/order-list/order-list",
+    "pages/order-detail/order-detail",
+    "pages/logs/logs"
+  ],
+  "window": {
+    "navigationBarTextStyle": "black",
+    "navigationBarTitleText": "囤囤馒头",
+    "navigationBarBackgroundColor": "#FFEB99",
+    "backgroundTextStyle": "dark"
+  },
+  "permission": {
+    "scope.userLocation": {
+      "desc": "获取您的位置用于展示附近门店"
+    }
+  },
+  "tabBar": {
+    "custom": true,
+    "list": [
+      {
+        "pagePath": "pages/home/home",
+        "text": "首页"
+      },
+      {
+        "pagePath": "pages/index/index",
+        "text": "点单"
+      },
+      {
+        "pagePath": "pages/order-list/order-list",
+        "text": "订单"
+      },
+      {
+        "pagePath": "pages/logs/logs",
+        "text": "我的"
+      }
+    ],
+    "selectedColor": "#f5a623",
+    "backgroundColor": "#FFEB99"
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json"
+}

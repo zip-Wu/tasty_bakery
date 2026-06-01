@@ -1,0 +1,139 @@
+page {
+  background: #f5f5f5;
+  height: 100vh;
+  width: 100vw;
+  margin: 0;
+  padding: 0;
+}
+
+.container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100vw;
+  margin: 0;
+  padding: 0;
+}
+
+/* 地图 */
+.map-wrap {
+  flex: 1;
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.map {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+/* 自定义标记点 */
+.marker-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.marker-dot {
+  width: 24rpx;
+  height: 24rpx;
+  background: #f5a623;
+  border-radius: 50%;
+  border: 4rpx solid #fff;
+  box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.3);
+}
+
+/* 底部选店面板 */
+.bottom-sheet {
+  background: #fff;
+  border-radius: 32rpx 32rpx 0 0;
+  padding: 32rpx 24rpx 40rpx;
+  box-shadow: 0 -4rpx 20rpx rgba(0,0,0,0.08);
+}
+
+.sheet-title {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #222;
+  margin-bottom: 24rpx;
+}
+
+/* 店铺列表 */
+.store-list {
+  margin-bottom: 24rpx;
+}
+
+.store-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  background: #fffbf3;
+  border: 2rpx solid #f5a623;
+  border-radius: 16rpx;
+  padding: 24rpx 20rpx;
+}
+
+.store-left {
+  flex: 1;
+  margin-right: 16rpx;
+}
+
+.store-name {
+  font-size: 30rpx;
+  font-weight: bold;
+  color: #222;
+  margin-bottom: 8rpx;
+}
+
+.store-addr {
+  font-size: 24rpx;
+  color: #888;
+  line-height: 1.5;
+  margin-bottom: 6rpx;
+}
+
+.store-hours {
+  font-size: 22rpx;
+  color: #aaa;
+}
+
+.store-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8rpx;
+}
+
+.store-dist {
+  font-size: 24rpx;
+  color: #f5a623;
+  font-weight: bold;
+}
+
+.store-status {
+  font-size: 22rpx;
+  padding: 4rpx 12rpx;
+  border-radius: 20rpx;
+}
+
+.store-status.open {
+  background: #e8f5e9;
+  color: #4caf50;
+}
+
+/* 确认按钮 */
+.confirm-btn {
+  width: 100%;
+  background: #f5a623;
+  color: #fff;
+  font-size: 32rpx;
+  font-weight: bold;
+  border-radius: 50rpx;
+  padding: 24rpx 0;
+  text-align: center;
+  box-sizing: border-box;
+}

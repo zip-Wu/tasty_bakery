@@ -1,0 +1,17 @@
+{
+  "name": "duntun-bakery-backend",
+  "version": "1.0.0",
+  "description": "囤囤馒头小程序后端服务",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "seed": "node seed.js",
+    "dev": "node app.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.0.0",
+    "cors": "^2.8.5",
+    "express": "^4.21.0",
+    "jsonwebtoken": "^9.0.3"
+  }
+}

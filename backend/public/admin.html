@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>囤囤馒头 - 商家管理</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: #fdf6e3;
+    color: #333;
+    min-height: 100vh;
+  }
+  .header {
+    background: linear-gradient(135deg, #f5a623, #e8911a);
+    color: #fff;
+    padding: 20px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  }
+  .header h1 { font-size: 22px; font-weight: 600; }
+  .header-stats { display: flex; gap: 24px; font-size: 14px; }
+  .header-stats span { opacity: 0.9; }
+  .header-stats strong { font-size: 18px; margin-right: 4px; }
+  .tabs {
+    display: flex;
+    background: #fff;
+    border-bottom: 2px solid #eee;
+    padding: 0 24px;
+    gap: 0;
+  }
+  .tab {
+    padding: 14px 28px;
+    cursor: pointer;
+    font-size: 15px;
+    color: #888;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    transition: all 0.2s;
+  }
+  .tab:hover { color: #f5a623; }
+  .tab.active { color: #f5a623; border-bottom-color: #f5a623; font-weight: 600; }
+  .content { max-width: 1100px; margin: 24px auto; padding: 0 24px; }
+  .card {
+    background: #fff;
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  }
+  .card-title { font-size: 16px; font-weight: 600; margin-bottom: 16px; color: #333; }
+  .filter-bar { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+  .filter-btn {
+    padding: 6px 16px;
+    border: 1px solid #ddd;
+    background: #fff;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 13px;
+    color: #666;
+    transition: all 0.2s;
+  }
+  .filter-btn:hover { border-color: #f5a623; color: #f5a623; }
+  .filter-btn.active { background: #f5a623; color: #fff; border-color: #f5a623; }
+  .order-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .order-table th {
+    text-align: left;
+    padding: 10px 12px;
+    background: #fdf6e3;
+    color: #333;
+    font-weight: 600;
+    border-bottom: 2px solid #eee;
+  }
+  .order-table td {
+    padding: 12px;
+    border-bottom: 1px solid #f0f0f0;
+    vertical-align: middle;
+  }
+  .order-table tr:hover { background: #fdf6e3; }
+  .badge {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 500;
+  }
+  .badge-pending { background: #fff3cd; color: #856404; }
+  .badge-preparing { background: #cce5ff; color: #004085; }
+  .badge-ready { background: #d4edda; color: #155724; }
+  .badge-completed { background: #e2e3e5; color: #383d41; }
+  .btn {
+    padding: 6px 14px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 500;
+    transition: all 0.2s;
+  }
+  .btn-primary { background: #f5a623; color: #fff; }
+  .btn-primary:hover { background: #e8911a; }
+  .btn-secondary { background: #e2e3e5; color: #333; }
+  .btn-secondary:hover { background: #d1d3d5; }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .item-tags { display: flex; flex-wrap: wrap; gap: 4px; max-width: 220px; }
+  .item-tag {
+    background: #f0f0f0;
+    padding: 1px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    color: #666;
+  }
+  .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+  .product-card {
+    border: 1px solid #eee;
+    border-radius: 10px;
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    transition: box-shadow 0.2s;
+  }
+  .product-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+  .product-card.off { opacity: 0.55; }
+  .product-img {
+    width: 64px; height: 64px;
+    border-radius: 8px;
+    background: #f0f0f0;
+    object-fit: cover;
+    flex-shrink: 0;
+  }
+  .product-info { flex: 1; min-width: 0; }
+  .product-name { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+  .product-meta { font-size: 12px; color: #999; margin-bottom: 4px; }
+  .product-price {
+    font-size: 16px;
+    font-weight: 700;
+    color: #f5a623;
+    margin-right: 6px;
+  }
+  .price-input {
+    width: 60px;
+    padding: 4px 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+    text-align: center;
+  }
+  .toggle-wrap { display: flex; align-items: center; gap: 8px; }
+  .toggle {
+    position: relative;
+    width: 44px; height: 24px;
+    background: #ccc;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: background 0.2s;
+    border: none;
+  }
+  .toggle.on { background: #f5a623; }
+  .toggle::after {
+    content: '';
+    position: absolute;
+    top: 2px; left: 2px;
+    width: 20px; height: 20px;
+    background: #fff;
+    border-radius: 50%;
+    transition: transform 0.2s;
+  }
+  .toggle.on::after { transform: translateX(20px); }
+  .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+  .stat-card {
+    background: #fff;
+    border-radius: 10px;
+    padding: 20px;
+    text-align: center;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  }
+  .stat-value { font-size: 32px; font-weight: 700; color: #f5a623; }
+  .stat-label { font-size: 13px; color: #999; margin-top: 6px; }
+  .pending-count { color: #e74c3c; }
+  .empty-state { text-align: center; padding: 48px; color: #ccc; font-size: 15px; }
+  .loading { text-align: center; padding: 48px; color: #999; }
+  /* 登录页 */
+  .login-container {
+    max-width: 400px; margin: 80px auto 0; padding: 0 24px;
+  }
+  .login-card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 40px 32px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    text-align: center;
+  }
+  .login-card h2 { font-size: 20px; margin-bottom: 8px; }
+  .login-card .sub { font-size: 13px; color: #999; margin-bottom: 28px; }
+  .login-input {
+    width: 100%;
+    padding: 12px 16px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 15px;
+    text-align: center;
+    margin-bottom: 16px;
+    outline: none;
+  }
+  .login-input:focus { border-color: #f5a623; }
+  .login-btn {
+    width: 100%;
+    padding: 12px;
+    background: #f5a623;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .login-btn:hover { background: #e8911a; }
+  .login-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+  .login-error { color: #e74c3c; font-size: 13px; margin-top: 12px; display: none; }
+  .logout-link {
+    background: none; border: none; color: #fff;
+    opacity: 0.8; cursor: pointer; font-size: 13px;
+    text-decoration: underline;
+  }
+  .logout-link:hover { opacity: 1; }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🍞 囤囤馒头 · 商家管理</h1>
+  <div>
+    <span class="header-stats" id="headerStats">
+      <span>今日营收 <strong id="hRevenue">--</strong></span>
+      <span>待处理 <strong id="hPending">--</strong></span>
+    </span>
+    <button class="logout-link" onclick="logout()">退出登录</button>
+  </div>
+</div>
+
+<!-- 登录界面 -->
+<div id="loginPage" class="login-container hidden">
+  <div class="login-card">
+    <h2>🔐 商家登录</h2>
+    <div class="sub">请输入管理密码进入后台</div>
+    <input type="password" class="login-input" id="passwordInput" placeholder="请输入密码" autofocus
+      onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="login-btn" id="loginBtn" onclick="doLogin()">登 录</button>
+    <div class="login-error" id="loginError">密码错误，请重试</div>
+  </div>
+</div>
+
+<!-- 管理界面（登录后显示） -->
+<div id="adminPage" class="hidden">
+
+
+<div class="tabs">
+  <div class="tab active" data-tab="orders">订单管理</div>
+  <div class="tab" data-tab="products">商品管理</div>
+  <div class="tab" data-tab="dashboard">营收看板</div>
+</div>
+
+<div class="content" id="content"></div>
+
+</div><!-- /adminPage -->
+
+<script>
+const API = '/api/admin';
+const TOKEN_KEY = 'admin_token';
+
+// ========== 认证 ==========
+function getToken() {
+  return localStorage.getItem(TOKEN_KEY);
+}
+
+function setToken(token) {
+  localStorage.setItem(TOKEN_KEY, token);
+}
+
+function clearToken() {
+  localStorage.removeItem(TOKEN_KEY);
+}
+
+// 带认证的 fetch 封装
+async function authFetch(url, options = {}) {
+  const token = getToken();
+  const headers = {
+    'Content-Type': 'application/json',
+    ...(options.headers || {}),
+  };
+  if (token) {
+    headers['Authorization'] = 'Bearer ' + token;
+  }
+  return fetch(url, { ...options, headers });
+}
+
+// ========== 登录 / 退出 ==========
+async function doLogin() {
+  const password = document.getElementById('passwordInput').value;
+  const btn = document.getElementById('loginBtn');
+  const err = document.getElementById('loginError');
+
+  if (!password) return;
+
+  btn.disabled = true;
+  btn.textContent = '登录中...';
+  err.style.display = 'none';
+
+  try {
+    const res = await fetch('/api/admin/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password })
+    }).then(r => r.json());
+
+    if (res.success) {
+      setToken(res.data.token);
+      showAdmin();
+    } else {
+      err.style.display = 'block';
+    }
+  } catch(e) {
+    err.textContent = '连接失败，请检查后端是否启动';
+    err.style.display = 'block';
+  }
+
+  btn.disabled = false;
+  btn.textContent = '登 录';
+}
+
+function logout() {
+  clearToken();
+  showLogin();
+}
+
+function showLogin() {
+  document.getElementById('loginPage').classList.remove('hidden');
+  document.getElementById('adminPage').classList.add('hidden');
+}
+
+function showAdmin() {
+  document.getElementById('loginPage').classList.add('hidden');
+  document.getElementById('adminPage').classList.remove('hidden');
+  loadOrders();
+  loadHeader();
+}
+
+// ========== Tab 切换 ==========
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    const name = tab.dataset.tab;
+    if (name === 'orders') loadOrders();
+    else if (name === 'products') loadProducts();
+    else if (name === 'dashboard') loadDashboard();
+  });
+});
+
+// ========== 头部摘要 ==========
+async function loadHeader() {
+  const res = await authFetch(API + '/dashboard').then(r => r.json());
+  if (res.success) {
+    document.getElementById('hRevenue').textContent = '¥' + res.data.revenue;
+    document.getElementById('hPending').textContent = res.data.preparing + res.data.ready + ' 单';
+  }
+}
+
+// ========== 订单管理 ==========
+async function loadOrders(filter = 'all') {
+  const content = document.getElementById('content');
+  content.innerHTML = '<div class="loading">加载中...</div>';
+
+  let url = API + '/orders';
+  if (filter !== 'all') url += '?status=' + filter;
+
+  const res = await authFetch(url).then(r => r.json());
+  if (!res.success) return;
+
+  const filters = [
+    { key: 'all', label: '全部' },
+    { key: 'pending', label: '待支付' },
+    { key: 'preparing', label: '制作中' },
+    { key: 'ready', label: '待取餐' },
+    { key: 'completed', label: '已完成' },
+  ];
+
+  const itemsHtml = res.data.length === 0
+    ? '<div class="empty-state">暂无订单</div>'
+    : res.data.map(o => {
+        const itemTags = o.items.map(i =>
+          `<span class="item-tag">${i.name} ×${i.quantity}</span>`
+        ).join('');
+
+        const time = new Date(o.createdAt);
+        const timeStr = `${time.getMonth()+1}/${time.getDate()} ${time.getHours().toString().padStart(2,'0')}:${time.getMinutes().toString().padStart(2,'0')}`;
+
+        const badgeClass = 'badge-' + o.status;
+        const statusMap = { pending: '待支付', preparing: '制作中', ready: '待取餐', completed: '已完成' };
+
+        let actionBtn = '';
+        if (o.status === 'preparing') {
+          actionBtn = `<button class="btn btn-primary" onclick="markReady('${o.id}')">标记可取餐</button>`;
+        } else if (o.status === 'ready') {
+          actionBtn = `<span style="color:#999;font-size:12px">等待顾客取餐</span>`;
+        }
+
+        return `
+          <tr>
+            <td><strong>${o.orderNo}</strong><br><span style="color:#999;font-size:11px">${timeStr}</span></td>
+            <td>${o.userNickname}</td>
+            <td><div class="item-tags">${itemTags}</div></td>
+            <td>¥${o.totalPrice}</td>
+            <td><span class="badge ${badgeClass}">${statusMap[o.status]}</span></td>
+            <td>${actionBtn}</td>
+          </tr>`;
+      }).join('');
+
+  content.innerHTML = `
+    <div class="card">
+      <div class="card-title">订单管理</div>
+      <div class="filter-bar">
+        ${filters.map(f =>
+          `<button class="filter-btn ${filter === f.key ? 'active' : ''}"
+            onclick="loadOrders('${f.key}')">${f.label}</button>`
+        ).join('')}
+      </div>
+      <table class="order-table">
+        <thead>
+          <tr>
+            <th>订单号 / 时间</th>
+            <th>顾客</th>
+            <th>商品</th>
+            <th>金额</th>
+            <th>状态</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody>${itemsHtml}</tbody>
+      </table>
+    </div>`;
+}
+
+async function markReady(orderId) {
+  const res = await authFetch(API + '/orders/' + orderId + '/ready', { method: 'POST' }).then(r => r.json());
+  if (res.success) {
+    alert('已标记为可取餐！');
+    loadOrders('preparing');
+    loadHeader();
+  }
+}
+
+// ========== 商品管理 ==========
+async function loadProducts() {
+  const content = document.getElementById('content');
+  content.innerHTML = '<div class="loading">加载中...</div>';
+
+  const res = await authFetch(API + '/products').then(r => r.json());
+  if (!res.success) return;
+
+  const html = res.data.map(p => `
+    <div class="product-card ${p.is_available ? '' : 'off'}">
+      <img class="product-img" src="${p.image}" alt="${p.name}" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22><rect fill=%22%23eee%22 width=%2264%22 height=%2264%22 rx=%228%22/><text x=%2232%22 y=%2236%22 text-anchor=%22middle%22 fill=%22%23ccc%22 font-size=%2220%22>🍞</text></svg>'">
+      <div class="product-info">
+        <div class="product-name" contenteditable="true" onblur="updateProduct(${p.id}, 'name', this.textContent)">${p.name}</div>
+        <div class="product-meta">${p.category} · 已售 ${p.sales} 单</div>
+        <div>
+          <span class="product-price">¥</span>
+          <input class="price-input" type="number" value="${p.price}" min="0" step="0.5"
+            onchange="updateProduct(${p.id}, 'price', this.value)" style="width:70px">
+        </div>
+      </div>
+      <div class="toggle-wrap">
+        <span style="font-size:11px;color:#999">${p.is_available ? '在售' : '已下架'}</span>
+        <button class="toggle ${p.is_available ? 'on' : ''}"
+          onclick="toggleProduct(${p.id}, ${p.is_available ? 0 : 1})"></button>
+      </div>
+    </div>
+  `).join('');
+
+  content.innerHTML = `
+    <div class="card">
+      <div class="card-title">商品管理（共 ${res.data.length} 款）</div>
+      <div class="product-grid">${html}</div>
+    </div>`;
+}
+
+async function toggleProduct(id, available) {
+  try {
+    const res = await authFetch(API + '/products/' + id, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ is_available: available })
+    }).then(r => r.json());
+    if (res.success) {
+      loadProducts();
+    }
+  } catch(e) {
+    alert('操作失败，请检查后端是否启动');
+  }
+}
+
+async function updateProduct(id, field, value) {
+  const body = {};
+  body[field] = field === 'price' ? parseFloat(value) : value;
+  try {
+    const res = await authFetch(API + '/products/' + id, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    }).then(r => r.json());
+    if (res.success) {
+      loadProducts();  // 修改后刷新商品列表
+    }
+  } catch(e) {
+    alert('修改失败，请检查后端是否启动');
+  }
+}
+
+// ========== 营收看板 ==========
+async function loadDashboard() {
+  const content = document.getElementById('content');
+  content.innerHTML = '<div class="loading">加载中...</div>';
+
+  const res = await authFetch(API + '/dashboard').then(r => r.json()); // dashboard load
+  if (!res.success) return;
+
+  const d = res.data;
+  content.innerHTML = `
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-value">¥${d.revenue}</div>
+        <div class="stat-label">今日营收</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">${d.totalOrders}</div>
+        <div class="stat-label">今日订单</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value pending-count">${d.preparing + d.ready}</div>
+        <div class="stat-label">待处理</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">${d.completed}</div>
+        <div class="stat-label">已完成</div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:16px">
+      <div class="card-title">订单分布</div>
+      <div style="display:flex;gap:16px;font-size:13px;color:#666">
+        <span>待支付: <strong>${d.pending}</strong></span>
+        <span>制作中: <strong>${d.preparing}</strong></span>
+        <span>待取餐: <strong>${d.ready}</strong></span>
+        <span>已完成: <strong>${d.completed}</strong></span>
+      </div>
+    </div>`;
+}
+
+// ========== 启动 ==========
+if (getToken()) {
+  showAdmin();
+} else {
+  showLogin();
+}
+</script>
+</body>
+</html>
