@@ -1,4 +1,14 @@
 // pages/index/index.js
+
+// ============================================================
+// 离线模拟开关：设为 true 时，后端连不上就用本地数据渲染
+// ★★★ 上线前必须改成 false，并把本文件里 useMockData() 删掉 ★★★
+// ============================================================
+const USE_MOCK  = true   // ← 上线前改成 false
+const ALLOW_MOCK = USE_MOCK
+
+const { mockProducts, mockCategories } = require('../../utils/mock');
+
 Page({
   data: {
     // 分类数据
@@ -64,13 +74,31 @@ Page({
           console.log('商品加载成功，数量:', res.data.data.length);
         } else {
           console.error('接口返回异常:', res.data);
-          wx.showToast({ title: '加载商品失败', icon: 'none' });
+          if (ALLOW_MOCK) {
+            this.useMockData();
+          } else {
+            wx.showToast({ title: '加载商品失败', icon: 'none' });
+          }
         }
       },
       fail: (err) => {
-        console.error('请求失败:', err);
-        wx.showToast({ title: '网络请求失败', icon: 'none' });
+        if (ALLOW_MOCK) {
+          console.log('后端未连接，使用离线模拟数据');
+          this.useMockData();
+        } else {
+          console.error('请求失败:', err);
+          wx.showToast({ title: '网络请求失败', icon: 'none' });
+        }
       }
+    });
+  },
+
+  // 离线模式：用本地模拟数据渲染界面
+  useMockData() {
+    this.setData({
+      breadList: mockProducts,
+      filteredBreadList: mockProducts,
+      categories: mockCategories
     });
   },
 
