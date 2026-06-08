@@ -73,9 +73,31 @@ router.get('/admin/products', (req, res) => {
   res.json({ success: true, data: products });
 });
 
+// ===== 新增商品 =====
+router.post('/admin/products', (req, res) => {
+  const { name, price, category, image } = req.body;
+
+  if (!name || !price) {
+    return res.json({ success: false, message: '商品名称和价格不能为空' });
+  }
+
+  const info = db.prepare(`
+    INSERT INTO products (name, price, image, category)
+    VALUES (@name, @price, @image, @category)
+  `).run({
+    name,
+    price: parseFloat(price),
+    image: image || '',
+    category: category || '其他',
+  });
+
+  const product = db.prepare('SELECT * FROM products WHERE id = ?').get(info.lastInsertRowid);
+  res.json({ success: true, data: product });
+});
+
 // ===== 更新商品 =====
 router.put('/admin/products/:id', (req, res) => {
-  const { is_available, price, name, category } = req.body;
+  const { is_available, price, name, category, image } = req.body;
   const product = db.prepare('SELECT * FROM products WHERE id = ?').get(req.params.id);
 
   if (!product) {
@@ -100,6 +122,10 @@ router.put('/admin/products/:id', (req, res) => {
   if (category !== undefined) {
     updates.push('category = @category');
     params.category = category;
+  }
+  if (image !== undefined) {
+    updates.push('image = @image');
+    params.image = image;
   }
 
   if (updates.length > 0) {
