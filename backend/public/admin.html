@@ -229,6 +229,41 @@
   }
   .logout-link:hover { opacity: 1; }
   .hidden { display: none !important; }
+  /* 新增商品表单 */
+  .add-form {
+    display: grid;
+    grid-template-columns: 1fr 80px 100px 1fr;
+    gap: 10px;
+    align-items: end;
+    margin-bottom: 16px;
+    padding: 16px;
+    background: #fdf6e3;
+    border-radius: 8px;
+  }
+  .add-form input, .add-form select {
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 13px;
+    outline: none;
+  }
+  .add-form input:focus, .add-form select:focus { border-color: #f5a623; }
+  .add-btn-small {
+    padding: 6px 16px;
+    background: #f5a623;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+  }
+  .add-btn-small:hover { background: #e8911a; }
+  .add-btn-small.cancel {
+    background: #e2e3e5;
+    color: #333;
+  }
+  .add-btn-small.cancel:hover { background: #d1d3d5; }
 </style>
 </head>
 <body>
@@ -486,7 +521,24 @@ async function loadProducts() {
 
   content.innerHTML = `
     <div class="card">
-      <div class="card-title">商品管理（共 ${res.data.length} 款）</div>
+      <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
+        <span>商品管理（共 ${res.data.length} 款）</span>
+        <button class="add-btn-small" onclick="showAddForm()">+ 新增商品</button>
+      </div>
+      <div id="addProductForm" class="hidden add-form">
+        <input id="newName" placeholder="商品名称">
+        <input id="newPrice" placeholder="价格" type="number" min="0" step="0.5">
+        <select id="newCategory">
+          <option value="吐司">吐司</option><option value="可颂">可颂</option>
+          <option value="欧包">欧包</option><option value="贝果">贝果</option>
+          <option value="丹麦">丹麦</option><option value="蛋糕">蛋糕</option>
+          <option value="咖啡">咖啡</option><option value="其他">其他</option>
+        </select>
+        <input id="newImage" placeholder="图片 URL（可选）">
+        <div></div><div></div>
+        <button class="add-btn-small" onclick="addProduct()">确认添加</button>
+        <button class="add-btn-small cancel" onclick="cancelAddForm()">取消</button>
+      </div>
       <div class="product-grid">${html}</div>
     </div>`;
 }
@@ -520,6 +572,48 @@ async function updateProduct(id, field, value) {
     }
   } catch(e) {
     alert('修改失败，请检查后端是否启动');
+  }
+}
+
+// ========== 新增商品 ==========
+function showAddForm() {
+  document.getElementById('addProductForm').classList.remove('hidden');
+  document.getElementById('newName').focus();
+}
+
+function cancelAddForm() {
+  document.getElementById('addProductForm').classList.add('hidden');
+  document.getElementById('newName').value = '';
+  document.getElementById('newPrice').value = '';
+  document.getElementById('newImage').value = '';
+}
+
+async function addProduct() {
+  const name = document.getElementById('newName').value.trim();
+  const price = document.getElementById('newPrice').value;
+  const category = document.getElementById('newCategory').value;
+  const image = document.getElementById('newImage').value.trim();
+
+  if (!name || !price) {
+    alert('请填写商品名称和价格');
+    return;
+  }
+
+  try {
+    const res = await authFetch(API + '/products', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, price, category, image })
+    }).then(r => r.json());
+
+    if (res.success) {
+      cancelAddForm();
+      loadProducts();
+    } else {
+      alert(res.message || '添加失败');
+    }
+  } catch(e) {
+    alert('添加失败，请检查后端是否启动');
   }
 }
 
