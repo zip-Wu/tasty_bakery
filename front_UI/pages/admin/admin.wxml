@@ -1,0 +1,160 @@
+<!-- 商家管理页面 -->
+
+<!-- ====== 未登录：密码输入 ====== -->
+<view class="login-page" wx:if="{{!loggedIn}}">
+  <view class="login-card">
+    <text class="login-title">🔐 商家管理</text>
+    <text class="login-sub">请输入管理密码</text>
+    <input class="login-input" type="password" placeholder="请输入密码"
+      value="{{password}}" bindinput="onPasswordInput" />
+    <text class="login-error" wx:if="{{loginError}}">{{loginError}}</text>
+    <button class="login-btn" bindtap="doLogin">登录</button>
+  </view>
+</view>
+
+<!-- ====== 已登录：管理面板 ====== -->
+<view class="admin-page" wx:if="{{loggedIn}}">
+  <!-- 顶部 Tab 栏 -->
+  <view class="tab-bar">
+    <view class="tab-item {{currentTab === 'orders' ? 'active' : ''}}"
+      bindtap="switchTab" data-tab="orders">订单管理</view>
+    <view class="tab-item {{currentTab === 'products' ? 'active' : ''}}"
+      bindtap="switchTab" data-tab="products">商品管理</view>
+    <view class="tab-item {{currentTab === 'dashboard' ? 'active' : ''}}"
+      bindtap="switchTab" data-tab="dashboard">营收看板</view>
+    <view class="tab-item logout-tab" bindtap="doLogout">退出</view>
+  </view>
+
+  <!-- ====== 订单管理 ====== -->
+  <view class="content" wx:if="{{currentTab === 'orders'}}">
+    <!-- 状态筛选 -->
+    <scroll-view scroll-x class="filter-scroll">
+      <view class="filter-item {{orderFilter === item.key ? 'active' : ''}}"
+        wx:for="{{orderFilters}}" wx:key="key"
+        bindtap="filterOrders" data-filter="{{item.key}}">
+        {{item.label}}
+      </view>
+    </scroll-view>
+
+    <!-- 订单列表 -->
+    <view class="order-list">
+      <view class="order-card" wx:for="{{orders}}" wx:key="id">
+        <view class="order-header">
+          <text class="order-no">{{item.orderNo}}</text>
+          <text class="order-status status-{{item.status}}">{{item.statusText}}</text>
+        </view>
+        <view class="order-body">
+          <text class="order-items">{{item.itemNames}}</text>
+          <text class="order-info">{{item.userNickname || '顾客'}} · {{item.totalQuantity}}件 · ¥{{item.totalPrice}}</text>
+          <text class="order-time">{{item.timeDisplay}}</text>
+        </view>
+        <view class="order-actions" wx:if="{{item.status === 'preparing'}}">
+          <button class="action-btn ready-btn" size="mini"
+            bindtap="markReady" data-id="{{item.id}}">标记待取餐</button>
+        </view>
+      </view>
+      <view class="empty" wx:if="{{orders.length === 0}}">
+        <text>暂无订单</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- ====== 商品管理 ====== -->
+  <view class="content" wx:if="{{currentTab === 'products'}}">
+    <view class="section-header">
+      <text class="section-title">全部商品（{{products.length}}）</text>
+      <view class="header-btns">
+        <button class="reset-btn" size="mini" bindtap="resetProducts">清空</button>
+        <button class="add-btn" size="mini" bindtap="toggleAddForm">+ 新增商品</button>
+      </view>
+    </view>
+
+    <!-- 新增商品表单 -->
+    <view class="add-form" wx:if="{{showAddForm}}">
+      <input class="form-input" placeholder="商品名称" value="{{newProduct.name}}" bindinput="onNewName" />
+      <input class="form-input" placeholder="价格（数字）" type="digit" value="{{newProduct.price}}" bindinput="onNewPrice" />
+      <input class="form-input" placeholder="分类（可选，如：吐司、欧包。留空则不归入任何分类）"
+        value="{{newProduct.category}}" bindinput="onNewCategory" />
+      <view class="form-row upload-row">
+        <text class="form-label">图片：</text>
+        <button class="upload-btn" size="mini" bindtap="chooseImage">
+          {{newProduct.image ? '换一张' : '从相册选择'}}
+        </button>
+      </view>
+      <image wx:if="{{newProduct.image}}" class="upload-preview"
+        src="{{newProduct.image}}" mode="aspectFill" />
+      <view class="form-btns">
+        <button class="form-btn cancel" size="mini" bindtap="toggleAddForm">取消</button>
+        <button class="form-btn confirm" size="mini" bindtap="addProduct">新增</button>
+      </view>
+    </view>
+
+    <!-- 商品列表 -->
+    <view class="product-list">
+      <view class="product-card {{item.is_available ? '' : 'disabled'}}"
+        wx:for="{{products}}" wx:key="id">
+        <image class="product-img" src="{{item.image}}" mode="aspectFill" />
+        <view class="product-info">
+          <text class="product-name">{{item.name}}</text>
+          <text class="product-cat">{{item.category}}</text>
+          <view class="product-price-row">
+            <text wx:if="{{editingId !== item.id}}" class="product-price">¥{{item.price}}</text>
+            <view wx:if="{{editingId === item.id}}" class="edit-row">
+              <input class="price-input" type="digit" value="{{editPrice}}" bindinput="onPriceInput" />
+              <button class="edit-btn save" size="mini" bindtap="savePrice">保存</button>
+              <button class="edit-btn cancel" size="mini" bindtap="cancelEdit">取消</button>
+            </view>
+            <text class="product-sales">售{{item.sales || 0}}</text>
+          </view>
+        </view>
+        <view class="product-actions">
+          <button class="p-action-btn" size="mini"
+            bindtap="startEdit" data-id="{{item.id}}" data-price="{{item.price}}">改价</button>
+          <button class="p-action-btn {{item.is_available ? 'off' : 'on'}}" size="mini"
+            bindtap="toggleProduct" data-id="{{item.id}}" data-available="{{item.is_available}}">
+            {{item.is_available ? '下架' : '上架'}}
+          </button>
+          <button class="p-action-btn delete" size="mini"
+            bindtap="deleteProduct" data-id="{{item.id}}" data-name="{{item.name}}">删除</button>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- ====== 营收看板 ====== -->
+  <view class="content" wx:if="{{currentTab === 'dashboard'}}">
+    <view class="dash-header" wx:if="{{dashboard}}">
+      <text class="dash-date">{{dashboard.today}}</text>
+      <text class="dash-title">今日数据</text>
+    </view>
+    <view class="dash-grid" wx:if="{{dashboard}}">
+      <view class="dash-card highlight">
+        <text class="dash-num">¥{{dashboard.revenue}}</text>
+        <text class="dash-label">今日营收</text>
+      </view>
+      <view class="dash-card">
+        <text class="dash-num">{{dashboard.totalOrders}}</text>
+        <text class="dash-label">总订单</text>
+      </view>
+      <view class="dash-card">
+        <text class="dash-num">{{dashboard.completed}}</text>
+        <text class="dash-label">已完成</text>
+      </view>
+      <view class="dash-card">
+        <text class="dash-num">{{dashboard.preparing}}</text>
+        <text class="dash-label">制作中</text>
+      </view>
+      <view class="dash-card">
+        <text class="dash-num">{{dashboard.ready}}</text>
+        <text class="dash-label">待取餐</text>
+      </view>
+      <view class="dash-card">
+        <text class="dash-num">{{dashboard.pending}}</text>
+        <text class="dash-label">待支付</text>
+      </view>
+    </view>
+    <view class="empty" wx:if="{{!dashboard}}">
+      <text>加载中...</text>
+    </view>
+  </view>
+</view>

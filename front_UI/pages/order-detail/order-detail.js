@@ -27,15 +27,11 @@ Page({
   // 加载订单
   loadOrder(orderId) {
     const app = getApp();
-    wx.request({
-      url: app.globalData.apiBase + '/api/orders/' + orderId,
-      success: (res) => {
-        if (res.data.success) {
-          const order = res.data.data;
-          this.processOrder(order);
-        }
-      }
-    });
+    app.request({
+      url: '/api/orders/' + orderId,
+    }).then(data => {
+      this.processOrder(data);
+    }).catch(() => {});
   },
 
   // 处理订单数据
@@ -92,16 +88,13 @@ Page({
       content: '请确认您已取到餐品',
       success: (res) => {
         if (res.confirm) {
-          wx.request({
-            url: app.globalData.apiBase + '/api/orders/' + this.data.orderId + '/complete',
+          app.request({
+            url: '/api/orders/' + this.data.orderId + '/complete',
             method: 'POST',
-            success: (r) => {
-              if (r.data.success) {
-                wx.showToast({ title: '取餐确认成功', icon: 'success' });
-                this.loadOrder(this.data.orderId);
-              }
-            }
-          });
+          }).then(() => {
+            wx.showToast({ title: '取餐确认成功', icon: 'success' });
+            this.loadOrder(this.data.orderId);
+          }).catch(() => {});
         }
       }
     });

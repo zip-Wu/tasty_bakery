@@ -62,14 +62,11 @@ Page({
 
     this.setData({ userId: app.globalData.userId });
 
-    wx.request({
-      url: app.globalData.apiBase + '/api/user/' + app.globalData.userId,
-      success: (res) => {
-        if (res.data.success) {
-          this.setData({ userInfo: res.data.data });
-        }
-      }
-    });
+    app.request({
+      url: '/api/user/' + app.globalData.userId,
+    }).then(data => {
+      this.setData({ userInfo: data });
+    }).catch(() => {});
   },
 
   // 加载订单数量
@@ -77,27 +74,23 @@ Page({
     const app = getApp();
     if (!app.globalData.userId) return;
 
-    wx.request({
-      url: app.globalData.apiBase + '/api/orders/user/' + app.globalData.userId,
-      success: (res) => {
-        if (res.data.success) {
-          const orders = res.data.data;
-          const count = {
-            pending: 0,
-            preparing: 0,
-            ready: 0,
-            completed: 0,
-            refund: 0
-          };
-          orders.forEach(order => {
-            if (count[order.status] !== undefined) {
-              count[order.status]++;
-            }
-          });
-          this.setData({ orderCount: count });
+    app.request({
+      url: '/api/orders/user/' + app.globalData.userId,
+    }).then(orders => {
+      const count = {
+        pending: 0,
+        preparing: 0,
+        ready: 0,
+        completed: 0,
+        refund: 0
+      };
+      orders.forEach(order => {
+        if (count[order.status] !== undefined) {
+          count[order.status]++;
         }
-      }
-    });
+      });
+      this.setData({ orderCount: count });
+    }).catch(() => {});
   },
 
   // 计算缓存大小
@@ -120,12 +113,15 @@ Page({
   // ===== 订单相关 =====
 
   goAllOrders() {
-    wx.navigateTo({ url: '/pages/order-list/order-list' });
+    wx.switchTab({ url: '/pages/order-list/order-list' });
   },
 
   goOrders(e) {
     const status = e.currentTarget.dataset.status;
-    wx.navigateTo({ url: '/pages/order-list/order-list?tab=' + status });
+    // 通过 globalData 传递 tab 参数（switchTab 不支持 query 参数）
+    const app = getApp();
+    app.globalData.orderTab = status;
+    wx.switchTab({ url: '/pages/order-list/order-list' });
   },
 
   // ===== 资产相关 =====

@@ -1,8 +1,8 @@
-<!-- 首页 - 囤囤馒头风格 -->
+<!-- 首页 - 大力馒头风格 -->
 <view class="home-page tab-bar-page">
-  <!-- 顶部大Banner - 占位图 -->
+  <!-- 顶部大Banner - 占位图（连续点击5次进入商家管理） -->
   <view class="banner-section">
-    <image class="banner-img" src="https://picsum.photos/750/400?random=1" mode="aspectFill"></image>
+    <image class="banner-img" src="https://picsum.photos/750/400?random=1" mode="aspectFill" bindtap="onBannerTap"></image>
   </view>
 
   <!-- 两大功能入口：门店自提 / 邮寄服务 -->

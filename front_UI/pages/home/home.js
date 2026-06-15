@@ -6,12 +6,28 @@ Page({
       { id: 2, image: 'https://picsum.photos/320/200?random=202' },
       { id: 3, image: 'https://picsum.photos/320/200?random=203' },
       { id: 4, image: 'https://picsum.photos/320/200?random=204' }
-    ]
+    ],
+    _adminTapCount: 0,
+    _adminTapTimer: null
   },
 
   onShow() {
     if (typeof this.getTabBar === 'function' && this.getTabBar()) {
       this.getTabBar().setData({ selected: 0 });
+    }
+    // 重置管理入口计数器
+    this._tapCount = 0;
+  },
+
+  // 隐藏管理入口：连续点击 Banner 5 次唤醒
+  onBannerTap() {
+    this._tapCount = (this._tapCount || 0) + 1;
+    if (this._tapTimer) clearTimeout(this._tapTimer);
+    if (this._tapCount >= 5) {
+      this._tapCount = 0;
+      wx.navigateTo({ url: '/pages/admin/admin' });
+    } else {
+      this._tapTimer = setTimeout(() => { this._tapCount = 0; }, 2000);
     }
   },
 

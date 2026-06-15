@@ -1,23 +1,9 @@
 /**
- * 订单路由 — 创建订单、查询、支付、状态流转
- *
- * 订单状态流转：pending → preparing → ready → completed
- *   pending   — 待支付（刚创建）
- *   preparing — 制作中（支付成功后）
- *   ready     — 待取餐（商家标记制作完成）
- *   completed — 已完成（用户确认取餐）
- *
- * POST /api/orders              — 创建订单
- * GET  /api/orders/user/:userId — 用户订单列表
- * GET  /api/orders/:id          — 订单详情
- * POST /api/orders/:id/status   — 更新订单状态
- * POST /api/pay/:orderId        — 模拟支付
- * POST /api/orders/:id/accept   — 商家接单
- * POST /api/orders/:id/complete — 完成订单
+ * 订单路由 — 创建、查询、支付、状态流转
  */
 const express = require('express');
 const crypto = require('crypto');
-const db = require('../database');
+const { pool } = require('../database');
 
 const router = express.Router();
 
@@ -25,156 +11,175 @@ function generateId() {
   return Date.now().toString(36) + crypto.randomBytes(4).toString('hex');
 }
 
+// MySQL 接受的日期格式：YYYY-MM-DD HH:MM:SS
+function mysqlNow() {
+  const d = new Date();
+  return d.getFullYear() + '-' +
+    String(d.getMonth() + 1).padStart(2, '0') + '-' +
+    String(d.getDate()).padStart(2, '0') + ' ' +
+    String(d.getHours()).padStart(2, '0') + ':' +
+    String(d.getMinutes()).padStart(2, '0') + ':' +
+    String(d.getSeconds()).padStart(2, '0');
+}
+
 // ===== 创建订单 =====
-router.post('/orders', (req, res) => {
-  const { userId, items, totalPrice, storeId, storeName, pickupTime } = req.body;
+router.post('/orders', async (req, res) => {
+  try {
+    const { userId, items, totalPrice, storeId, storeName, pickupTime } = req.body;
 
-  if (!userId || !items || !items.length) {
-    return res.json({ success: false, message: '缺少必要参数' });
+    if (!userId || !items || !items.length) {
+      return res.json({ success: false, message: '缺少必要参数' });
+    }
+
+    const order = {
+      id: generateId(),
+      orderNo: 'ORD' + Date.now(),
+      userId,
+      storeId: storeId || null,
+      storeName: storeName || '',
+      items: JSON.stringify(items),
+      totalPrice,
+      status: 'pending',
+      pickupTime: pickupTime || (() => {
+        const d = new Date(Date.now() + 30 * 60000);
+        return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' +
+          String(d.getDate()).padStart(2,'0') + ' ' + String(d.getHours()).padStart(2,'0') +
+          ':' + String(d.getMinutes()).padStart(2,'0') + ':' + String(d.getSeconds()).padStart(2,'0');
+      })(),
+    };
+
+    await pool.execute(
+      `INSERT INTO orders (id, order_no, user_id, store_id, store_name, items, total_price, status, pickup_time)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [order.id, order.orderNo, order.userId, order.storeId, order.storeName, order.items, order.totalPrice, order.status, order.pickupTime]
+    );
+
+    order.items = items;
+    order.createdAt = mysqlNow();
+    order.paidAt = null;
+    order.completedAt = null;
+
+    res.json({ success: true, data: order });
+  } catch (err) {
+    console.error('[orders] 创建订单异常:', err.message, err.stack);
+    res.status(500).json({ success: false, message: '创建订单失败: ' + err.message });
   }
-
-  const order = {
-    id: generateId(),
-    orderNo: 'ORD' + Date.now(),
-    userId,
-    storeId: storeId || null,
-    storeName: storeName || '',
-    items: JSON.stringify(items),
-    totalPrice,
-    status: 'pending',
-    pickupTime: pickupTime || new Date(Date.now() + 30 * 60000).toISOString(),
-  };
-
-  db.prepare(`
-    INSERT INTO orders (id, order_no, user_id, store_id, store_name, items, total_price, status, pickup_time)
-    VALUES (@id, @orderNo, @userId, @storeId, @storeName, @items, @totalPrice, @status, @pickupTime)
-  `).run(order);
-
-  // 返回给前端时 items 要解析回数组
-  order.items = items;
-  order.createdAt = new Date().toISOString();
-  order.paidAt = null;
-  order.completedAt = null;
-
-  res.json({ success: true, data: order });
 });
 
 // ===== 用户订单列表 =====
-router.get('/orders/user/:userId', (req, res) => {
-  const orders = db.prepare(
-    'SELECT * FROM orders WHERE user_id = ? ORDER BY created_at DESC'
-  ).all(req.params.userId);
+router.get('/orders/user/:userId', async (req, res) => {
+  const [orders] = await pool.execute(
+    'SELECT * FROM orders WHERE user_id = ? ORDER BY created_at DESC',
+    [req.params.userId]
+  );
 
   const result = orders.map(formatOrder);
   res.json({ success: true, data: result });
 });
 
 // ===== 订单详情 =====
-router.get('/orders/:id', (req, res) => {
-  const order = db.prepare('SELECT * FROM orders WHERE id = ?').get(req.params.id);
+router.get('/orders/:id', async (req, res) => {
+  const [rows] = await pool.execute('SELECT * FROM orders WHERE id = ?', [req.params.id]);
 
-  if (!order) {
+  if (!rows[0]) {
     return res.json({ success: false, message: '订单不存在' });
   }
 
-  res.json({ success: true, data: formatOrder(order) });
+  res.json({ success: true, data: formatOrder(rows[0]) });
 });
 
 // ===== 更新订单状态（通用） =====
-router.post('/orders/:id/status', (req, res) => {
+router.post('/orders/:id/status', async (req, res) => {
   const { status } = req.body;
-  const order = db.prepare('SELECT * FROM orders WHERE id = ?').get(req.params.id);
+  const [rows] = await pool.execute('SELECT * FROM orders WHERE id = ?', [req.params.id]);
 
-  if (!order) {
+  if (!rows[0]) {
     return res.json({ success: false, message: '订单不存在' });
   }
 
-  const updates = { status };
-  if (status === 'paid') updates.paidAt = new Date().toISOString();
-  if (status === 'completed') updates.completedAt = new Date().toISOString();
+  const now = mysqlNow();
+  const setClauses = ['status = ?'];
+  const params = [status];
 
-  const setClauses = ['status = @status'];
-  const params = { id: req.params.id, status };
-
-  if (updates.paidAt) {
-    setClauses.push("paid_at = @paidAt");
-    params.paidAt = updates.paidAt;
+  if (status === 'paid') {
+    setClauses.push('paid_at = ?');
+    params.push(now);
   }
-  if (updates.completedAt) {
-    setClauses.push("completed_at = @completedAt");
-    params.completedAt = updates.completedAt;
+  if (status === 'completed') {
+    setClauses.push('completed_at = ?');
+    params.push(now);
   }
 
-  db.prepare(`UPDATE orders SET ${setClauses.join(', ')} WHERE id = @id`).run(params);
+  params.push(req.params.id);
+  await pool.execute(`UPDATE orders SET ${setClauses.join(', ')} WHERE id = ?`, params);
 
-  const updated = db.prepare('SELECT * FROM orders WHERE id = ?').get(req.params.id);
-  res.json({ success: true, data: formatOrder(updated) });
+  const [updated] = await pool.execute('SELECT * FROM orders WHERE id = ?', [req.params.id]);
+  res.json({ success: true, data: formatOrder(updated[0]) });
 });
 
 // ===== 模拟支付 =====
-// TODO: 后续替换为真实微信支付
-// 1. 后端调用微信统一下单 API，获取 prepay_id
-// 2. 签名后返回 { timeStamp, nonceStr, package, paySign } 给前端
-// 3. 前端调用 wx.requestPayment() 唤起支付
-// 4. 微信异步通知后端（payNotify 回调）
-router.post('/pay/:orderId', (req, res) => {
-  const order = db.prepare('SELECT * FROM orders WHERE id = ?').get(req.params.orderId);
+router.post('/pay/:orderId', async (req, res) => {
+  const [rows] = await pool.execute('SELECT * FROM orders WHERE id = ?', [req.params.orderId]);
 
-  if (!order) {
+  if (!rows[0]) {
     return res.json({ success: false, message: '订单不存在' });
   }
 
   const payResult = {
     success: true,
     tradeNo: 'MOCK' + Date.now(),
-    timeEnd: new Date().toISOString(),
+    timeEnd: mysqlNow(),
   };
 
-  db.prepare(`
-    UPDATE orders SET status = 'preparing', paid_at = @paidAt WHERE id = @id
-  `).run({ id: req.params.orderId, paidAt: payResult.timeEnd });
+  await pool.execute(
+    'UPDATE orders SET status = ?, paid_at = ? WHERE id = ?',
+    ['preparing', payResult.timeEnd, req.params.orderId]
+  );
 
   res.json({
     success: true,
-    data: { payResult, order: formatOrder({
-      ...order,
-      status: 'preparing',
-      paid_at: payResult.timeEnd,
-    }) },
+    data: {
+      payResult,
+      order: formatOrder({ ...rows[0], status: 'preparing', paid_at: payResult.timeEnd }),
+    },
   });
 });
 
 // ===== 商家接单 =====
-router.post('/orders/:id/accept', (req, res) => {
-  const order = db.prepare('SELECT * FROM orders WHERE id = ?').get(req.params.id);
+router.post('/orders/:id/accept', async (req, res) => {
+  const [rows] = await pool.execute('SELECT * FROM orders WHERE id = ?', [req.params.id]);
 
-  if (!order) {
+  if (!rows[0]) {
     return res.json({ success: false, message: '订单不存在' });
   }
 
-  const now = new Date().toISOString();
-  db.prepare('UPDATE orders SET status = ?, accepted_at = ? WHERE id = ?')
-    .run('preparing', now, req.params.id);
+  const now = mysqlNow();
+  await pool.execute(
+    'UPDATE orders SET status = ?, accepted_at = ? WHERE id = ?',
+    ['preparing', now, req.params.id]
+  );
 
-  res.json({ success: true, data: formatOrder({ ...order, status: 'preparing', accepted_at: now }) });
+  res.json({ success: true, data: formatOrder({ ...rows[0], status: 'preparing', accepted_at: now }) });
 });
 
 // ===== 完成订单（用户确认取餐） =====
-router.post('/orders/:id/complete', (req, res) => {
-  const order = db.prepare('SELECT * FROM orders WHERE id = ?').get(req.params.id);
+router.post('/orders/:id/complete', async (req, res) => {
+  const [rows] = await pool.execute('SELECT * FROM orders WHERE id = ?', [req.params.id]);
 
-  if (!order) {
+  if (!rows[0]) {
     return res.json({ success: false, message: '订单不存在' });
   }
 
-  const now = new Date().toISOString();
-  db.prepare('UPDATE orders SET status = ?, completed_at = ? WHERE id = ?')
-    .run('completed', now, req.params.id);
+  const now = mysqlNow();
+  await pool.execute(
+    'UPDATE orders SET status = ?, completed_at = ? WHERE id = ?',
+    ['completed', now, req.params.id]
+  );
 
-  res.json({ success: true, data: formatOrder({ ...order, status: 'completed', completed_at: now }) });
+  res.json({ success: true, data: formatOrder({ ...rows[0], status: 'completed', completed_at: now }) });
 });
 
-// ===== 工具函数：格式化订单输出 =====
+// ===== 工具函数 =====
 function formatOrder(row) {
   return {
     id: row.id,
@@ -182,7 +187,7 @@ function formatOrder(row) {
     userId: row.user_id,
     storeId: row.store_id,
     storeName: row.store_name,
-    items: JSON.parse(row.items),
+    items: typeof row.items === 'string' ? JSON.parse(row.items) : row.items,
     totalPrice: row.total_price,
     status: row.status,
     pickupTime: row.pickup_time,

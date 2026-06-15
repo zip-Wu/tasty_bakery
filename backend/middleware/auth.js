@@ -11,8 +11,8 @@ const jwt = require('jsonwebtoken');
 // 管理员密码的哈希 → 部署时通过环境变量 ADMIN_PASSWORD 设置
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123456';
 
-// JWT 密钥 → 部署时通过环境变量 JWT_SECRET 设置
-const JWT_SECRET = process.env.JWT_SECRET || 'duntun-bakery-secret-key-' + Date.now();
+// JWT 密钥 → 通过环境变量 JWT_SECRET 设置，避免重启后失效
+const JWT_SECRET = process.env.JWT_SECRET || 'dali-mantou-2024-secret-key';
 
 // Token 有效期：8 小时
 const TOKEN_EXPIRES = '8h';

@@ -6,11 +6,12 @@
     "pages/order-confirm/order-confirm",
     "pages/order-list/order-list",
     "pages/order-detail/order-detail",
-    "pages/logs/logs"
+    "pages/logs/logs",
+    "pages/admin/admin"
   ],
   "window": {
     "navigationBarTextStyle": "black",
-    "navigationBarTitleText": "囤囤馒头",
+    "navigationBarTitleText": "大力馒头",
     "navigationBarBackgroundColor": "#FFEB99",
     "backgroundTextStyle": "dark"
   },

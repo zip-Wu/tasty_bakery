@@ -29,6 +29,12 @@ Page({
     if (typeof this.getTabBar === 'function' && this.getTabBar()) {
       this.getTabBar().setData({ selected: 2 });
     }
+    // 读取从"我的"页面传入的 tab 筛选参数
+    const app = getApp();
+    if (app.globalData.orderTab) {
+      this.setData({ currentTab: app.globalData.orderTab });
+      app.globalData.orderTab = null; // 用完即清
+    }
     this.loadOrders();
   },
 
@@ -45,36 +51,33 @@ Page({
     const app = getApp();
     if (!app.globalData.userId) return;
 
-    wx.request({
-      url: app.globalData.apiBase + '/api/orders/user/' + app.globalData.userId,
-      success: (res) => {
-        if (res.data.success) {
-          let orders = res.data.data;
+    app.request({
+      url: '/api/orders/user/' + app.globalData.userId,
+    }).then(allOrders => {
+      let orders = allOrders;
 
-          // 过滤
-          if (this.data.currentTab !== 'all') {
-            orders = orders.filter(o => o.status === this.data.currentTab);
-          }
-
-          // 格式化数据
-          orders = orders.map(order => {
-            // 状态文字
-            order.statusText = this.data.statusMap[order.status] || order.status;
-            // 商品总数
-            order.totalQuantity = order.items.reduce((sum, item) => sum + item.quantity, 0);
-            // 时间显示
-            const d = new Date(order.createdAt);
-            order.timeDisplay = `${d.getMonth() + 1}/${d.getDate()} ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
-            return order;
-          });
-
-          this.setData({ orders });
-
-          // 更新标签数量
-          this.updateTabCounts(res.data.data);
-        }
+      // 过滤
+      if (this.data.currentTab !== 'all') {
+        orders = orders.filter(o => o.status === this.data.currentTab);
       }
-    });
+
+      // 格式化数据
+      orders = orders.map(order => {
+        // 状态文字
+        order.statusText = this.data.statusMap[order.status] || order.status;
+        // 商品总数
+        order.totalQuantity = (order.items || []).reduce((sum, item) => sum + (item.quantity || 0), 0);
+        // 时间显示
+        const d = new Date(order.createdAt);
+        order.timeDisplay = `${d.getMonth() + 1}/${d.getDate()} ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+        return order;
+      });
+
+      this.setData({ orders });
+
+      // 更新标签数量
+      this.updateTabCounts(allOrders);
+    }).catch(() => {});
   },
 
   // 更新标签角标

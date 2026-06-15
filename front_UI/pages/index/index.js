@@ -4,15 +4,15 @@
 // 离线模拟开关：设为 true 时，后端连不上就用本地数据渲染
 // ★★★ 上线前必须改成 false，并把本文件里 useMockData() 删掉 ★★★
 // ============================================================
-const USE_MOCK  = true   // ← 上线前改成 false
+const USE_MOCK  = false  // ← 上线前改成 false
 const ALLOW_MOCK = USE_MOCK
 
 const { mockProducts, mockCategories } = require('../../utils/mock');
 
 Page({
   data: {
-    // 分类数据
-    categories: ['全部', '吐司', '可颂', '欧包', '贝果', '丹麦', '蛋糕'],
+    // 分类数据（从后端动态加载，初始仅「全部」）
+    categories: ['全部'],
     currentCategory: '全部',
 
     // 商品数据
@@ -32,7 +32,7 @@ Page({
     },
 
     // 调试信息
-    apiBase: ''
+    apiBase: '云托管'
   },
 
   onLoad() {
@@ -45,50 +45,53 @@ Page({
     }
 
     // 设置API地址（调试用）
-    this.setData({ apiBase: app.globalData.apiBase });
+    this.setData({ apiBase: '云托管' });
 
     // 从全局获取选中的门店信息
     const store = app.globalData.selectedStore || this.data.store;
     this.setData({ store });
 
-    // 加载商品列表
+    // 加载商品 + 分类
     this.loadProducts();
+    this.loadCategories();
+  },
+
+  // 加载分类（从后端拉取，非硬编码）
+  loadCategories() {
+    const app = getApp();
+    app.request({
+      url: '/api/categories',
+      method: 'GET',
+    }).then(data => {
+      this.setData({ categories: data });
+    }).catch(() => {
+      // 保留默认分类作为降级
+      console.log('分类加载失败，使用默认值');
+    });
   },
 
   // 加载商品列表
   loadProducts() {
     const app = getApp();
-    console.log('加载商品，API地址:', app.globalData.apiBase);
+    console.log('加载商品，API地址: 云托管');
     
-    wx.request({
-      url: app.globalData.apiBase + '/api/products',
+    app.request({
+      url: '/api/products',
       method: 'GET',
-      success: (res) => {
-        console.log('商品接口返回:', res.data);
-        
-        if (res.data && res.data.success) {
-          this.setData({
-            breadList: res.data.data,
-            filteredBreadList: res.data.data
-          });
-          console.log('商品加载成功，数量:', res.data.data.length);
-        } else {
-          console.error('接口返回异常:', res.data);
-          if (ALLOW_MOCK) {
-            this.useMockData();
-          } else {
-            wx.showToast({ title: '加载商品失败', icon: 'none' });
-          }
-        }
-      },
-      fail: (err) => {
-        if (ALLOW_MOCK) {
-          console.log('后端未连接，使用离线模拟数据');
-          this.useMockData();
-        } else {
-          console.error('请求失败:', err);
-          wx.showToast({ title: '网络请求失败', icon: 'none' });
-        }
+    }).then(data => {
+      console.log('商品接口返回:', data);
+      this.setData({
+        breadList: data,
+        filteredBreadList: data
+      });
+      console.log('商品加载成功，数量:', data.length);
+    }).catch((err) => {
+      if (ALLOW_MOCK) {
+        console.log('后端未连接，使用离线模拟数据');
+        this.useMockData();
+      } else {
+        console.error('请求失败:', err);
+        wx.showToast({ title: '网络请求失败', icon: 'none' });
       }
     });
   },
@@ -119,6 +122,7 @@ Page({
     // 每次显示页面时刷新商品（管理后台可能改了价格/上下架）
     if (app.globalData.selectedStore) {
       this.loadProducts();
+      this.loadCategories();
     }
   },
 
@@ -131,7 +135,7 @@ Page({
     });
   },
 
-  // 筛选面包列表
+  // 筛选面包列表（空分类/无分类 商品只出现在"全部"中）
   filterBreadList() {
     const { breadList, currentCategory } = this.data;
     console.log('筛选，原始数据:', breadList.length, '分类:', currentCategory);
@@ -256,27 +260,20 @@ Page({
 
     console.log('创建订单，发送数据:', requestData);
 
-    wx.request({
-      url: app.globalData.apiBase + '/api/orders',
+    app.request({
+      url: '/api/orders',
       method: 'POST',
-      header: { 'Content-Type': 'application/json' },
       data: requestData,
-      success: (res) => {
-        console.log('创建订单返回:', res.data);
-        wx.hideLoading();
-        if (res.data && res.data.success) {
-          wx.navigateTo({
-            url: '/pages/order-confirm/order-confirm?orderId=' + res.data.data.id
-          });
-        } else {
-          wx.showToast({ title: res.data?.message || '创建订单失败', icon: 'none' });
-        }
-      },
-      fail: (err) => {
-        console.error('创建订单失败:', err);
-        wx.hideLoading();
-        wx.showToast({ title: '网络错误', icon: 'none' });
-      }
+    }).then(data => {
+      console.log('创建订单返回:', data);
+      wx.hideLoading();
+      wx.navigateTo({
+        url: '/pages/order-confirm/order-confirm?orderId=' + data.id
+      });
+    }).catch((err) => {
+      console.error('创建订单失败:', err);
+      wx.hideLoading();
+      wx.showToast({ title: '网络错误', icon: 'none' });
     });
   }
 });
