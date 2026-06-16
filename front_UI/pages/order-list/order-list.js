@@ -26,11 +26,12 @@ Page({
   },
 
   onShow() {
+    const app = getApp();
+
     if (typeof this.getTabBar === 'function' && this.getTabBar()) {
       this.getTabBar().setData({ selected: 2 });
     }
     // 读取从"我的"页面传入的 tab 筛选参数
-    const app = getApp();
     if (app.globalData.orderTab) {
       this.setData({ currentTab: app.globalData.orderTab });
       app.globalData.orderTab = null; // 用完即清

@@ -6,10 +6,17 @@ const SERVICE_NAME = 'dali-bakery-api';
 
 App({
   onLaunch() {
-    // 初始化云环境（callContainer 依赖此调用）
     wx.cloud.init({ env: CLOUD_ENV });
 
-    // 检查登录状态
+    // 生成/读取设备唯一标识，区分不同用户
+    // 生产环境：后端用 wx.login 的 code 换 openid 替代 deviceId
+    var deviceId = wx.getStorageSync('deviceId');
+    if (!deviceId) {
+      deviceId = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+      wx.setStorageSync('deviceId', deviceId);
+    }
+
+    // 恢复登录状态
     const userId = wx.getStorageSync('userId');
     if (userId) {
       this.autoLogin(userId);
@@ -22,7 +29,7 @@ App({
     selectedStore: null,
   },
 
-  // 自动登录（从本地存储恢复）
+  // 恢复登录（从本地缓存）
   autoLogin(userId) {
     this.request({
       url: '/api/user/' + userId,
@@ -32,18 +39,15 @@ App({
     }).catch(() => {});
   },
 
-  // 微信登录
+  // 静默登录（首次或缓存被清后触发，无需用户任何操作）
   login(callback) {
+    var deviceId = wx.getStorageSync('deviceId');
     wx.login({
       success: (res) => {
         this.request({
           url: '/api/login',
           method: 'POST',
-          data: {
-            code: res.code,
-            nickname: '面包爱好者',
-            avatar: 'https://picsum.photos/200/200?random=' + Date.now()
-          },
+          data: { code: res.code, deviceId: deviceId },
         }).then(data => {
           this.globalData.userId = data.id;
           this.globalData.userInfo = data;
@@ -55,8 +59,6 @@ App({
   },
 
   // 统一请求方法 — 通过微信云托管 callContainer 私有协议
-  // options: { url, method?, data?, header? }
-  // 返回 Promise，resolve 的是 res.data.data（即 {success:true, data:...} 中的 data 部分）
   request(options) {
     return new Promise((resolve, reject) => {
       wx.cloud.callContainer({
@@ -73,10 +75,7 @@ App({
           if (res.data && res.data.success) {
             resolve(res.data.data);
           } else {
-            wx.showToast({
-              title: (res.data && res.data.message) || '请求失败',
-              icon: 'none'
-            });
+            wx.showToast({ title: (res.data && res.data.message) || '请求失败', icon: 'none' });
             reject(res.data);
           }
         },

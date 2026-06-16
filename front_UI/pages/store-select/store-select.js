@@ -1,29 +1,62 @@
 Page({
   data: {
-    selectedStoreId: 1,
-    stores: [
-      {
-        id: 1,
-        name: '格创·壹号店',
-        address: '广东省珠海市香洲区唐家湾镇香山路639号',
-        hours: '08:00 - 21:00',
-        latitude: 22.3568,
-        longitude: 113.5542,
-        distance: '约 0.1km',
-        open: true
+    selectedStoreId: null,
+    stores: [],
+    markers: [],
+    loading: true
+  },
+
+  onLoad() {
+    this.loadStores();
+  },
+
+  // 获取用户位置 → 请求门店列表（含真实距离）
+  loadStores() {
+    const app = getApp();
+    const that = this;
+
+    wx.getLocation({
+      type: 'gcj02',
+      success(loc) {
+        app.request({
+          url: `/api/stores?lat=${loc.latitude}&lng=${loc.longitude}`,
+        }).then(stores => {
+          // 生成地图标记点
+          const markers = stores.map(s => ({
+            id: s.id,
+            latitude: s.latitude,
+            longitude: s.longitude,
+            title: s.name,
+            iconPath: '',
+            width: 30,
+            height: 30
+          }));
+
+          that.setData({
+            stores,
+            markers,
+            loading: false,
+            // 默认选中最近的门店
+            selectedStoreId: stores.length > 0 ? stores[0].id : null
+          });
+        }).catch(() => {
+          that.setData({ loading: false });
+          wx.showToast({ title: '加载门店失败', icon: 'none' });
+        });
+      },
+      fail() {
+        // 用户拒绝定位 → 用降级数据（不传坐标）
+        app.request({ url: '/api/stores' }).then(stores => {
+          that.setData({
+            stores,
+            loading: false,
+            selectedStoreId: stores.length > 0 ? stores[0].id : null
+          });
+        }).catch(() => {
+          that.setData({ loading: false });
+        });
       }
-    ],
-    markers: [
-      {
-        id: 1,
-        latitude: 22.3568,
-        longitude: 113.5542,
-        title: '格创·壹号店',
-        iconPath: '',
-        width: 30,
-        height: 30
-      }
-    ]
+    });
   },
 
   selectStore(e) {
@@ -37,12 +70,8 @@ Page({
       wx.showToast({ title: '请选择门店', icon: 'none' });
       return;
     }
-    // 把选中的门店存到全局，跳转到点单页
     const app = getApp();
     app.globalData.selectedStore = store;
-
-    wx.switchTab({
-      url: '/pages/index/index'
-    });
+    wx.switchTab({ url: '/pages/index/index' });
   }
 });

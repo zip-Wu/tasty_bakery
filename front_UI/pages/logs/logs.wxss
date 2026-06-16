@@ -50,6 +50,8 @@ page {
   margin-bottom: 8rpx;
 }
 
+/* ========== 授权弹窗相关样式已移除 ========== */
+
 .member-tag-row {
   display: flex;
 }

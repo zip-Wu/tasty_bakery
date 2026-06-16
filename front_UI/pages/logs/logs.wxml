@@ -1,5 +1,6 @@
 <!-- 我的页面 -->
 <view class="profile-page tab-bar-page">
+
   <!-- 顶部用户信息区 -->
   <view class="user-header">
     <view class="user-bg"></view>
@@ -23,7 +24,7 @@
     </view>
     <view class="asset-divider"></view>
     <view class="asset-item" bindtap="goCoupons">
-      <text class="asset-num">{{userInfo.couponCount}}</text>
+      <text class="asset-num">{{userInfo.couponCount || 0}}</text>
       <text class="asset-label">优惠券</text>
     </view>
     <view class="asset-divider"></view>
