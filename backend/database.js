@@ -1,6 +1,6 @@
 /**
  * 数据库模块 — MySQL 连接池
- * 自动创建数据库、表、种子数据
+ * 自动创建数据库和表结构，并初始化门店
  */
 const mysql = require('mysql2/promise');
 
@@ -22,7 +22,7 @@ const pool = mysql.createPool({
   charset: 'utf8mb4',
 });
 
-// ========== 初始化（创建库 → 建表 → 种子） ==========
+// ========== 初始化（创建库 → 建表） ==========
 const ready = (async () => {
   // 1. 创建数据库
   const conn = await mysql.createConnection({ host: DB_HOST, port: DB_PORT, user: DB_USER, password: DB_PASS });
@@ -35,50 +35,38 @@ const ready = (async () => {
   try {
     await c.query(`
       CREATE TABLE IF NOT EXISTS users (
-        id          VARCHAR(64) PRIMARY KEY,
-        openid      VARCHAR(128) UNIQUE,
-        nickname    VARCHAR(64) DEFAULT '面包爱好者',
-        avatar      TEXT,
-        phone       VARCHAR(20) DEFAULT '',
-        points      INT DEFAULT 0,
-        balance     DECIMAL(10,2) DEFAULT 0,
+        id           VARCHAR(64) PRIMARY KEY,
+        openid       VARCHAR(128) UNIQUE,
+        nickname     VARCHAR(64) DEFAULT '面包爱好者',
+        avatar       TEXT,
+        phone        VARCHAR(20) DEFAULT '',
+        points       INT DEFAULT 0,
+        balance      DECIMAL(10,2) DEFAULT 0,
         coupon_count INT DEFAULT 0,
         member_level VARCHAR(32) DEFAULT '',
-        is_member   TINYINT DEFAULT 0,
-        created_at  DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at  DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        is_member    TINYINT DEFAULT 0,
+        created_at   DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at   DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
     `);
-    // 兼容旧表：如果缺 coupon_count 列则补齐（兼容所有 MySQL 版本）
-    const [cols] = await c.query(`SHOW COLUMNS FROM users LIKE 'coupon_count'`);
-    if (cols.length === 0) {
-      await c.query(`ALTER TABLE users ADD COLUMN coupon_count INT DEFAULT 0`);
-      console.log('[db] 已补全 coupon_count 列');
-    }
 
     await c.query(`
-      CREATE TABLE IF NOT EXISTS categories (
-        id        INT AUTO_INCREMENT PRIMARY KEY,
-        name      VARCHAR(64) NOT NULL,
-        sort_order INT DEFAULT 0
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
-    `);
-    await c.query(`
       CREATE TABLE IF NOT EXISTS products (
-        id          INT AUTO_INCREMENT PRIMARY KEY,
-        name        VARCHAR(128) NOT NULL,
-        price       DECIMAL(10,2) NOT NULL,
-        image       TEXT,
-        category    VARCHAR(64) DEFAULT '',
-        sales       INT DEFAULT 0,
+        id           INT AUTO_INCREMENT PRIMARY KEY,
+        name         VARCHAR(128) NOT NULL,
+        price        DECIMAL(10,2) NOT NULL,
+        image        TEXT,
+        category     VARCHAR(64) DEFAULT '',
+        sales        INT DEFAULT 0,
         is_available TINYINT DEFAULT 1,
-        created_at  DATETIME DEFAULT CURRENT_TIMESTAMP
+        created_at   DATETIME DEFAULT CURRENT_TIMESTAMP
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
     `);
+
     await c.query(`
       CREATE TABLE IF NOT EXISTS stores (
         id        INT AUTO_INCREMENT PRIMARY KEY,
-        name      VARCHAR(128) NOT NULL,
+        name      VARCHAR(128) NOT NULL UNIQUE,
         address   VARCHAR(256) DEFAULT '',
         phone     VARCHAR(20) DEFAULT '',
         hours     VARCHAR(32) DEFAULT '08:00-21:00',
@@ -87,6 +75,7 @@ const ready = (async () => {
         is_open   TINYINT DEFAULT 1
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
     `);
+
     await c.query(`
       CREATE TABLE IF NOT EXISTS orders (
         id           VARCHAR(64) PRIMARY KEY,
@@ -105,61 +94,11 @@ const ready = (async () => {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
     `);
 
-    // 3. 种子数据
-    // 分类
-    const [[{ cnt: catCnt }]] = await c.query('SELECT COUNT(*) as cnt FROM categories');
-    if (catCnt === 0) {
-      await c.query(`INSERT INTO categories (name, sort_order) VALUES
-        ('吐司',1),('可颂',2),('欧包',3),('贝果',4),('丹麦',5),('蛋糕',6),('咖啡',7)
-      `);
-    }
-
-    // 商品 — 自动清理历史重复测试数据
-    const [[{ cnt: realCnt }]] = await c.query(
-      "SELECT COUNT(*) as cnt FROM products WHERE name != '原味馒头' OR price != 8"
-    );
-    if (realCnt === 0) {
-      // 数据库里只有测试数据 — 先清空再插入一条干净的
-      await c.query('DELETE FROM products');
-      await c.query(`INSERT INTO products (name, price, image, category, sales) VALUES
-        ('原味馒头', 8, '', '', 0)
-      `);
-      console.log('[db] 商品表已重置为默认状态');
-    } else if (realCnt > 0) {
-      // 用户已经添加了真实商品 — 什么都不做
-      console.log('[db] 检测到真实商品数据，跳过种子');
-    }
-
-    // 门店 — 先清理历史重复数据（保留每组 name 里 id 最小的）
+    // 3. 初始化门店
     await c.query(`
-      DELETE s1 FROM stores s1
-      INNER JOIN stores s2 ON s1.name = s2.name AND s1.id > s2.id
+      INSERT IGNORE INTO stores (name, address, phone, hours, latitude, longitude, is_open) VALUES
+      ('大力馒头·格创壹号店', '广东省珠海市香洲区唐家湾镇香山路639号', '0756-1234567', '08:00-21:00', 22.3568, 113.5542, 1)
     `);
-
-    // 加唯一约束防止将来重复（如果已有则跳过）
-    try {
-      await c.query('ALTER TABLE stores ADD UNIQUE INDEX idx_stores_name (name)');
-      console.log('[db] 已为 stores.name 添加唯一约束');
-    } catch (e) {
-      // 约束已存在或数据仍有重复 — 不影响启动
-      if (e.code !== 'ER_DUP_KEYNAME') {
-        console.log('[db] stores.name 唯一约束创建提示:', e.message);
-      }
-    }
-
-    // 种子逻辑：只有种子数据 → 清空重插（用户加的真实门店不会被清除）
-    const [[{ cnt: storeCnt }]] = await c.query(
-      "SELECT COUNT(*) as cnt FROM stores WHERE name != '大力馒头·格创壹号店'"
-    );
-    if (storeCnt === 0) {
-      await c.query('DELETE FROM stores');
-      await c.query(`INSERT INTO stores (name, address, phone, hours, latitude, longitude, is_open) VALUES
-        ('大力馒头·格创壹号店', '广东省珠海市香洲区唐家湾镇香山路639号', '0756-1234567', '08:00-21:00', 22.3568, 113.5542, 1)
-      `);
-      console.log('[db] 门店表已重置为默认状态');
-    } else {
-      console.log('[db] 检测到真实门店数据，跳过种子');
-    }
 
     console.log('[db] 初始化完成');
   } finally {
