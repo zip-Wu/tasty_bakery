@@ -4,13 +4,33 @@
 const express = require('express');
 const crypto = require('crypto');
 const https = require('https');
+const tls = require('tls');
+const fs = require('fs');
 const { pool } = require('../database');
 
 const router = express.Router();
 
-// 微信小程序 AppID（生产与开发共用）
-const WX_APP_ID = process.env.WX_APP_ID || 'wx15f2f2b49e880346';
-const WX_APP_SECRET = process.env.WX_APP_SECRET || '';
+// 微信小程序 AppID（通过环境变量注入）
+const WX_APP_ID = process.env.WX_APP_ID;
+const WX_APP_SECRET = process.env.WX_APP_SECRET;
+
+// 构造 HTTPS 请求选项：优先系统 CA → Node.js 内置 CA → 默认（依赖环境变量）
+function getHttpsOptions() {
+  // 1) 系统 CA 证书文件（ca-certificates 包安装后）
+  const systemPaths = ['/etc/ssl/certs/ca-certificates.crt', '/etc/ssl/certs/ca-bundle.crt'];
+  for (const p of systemPaths) {
+    try {
+      const ca = fs.readFileSync(p);
+      if (ca && ca.length > 0) return { ca };
+    } catch (_) {}
+  }
+  // 2) Node.js 内置 CA 列表
+  if (tls.rootCertificates && tls.rootCertificates.length > 0) {
+    return { ca: tls.rootCertificates };
+  }
+  // 3) 完全依赖 NODE_OPTIONS=--use-openssl-ca 环境变量
+  return {};
+}
 
 function generateId() {
   return Date.now().toString(36) + crypto.randomBytes(4).toString('hex');
@@ -29,7 +49,7 @@ function getOpenId(code) {
       '&js_code=' + code +
       '&grant_type=authorization_code';
 
-    https.get(url, (wxRes) => {
+    https.get(url, getHttpsOptions(), (wxRes) => {
       var data = '';
       wxRes.on('data', function(chunk) { data += chunk; });
       wxRes.on('end', function() {
@@ -76,19 +96,17 @@ function customerResponse(user) {
   return { ...user, nickname: customerDisplayName(user.nickname) };
 }
 
-// ===== 微信登录（生产：code 换 openid；开发：deviceId 降级） =====
+// ===== 微信登录（code 换取 openid） =====
 router.post('/login', async (req, res) => {
-  const { nickname, avatar, deviceId, code } = req.body;
+  const { nickname, avatar, code } = req.body;
 
-  // 尝试用真实 code 换取微信 openid
-  var openId;
+  let openId;
   try {
     openId = await getOpenId(code);
-    console.log('[auth] 真实 openid:', openId.slice(0, 8) + '...');
+    console.log('[auth] openid:', openId.slice(0, 8) + '...');
   } catch (e) {
-    // 未配置 WX_APP_SECRET 时降级为 deviceId 模拟
-    openId = 'wx_' + (deviceId || generateId());
-    console.log('[auth] 降级 mock openid:', openId);
+    console.error('[auth] code2Session 失败:', e.message);
+    return res.json({ success: false, message: '微信登录失败，请重试' });
   }
 
   const [rows] = await pool.execute('SELECT * FROM users WHERE openid = ?', [openId]);
