@@ -56,7 +56,6 @@
     <view class="card-title">取餐信息</view>
     <view class="store-row">
       <text class="store-name">{{order.storeName}}</text>
-      <text class="pickup-time">{{order.pickupTimeDisplay}}</text>
     </view>
     <view class="store-addr">{{order.address}}</view>
   </view>

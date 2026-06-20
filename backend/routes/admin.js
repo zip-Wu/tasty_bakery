@@ -57,25 +57,55 @@ router.post('/admin/orders/:id/ready', async (req, res) => {
   res.json({ success: true, message: '已标记为待取餐' });
 });
 
+// ===== 商家标记已完成 =====
+router.post('/admin/orders/:id/complete', async (req, res) => {
+  const [rows] = await pool.execute('SELECT * FROM orders WHERE id = ?', [req.params.id]);
+
+  if (!rows[0]) {
+    return res.json({ success: false, message: '订单不存在' });
+  }
+
+  const now = new Date();
+  const mysqlNow = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' +
+    String(now.getDate()).padStart(2,'0') + ' ' + String(now.getHours()).padStart(2,'0') +
+    ':' + String(now.getMinutes()).padStart(2,'0') + ':' + String(now.getSeconds()).padStart(2,'0');
+
+  await pool.execute(
+    "UPDATE orders SET status = 'completed', completed_at = ? WHERE id = ?",
+    [mysqlNow, req.params.id]
+  );
+
+  // 订单完成时累加销量
+  const items = typeof rows[0].items === 'string' ? JSON.parse(rows[0].items) : rows[0].items;
+  for (const item of items) {
+    await pool.execute(
+      'UPDATE products SET sales = sales + ? WHERE id = ?',
+      [item.quantity, item.id]
+    );
+  }
+
+  res.json({ success: true, message: '已标记为已完成' });
+});
+
 // ===== 获取全部商品 =====
 router.get('/admin/products', async (req, res) => {
   const [products] = await pool.execute(
-    'SELECT id, name, price, image, category, sales, is_available FROM products ORDER BY id'
+    'SELECT id, name, price, image, category, sales, stock, is_available FROM products ORDER BY id'
   );
   res.json({ success: true, data: products });
 });
 
 // ===== 新增商品 =====
 router.post('/admin/products', async (req, res) => {
-  const { name, price, category, image } = req.body;
+  const { name, price, category, image, stock } = req.body;
 
   if (!name || !price) {
     return res.json({ success: false, message: '商品名称和价格不能为空' });
   }
 
   const [result] = await pool.execute(
-    'INSERT INTO products (name, price, image, category) VALUES (?, ?, ?, ?)',
-    [name, parseFloat(price), image || '', category || '']
+    'INSERT INTO products (name, price, image, category, stock) VALUES (?, ?, ?, ?, ?)',
+    [name, parseFloat(price), image || '', category || '', parseInt(stock) || 0]
   );
 
   const [rows] = await pool.execute('SELECT * FROM products WHERE id = ?', [result.insertId]);
@@ -84,7 +114,7 @@ router.post('/admin/products', async (req, res) => {
 
 // ===== 更新商品 =====
 router.put('/admin/products/:id', async (req, res) => {
-  const { is_available, price, name, category, image } = req.body;
+  const { is_available, price, name, category, image, stock } = req.body;
   const [rows] = await pool.execute('SELECT * FROM products WHERE id = ?', [req.params.id]);
 
   if (!rows[0]) {
@@ -113,6 +143,10 @@ router.put('/admin/products/:id', async (req, res) => {
   if (image !== undefined) {
     updates.push('image = ?');
     params.push(image);
+  }
+  if (stock !== undefined) {
+    updates.push('stock = ?');
+    params.push(parseInt(stock) || 0);
   }
 
   if (updates.length > 0) {

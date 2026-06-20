@@ -5,8 +5,7 @@ Page({
       storeName: '',
       address: '',
       items: [],
-      totalPrice: 0,
-      pickupTimeDisplay: ''
+      totalPrice: 0
     },
     isPaying: false,
     // 用于下单时的临时数据
@@ -40,12 +39,6 @@ Page({
       if (!order.address) {
         order.address = '广东省珠海市香洲区唐家湾镇香山路639号';
       }
-      // 格式化取餐时间
-      const pickupTime = new Date(order.pickupTime);
-      const hours = pickupTime.getHours().toString().padStart(2, '0');
-      const minutes = pickupTime.getMinutes().toString().padStart(2, '0');
-      order.pickupTimeDisplay = `预计 ${hours}:${minutes} 可取`;
-
       console.log('设置订单数据:', order);
       this.setData({ order });
     }).catch((err) => {

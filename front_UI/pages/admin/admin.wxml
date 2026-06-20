@@ -52,6 +52,10 @@
           <button class="action-btn ready-btn" size="mini"
             bindtap="markReady" data-id="{{item.id}}">标记待取餐</button>
         </view>
+        <view class="order-actions" wx:if="{{item.status === 'ready'}}">
+          <button class="action-btn complete-btn" size="mini"
+            bindtap="markComplete" data-id="{{item.id}}">标记已完成</button>
+        </view>
       </view>
       <view class="empty" wx:if="{{orders.length === 0}}">
         <text>暂无订单</text>
@@ -75,6 +79,8 @@
       <input class="form-input" placeholder="价格（数字）" type="digit" value="{{newProduct.price}}" bindinput="onNewPrice" />
       <input class="form-input" placeholder="分类（可选，如：吐司、欧包。留空则不归入任何分类）"
         value="{{newProduct.category}}" bindinput="onNewCategory" />
+      <input class="form-input" placeholder="库存量（数字，如：50）" type="number"
+        value="{{newProduct.stock}}" bindinput="onNewStock" />
       <view class="form-row upload-row">
         <text class="form-label">图片：</text>
         <button class="upload-btn" size="mini" bindtap="chooseImage">
@@ -91,25 +97,58 @@
 
     <!-- 商品列表 -->
     <view class="product-list">
-      <view class="product-card {{item.is_available ? '' : 'disabled'}}"
+      <view class="product-card {{item.is_available ? '' : 'disabled'}} {{editingId === item.id ? 'editing' : ''}}"
         wx:for="{{products}}" wx:key="id">
-        <image class="product-img" src="{{item.image}}" mode="aspectFill" />
+        <!-- 正常模式：小图 -->
+        <image wx:if="{{editingId !== item.id}}" class="product-img" src="{{item.image}}" mode="aspectFill" />
         <view class="product-info">
-          <text class="product-name">{{item.name}}</text>
-          <text class="product-cat">{{item.category}}</text>
-          <view class="product-price-row">
-            <text wx:if="{{editingId !== item.id}}" class="product-price">¥{{item.price}}</text>
-            <view wx:if="{{editingId === item.id}}" class="edit-row">
-              <input class="price-input" type="digit" value="{{editPrice}}" bindinput="onPriceInput" />
-              <button class="edit-btn save" size="mini" bindtap="savePrice">保存</button>
-              <button class="edit-btn cancel" size="mini" bindtap="cancelEdit">取消</button>
+          <!-- 正常显示 -->
+          <block wx:if="{{editingId !== item.id}}">
+            <text class="product-name">{{item.name}}</text>
+            <text class="product-cat">{{item.category}}</text>
+            <text class="product-stock">库存：{{item.stock || 0}}</text>
+            <view class="product-price-row">
+              <text class="product-price">¥{{item.price}}</text>
+              <text class="product-sales">售{{item.sales || 0}}</text>
             </view>
-            <text class="product-sales">售{{item.sales || 0}}</text>
-          </view>
+          </block>
+          <!-- 编辑模式 -->
+          <block wx:if="{{editingId === item.id}}">
+            <view class="edit-layout">
+              <!-- 左侧：大图 -->
+              <view class="edit-left">
+                <image class="edit-image" src="{{editImage || item.image}}" mode="aspectFill" bindtap="chooseEditImage" />
+                <button class="upload-btn" size="mini" bindtap="chooseEditImage">更换图片</button>
+              </view>
+              <!-- 右侧：表单 -->
+              <view class="edit-right">
+                <view class="edit-row-flex">
+                  <text class="edit-label-left">名称</text>
+                  <input class="edit-input-right" placeholder="商品名称" value="{{editName}}" bindinput="onEditName" />
+                </view>
+                <view class="edit-row-flex">
+                  <text class="edit-label-left">价格</text>
+                  <input class="edit-input-right" placeholder="价格" type="digit" value="{{editPrice}}" bindinput="onEditPrice" />
+                </view>
+                <view class="edit-row-flex">
+                  <text class="edit-label-left">分类</text>
+                  <input class="edit-input-right" placeholder="如：吐司" value="{{editCategory}}" bindinput="onEditCategory" />
+                </view>
+                <view class="edit-row-flex">
+                  <text class="edit-label-left">库存</text>
+                  <input class="edit-input-right" placeholder="库存" type="number" value="{{editStock}}" bindinput="onEditStock" />
+                </view>
+              </view>
+            </view>
+            <view class="edit-btns">
+              <button class="edit-confirm" size="mini" bindtap="saveEdit">保存</button>
+              <button class="edit-cancel-btn" size="mini" bindtap="cancelEdit">取消</button>
+            </view>
+          </block>
         </view>
-        <view class="product-actions">
+        <view class="product-actions" wx:if="{{editingId !== item.id}}">
           <button class="p-action-btn" size="mini"
-            bindtap="startEdit" data-id="{{item.id}}" data-price="{{item.price}}">改价</button>
+            bindtap="startEdit" data-id="{{item.id}}" data-name="{{item.name}}" data-price="{{item.price}}" data-category="{{item.category}}" data-stock="{{item.stock}}">编辑</button>
           <button class="p-action-btn {{item.is_available ? 'off' : 'on'}}" size="mini"
             bindtap="toggleProduct" data-id="{{item.id}}" data-available="{{item.is_available}}">
             {{item.is_available ? '下架' : '上架'}}

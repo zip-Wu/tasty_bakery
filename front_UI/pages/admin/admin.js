@@ -29,9 +29,13 @@ Page({
     // 商品
     products: [],
     editingId: null,
+    editName: '',
     editPrice: '',
+    editCategory: '',
+    editStock: '',
+    editImage: '', // 新上传的 cloud fileID
     showAddForm: false,
-    newProduct: { name: '', price: '', category: '', image: '' },
+    newProduct: { name: '', price: '', category: '', image: '', stock: '' },
     // 分类无需硬编码，管理页手动输入，顾客页自动提取
 
     // 营收
@@ -185,6 +189,32 @@ Page({
     });
   },
 
+  // 标记已完成（商家代顾客完成取餐）
+  markComplete(e) {
+    const id = e.currentTarget.dataset.id;
+    const token = wx.getStorageSync('admin_token');
+
+    wx.showModal({
+      title: '确认',
+      content: '确认顾客已取餐，标记为"已完成"？',
+      success: (r) => {
+        if (!r.confirm) return;
+        this._request({
+          url: '/api/admin/orders/' + id + '/complete',
+          method: 'POST',
+          header: { Authorization: 'Bearer ' + token }
+        }).then(res => {
+          if (res.success) {
+            wx.showToast({ title: '已完成', icon: 'success' });
+            this.loadOrders();
+          } else {
+            wx.showToast({ title: res.message || '操作失败', icon: 'none' });
+          }
+        });
+      }
+    });
+  },
+
   // ========== 商品管理 ==========
   loadProducts() {
     const token = wx.getStorageSync('admin_token');
@@ -216,33 +246,87 @@ Page({
   },
 
   startEdit(e) {
-    const { id, price } = e.currentTarget.dataset;
-    this.setData({ editingId: id, editPrice: String(price) });
-    // 延迟聚焦
-    setTimeout(() => {
-      // 小程序没有直接聚焦，用户手动点击输入框即可
-    }, 100);
+    const { id, name, price, category, stock } = e.currentTarget.dataset;
+    this.setData({
+      editingId: id,
+      editName: name || '',
+      editPrice: String(price || ''),
+      editCategory: category || '',
+      editStock: String(stock || 0),
+      editImage: ''
+    });
   },
 
-  onPriceInput(e) {
-    this.setData({ editPrice: e.detail.value });
+  onEditName(e) { this.setData({ editName: e.detail.value }); },
+  onEditPrice(e) { this.setData({ editPrice: e.detail.value }); },
+  onEditCategory(e) { this.setData({ editCategory: e.detail.value }); },
+  onEditStock(e) { this.setData({ editStock: e.detail.value }); },
+
+  // 编辑模式下更换图片
+  chooseEditImage() {
+    const that = this;
+    wx.chooseMedia({
+      count: 1,
+      mediaType: ['image'],
+      sourceType: ['album', 'camera'],
+      success(res) {
+        const tempFilePath = res.tempFiles[0].tempFilePath;
+        wx.compressImage({
+          src: tempFilePath,
+          quality: 80,
+          success(compressRes) {
+            that._cloudUploadForEdit(compressRes.tempFilePath);
+          },
+          fail() {
+            that._cloudUploadForEdit(tempFilePath);
+          }
+        });
+      }
+    });
   },
 
-  savePrice() {
-    const { editingId, editPrice } = this.data;
+  _cloudUploadForEdit(filePath) {
+    const that = this;
+    wx.showLoading({ title: '上传中...' });
+    wx.cloud.uploadFile({
+      cloudPath: 'products/' + Date.now() + '_' + Math.random().toString(36).slice(2, 8) + '.jpg',
+      filePath: filePath,
+      success(uploadRes) {
+        wx.hideLoading();
+        that.setData({ editImage: uploadRes.fileID });
+        wx.showToast({ title: '上传成功', icon: 'success' });
+      },
+      fail(err) {
+        wx.hideLoading();
+        console.error('云存储上传失败:', err);
+        wx.showToast({ title: '上传失败', icon: 'none' });
+      }
+    });
+  },
+
+  saveEdit() {
+    const { editingId, editName, editPrice, editCategory, editStock, editImage } = this.data;
     if (!editingId) return;
     const token = wx.getStorageSync('admin_token');
+
+    const data = {
+      name: editName,
+      price: parseFloat(editPrice),
+      category: editCategory,
+      stock: parseInt(editStock) || 0
+    };
+    if (editImage) data.image = editImage;
 
     this._request({
       url: '/api/admin/products/' + editingId,
       method: 'PUT',
-      data: { price: parseFloat(editPrice) },
+      data: data,
       header: { Authorization: 'Bearer ' + token }
     }).then(res => {
       if (res.success) {
-        this.setData({ editingId: null, editPrice: '' });
+        this.setData({ editingId: null, editName: '', editPrice: '', editCategory: '', editStock: '', editImage: '' });
         this.loadProducts();
-        wx.showToast({ title: '价格已更新', icon: 'success' });
+        wx.showToast({ title: '已更新', icon: 'success' });
       } else {
         wx.showToast({ title: '修改失败', icon: 'none' });
       }
@@ -250,7 +334,7 @@ Page({
   },
 
   cancelEdit() {
-    this.setData({ editingId: null, editPrice: '' });
+    this.setData({ editingId: null, editName: '', editPrice: '', editCategory: '', editStock: '', editImage: '' });
   },
 
   toggleAddForm() {
@@ -260,6 +344,7 @@ Page({
   onNewName(e) { this.setData({ 'newProduct.name': e.detail.value }); },
   onNewPrice(e) { this.setData({ 'newProduct.price': e.detail.value }); },
   onNewCategory(e) { this.setData({ 'newProduct.category': e.detail.value }); },
+  onNewStock(e) { this.setData({ 'newProduct.stock': e.detail.value }); },
 
   // 从手机相册/相机选择商品图片 → 直接上传云存储
   chooseImage() {
@@ -327,7 +412,7 @@ Page({
         wx.showToast({ title: '新增成功', icon: 'success' });
         this.setData({
           showAddForm: false,
-          newProduct: { name: '', price: '', category: '', image: '' }
+          newProduct: { name: '', price: '', category: '', image: '', stock: '' }
         });
         this.loadProducts();
       } else {

@@ -110,12 +110,6 @@ page {
   color: #333;
 }
 
-.pickup-time {
-  font-size: 28rpx;
-  color: #f5a623;
-  font-weight: bold;
-}
-
 .store-addr {
   font-size: 26rpx;
   color: #999;

@@ -45,12 +45,6 @@ Page({
     order.acceptedAtDisplay = order.acceptedAt ? this.formatTime(order.acceptedAt) : '';
     order.completedAtDisplay = order.completedAt ? this.formatTime(order.completedAt) : '';
     
-    // 取餐时间显示
-    const pickupTime = new Date(order.pickupTime);
-    const hours = pickupTime.getHours().toString().padStart(2, '0');
-    const minutes = pickupTime.getMinutes().toString().padStart(2, '0');
-    order.pickupTimeDisplay = `预计 ${hours}:${minutes} 可取`;
-    
     // 商品总数
     order.totalQuantity = order.items.reduce((sum, item) => sum + item.quantity, 0);
     

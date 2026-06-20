@@ -10,7 +10,7 @@ const router = express.Router();
 router.get('/products', async (req, res) => {
   const { category } = req.query;
 
-  let sql = 'SELECT id, name, price, image, category, sales FROM products WHERE is_available = 1';
+  let sql = 'SELECT id, name, price, image, category, sales, stock FROM products WHERE is_available = 1 AND stock > 0';
   const params = [];
 
   if (category && category !== '全部') {
@@ -27,7 +27,7 @@ router.get('/products', async (req, res) => {
 // ===== 获取分类（从商品数据自动提取） =====
 router.get('/categories', async (req, res) => {
   const [rows] = await pool.execute(
-    "SELECT DISTINCT category FROM products WHERE category IS NOT NULL AND category != '' AND is_available = 1 ORDER BY category"
+    "SELECT DISTINCT category FROM products WHERE category IS NOT NULL AND category != '' AND is_available = 1 AND stock > 0 ORDER BY category"
   );
   const names = ['全部', ...rows.map(r => r.category)];
   res.json({ success: true, data: names });

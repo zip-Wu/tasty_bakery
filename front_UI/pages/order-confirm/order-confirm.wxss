@@ -74,35 +74,6 @@ page {
   color: #999;
 }
 
-/* ========== 取餐时间 ========== */
-.pickup-time {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: #fff;
-  margin: 20rpx 24rpx;
-  border-radius: 16rpx;
-  padding: 28rpx 24rpx;
-  box-shadow: 0 2rpx 12rpx rgba(0,0,0,0.04);
-}
-
-.pickup-time .label {
-  font-size: 28rpx;
-  color: #333;
-}
-
-.time-value {
-  display: flex;
-  align-items: center;
-  color: #f5a623;
-  font-size: 28rpx;
-}
-
-.time-value .arrow {
-  margin-left: 8rpx;
-  font-size: 32rpx;
-}
-
 /* ========== 订单金额 ========== */
 .order-summary {
   background: #fff;

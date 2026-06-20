@@ -18,15 +18,6 @@
     </view>
   </view>
 
-  <!-- 取餐时间 -->
-  <view class="pickup-time">
-    <text class="label">取餐时间</text>
-    <view class="time-value">
-      <text>{{order.pickupTimeDisplay}}</text>
-      <text class="arrow">›</text>
-    </view>
-  </view>
-
   <!-- 订单金额 -->
   <view class="order-summary">
     <view class="summary-row">

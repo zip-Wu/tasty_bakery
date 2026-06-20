@@ -58,10 +58,17 @@ const ready = (async () => {
         image        TEXT,
         category     VARCHAR(64) DEFAULT '',
         sales        INT DEFAULT 0,
+        stock        INT DEFAULT 0,
         is_available TINYINT DEFAULT 1,
         created_at   DATETIME DEFAULT CURRENT_TIMESTAMP
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
     `);
+    // 兼容旧表：如果缺 stock 列则补齐
+    const [stockCols] = await c.query(`SHOW COLUMNS FROM products LIKE 'stock'`);
+    if (stockCols.length === 0) {
+      await c.query(`ALTER TABLE products ADD COLUMN stock INT DEFAULT 0`);
+      console.log('[db] 已补全 products.stock 列');
+    }
 
     await c.query(`
       CREATE TABLE IF NOT EXISTS stores (

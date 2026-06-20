@@ -91,6 +91,7 @@
 .order-actions { margin-top: 16rpx; }
 .action-btn { font-size: 22rpx !important; }
 .ready-btn { background: #27ae60 !important; color: #fff !important; }
+.complete-btn { background: #333 !important; color: #fff !important; }
 
 /* 商品管理 */
 .section-header {
@@ -130,12 +131,12 @@
 /* 图片上传 */
 .upload-row { margin-bottom: 12rpx; }
 .upload-btn {
-  font-size: 24rpx !important;
+  font-size: 22rpx !important;
   background: #f0f0f0 !important;
   color: #333 !important;
   border: 2rpx dashed #ccc !important;
   border-radius: 8rpx !important;
-  padding: 12rpx 24rpx !important;
+  padding: 8rpx 16rpx !important;
 }
 .upload-preview {
   width: 200rpx;
@@ -155,25 +156,56 @@
   margin-bottom: 12rpx;
 }
 .product-card.disabled { opacity: 0.5; }
+.product-card.editing { align-items: flex-start; }
 .product-img { width: 80rpx; height: 80rpx; border-radius: 8rpx; margin-right: 16rpx; flex-shrink: 0; }
 .product-info { flex: 1; min-width: 0; }
 .product-name { font-size: 28rpx; font-weight: bold; display: block; }
 .product-cat { font-size: 22rpx; color: #999; }
+.product-stock { font-size: 22rpx; color: #999; margin-top: 2rpx; display: block; }
 .product-price-row { display: flex; align-items: center; justify-content: space-between; margin-top: 4rpx; }
 .product-price { font-size: 28rpx; color: #e74c3c; font-weight: bold; }
 .product-sales { font-size: 22rpx; color: #999; }
-.edit-row { display: flex; align-items: center; gap: 8rpx; }
-.price-input {
-  border: 1px solid #333;
-  border-radius: 4rpx;
-  padding: 4rpx 8rpx;
-  width: 100rpx;
-  font-size: 24rpx;
-  text-align: center;
+
+/* 编辑模式 */
+.edit-layout { display: flex; }
+.edit-left {
+  width: 160rpx;
+  flex-shrink: 0;
+  margin-right: 20rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
-.edit-btn { font-size: 20rpx !important; }
-.edit-btn.save { background: #27ae60 !important; color: #fff !important; }
-.edit-btn.cancel { background: #e0e0e0 !important; }
+.edit-image {
+  width: 160rpx;
+  height: 160rpx;
+  border-radius: 10rpx;
+  background: #f5f5f5;
+  margin-bottom: 10rpx;
+}
+.edit-left .upload-btn { font-size: 18rpx !important; padding: 4rpx 10rpx !important; }
+.edit-right { flex: 1; min-width: 0; }
+.edit-row-flex { display: flex; align-items: center; margin-bottom: 10rpx; }
+.edit-label-left {
+  font-size: 24rpx;
+  color: #666;
+  width: 64rpx;
+  flex-shrink: 0;
+  text-align: right;
+  margin-right: 10rpx;
+}
+.edit-input-right {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid #e0e0e0;
+  border-radius: 6rpx;
+  padding: 8rpx 12rpx;
+  font-size: 26rpx;
+  box-sizing: border-box;
+}
+.edit-btns { display: flex; gap: 16rpx; margin-top: 14rpx; justify-content: flex-end; }
+.edit-confirm { font-size: 24rpx !important; background: #27ae60 !important; color: #fff !important; }
+.edit-cancel-btn { font-size: 24rpx !important; background: #e0e0e0 !important; }
 .product-actions { display: flex; flex-direction: column; gap: 8rpx; margin-left: 12rpx; }
 .p-action-btn { font-size: 20rpx !important; min-width: 80rpx; }
 .p-action-btn.off { background: #e74c3c !important; color: #fff !important; }

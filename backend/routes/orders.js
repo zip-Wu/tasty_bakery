@@ -40,12 +40,7 @@ router.post('/orders', async (req, res) => {
       items: JSON.stringify(items),
       totalPrice,
       status: 'pending',
-      pickupTime: pickupTime || (() => {
-        const d = new Date(Date.now() + 30 * 60000);
-        return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' +
-          String(d.getDate()).padStart(2,'0') + ' ' + String(d.getHours()).padStart(2,'0') +
-          ':' + String(d.getMinutes()).padStart(2,'0') + ':' + String(d.getSeconds()).padStart(2,'0');
-      })(),
+      pickupTime: pickupTime || null,
     };
 
     await pool.execute(
@@ -136,6 +131,14 @@ router.post('/pay/:orderId', async (req, res) => {
     ['preparing', payResult.timeEnd, req.params.orderId]
   );
 
+  // 扣减库存：每件商品 stock - 购买数量，stock 归零则自动下架
+  for (const item of (typeof rows[0].items === 'string' ? JSON.parse(rows[0].items) : rows[0].items)) {
+    await pool.execute(
+      'UPDATE products SET stock = GREATEST(stock - ?, 0), is_available = CASE WHEN stock - ? <= 0 THEN 0 ELSE is_available END WHERE id = ?',
+      [item.quantity, item.quantity, item.id]
+    );
+  }
+
   res.json({
     success: true,
     data: {
@@ -175,6 +178,15 @@ router.post('/orders/:id/complete', async (req, res) => {
     'UPDATE orders SET status = ?, completed_at = ? WHERE id = ?',
     ['completed', now, req.params.id]
   );
+
+  // 订单完成时累加销量
+  const items = typeof rows[0].items === 'string' ? JSON.parse(rows[0].items) : rows[0].items;
+  for (const item of items) {
+    await pool.execute(
+      'UPDATE products SET sales = sales + ? WHERE id = ?',
+      [item.quantity, item.id]
+    );
+  }
 
   res.json({ success: true, data: formatOrder({ ...rows[0], status: 'completed', completed_at: now }) });
 });
