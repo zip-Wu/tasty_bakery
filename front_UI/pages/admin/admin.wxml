@@ -20,6 +20,8 @@
       bindtap="switchTab" data-tab="orders">订单管理</view>
     <view class="tab-item {{currentTab === 'products' ? 'active' : ''}}"
       bindtap="switchTab" data-tab="products">商品管理</view>
+    <view class="tab-item {{currentTab === 'quick-sale' ? 'active' : ''}}"
+      bindtap="switchTab" data-tab="quick-sale">快速录单</view>
     <view class="tab-item {{currentTab === 'dashboard' ? 'active' : ''}}"
       bindtap="switchTab" data-tab="dashboard">营收看板</view>
     <view class="tab-item logout-tab" bindtap="doLogout">退出</view>
@@ -35,6 +37,12 @@
         {{item.label}}
       </view>
     </scroll-view>
+
+    <!-- 新订单提醒横幅 -->
+    <view class="new-order-banner" wx:if="{{newOrderAlert}}" bindtap="dismissNewAlert">
+      <text class="banner-text">🔔 有 {{newOrderCount}} 笔新订单，已自动刷新</text>
+      <text class="banner-close">✕</text>
+    </view>
 
     <!-- 订单列表 -->
     <view class="order-list">
@@ -157,6 +165,52 @@
             bindtap="deleteProduct" data-id="{{item.id}}" data-name="{{item.name}}">删除</button>
         </view>
       </view>
+    </view>
+  </view>
+
+  <!-- ====== 快速录单 ====== -->
+  <view class="content qs-content" wx:if="{{currentTab === 'quick-sale'}}">
+    <view class="qs-header">
+      <text class="qs-header-title">📋 快速录单</text>
+      <text class="qs-header-desc">记录线下收款，自动计入今日营收和销量</text>
+    </view>
+
+    <!-- 商品列表 -->
+    <view class="qs-product-list">
+      <view class="qs-item {{qsCart[item.id] ? 'selected' : ''}}"
+        wx:for="{{qsProducts}}" wx:key="id">
+        <image class="qs-item-img" src="{{item.image}}" mode="aspectFill"
+          wx:if="{{item.image}}" />
+        <view class="qs-item-img qs-item-img-placeholder" wx:else>🍞</view>
+        <view class="qs-item-info">
+          <text class="qs-item-name">{{item.name}}</text>
+          <text class="qs-item-meta">{{item.category}} · 库存 {{item.stock}}</text>
+          <text class="qs-item-price">¥{{item.price}}</text>
+        </view>
+        <view class="qs-qty-ctrl">
+          <view class="qs-qty-btn minus {{qsCart[item.id] ? '' : 'disabled'}}"
+            bindtap="qsChange" data-id="{{item.id}}" data-delta="-1">−</view>
+          <text class="qs-qty-num">{{qsCart[item.id] || 0}}</text>
+          <view class="qs-qty-btn plus"
+            bindtap="qsChange" data-id="{{item.id}}" data-delta="1">+</view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 空状态 -->
+    <view class="empty" wx:if="{{qsProducts.length === 0}}">
+      <text>暂无在售商品</text>
+    </view>
+
+    <!-- 底部汇总栏 -->
+    <view class="qs-summary">
+      <view class="qs-summary-info">
+        <text class="qs-summary-item">已选 <text class="qs-summary-num">{{qsCount}}</text> 件</text>
+        <text class="qs-summary-item">合计 <text class="qs-summary-num">¥{{qsTotal}}</text></text>
+      </view>
+      <button class="qs-submit-btn" bindtap="qsSubmit"
+        disabled="{{qsCount === 0 || qsSubmitting}}"
+        loading="{{qsSubmitting}}">确认录入</button>
     </view>
   </view>
 

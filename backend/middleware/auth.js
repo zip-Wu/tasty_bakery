@@ -14,8 +14,8 @@ const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123456';
 // JWT 密钥 → 通过环境变量 JWT_SECRET 设置，避免重启后失效
 const JWT_SECRET = process.env.JWT_SECRET || 'dali-mantou-2024-secret-key';
 
-// Token 有效期：8 小时
-const TOKEN_EXPIRES = '8h';
+// Token 有效期：12 小时（一个班次），生产环境通过 JWT_SECRET 环境变量加固
+const TOKEN_EXPIRES = '12h';
 
 /**
  * 验证密码并签发 token

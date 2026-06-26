@@ -264,6 +264,99 @@
     color: #333;
   }
   .add-btn-small.cancel:hover { background: #d1d3d5; }
+  /* 快速录单样式 */
+  .qs-product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+  .qs-product-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    background: #fff;
+    transition: border-color 0.2s;
+  }
+  .qs-product-item.selected { border-color: #f5a623; background: #fef9f0; }
+  .qs-product-item img {
+    width: 52px; height: 52px;
+    border-radius: 8px;
+    object-fit: cover;
+    flex-shrink: 0;
+    background: #f0f0f0;
+  }
+  .qs-product-info { flex: 1; min-width: 0; }
+  .qs-product-name { font-size: 14px; font-weight: 600; margin-bottom: 2px; }
+  .qs-product-meta { font-size: 12px; color: #999; margin-bottom: 2px; }
+  .qs-product-price { font-size: 16px; font-weight: 700; color: #f5a623; }
+  .qs-qty-ctrl {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+  .qs-qty-btn {
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    border: none;
+    font-size: 18px;
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+  }
+  .qs-qty-minus { background: #f0f0f0; color: #666; }
+  .qs-qty-minus:hover { background: #e0e0e0; }
+  .qs-qty-plus { background: #f5a623; color: #fff; }
+  .qs-qty-plus:hover { background: #e8911a; }
+  .qs-qty-num { font-size: 16px; font-weight: 600; min-width: 28px; text-align: center; color: #333; }
+  .qs-summary {
+    position: sticky;
+    bottom: 0;
+    background: #fff;
+    border-top: 2px solid #f0f0f0;
+    padding: 16px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 20px -24px -10px;
+    border-radius: 0 0 10px 10px;
+  }
+  .qs-summary-info { display: flex; gap: 24px; align-items: center; }
+  .qs-summary-item { font-size: 14px; color: #666; }
+  .qs-summary-item strong { font-size: 20px; color: #f5a623; }
+  .qs-submit-btn {
+    padding: 12px 36px;
+    background: #f5a623;
+    color: #fff;
+    border: none;
+    border-radius: 24px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .qs-submit-btn:hover { background: #e8911a; }
+  .qs-submit-btn:disabled { background: #ccc; cursor: not-allowed; }
+  .qs-toast {
+    position: fixed;
+    top: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #333;
+    color: #fff;
+    padding: 12px 28px;
+    border-radius: 8px;
+    font-size: 14px;
+    z-index: 999;
+    opacity: 0;
+    transition: opacity 0.3s;
+    pointer-events: none;
+  }
+  .qs-toast.show { opacity: 1; }
+  .qs-toast.success { background: #27ae60; }
+  .qs-toast.error { background: #e74c3c; }
 </style>
 </head>
 <body>
@@ -297,6 +390,7 @@
 
 <div class="tabs">
   <div class="tab active" data-tab="orders">订单管理</div>
+  <div class="tab" data-tab="quick-sale">快速录单</div>
   <div class="tab" data-tab="products">商品管理</div>
   <div class="tab" data-tab="dashboard">营收看板</div>
 </div>
@@ -304,6 +398,9 @@
 <div class="content" id="content"></div>
 
 </div><!-- /adminPage -->
+
+<!-- 快速录单 Toast -->
+<div class="qs-toast" id="qsToast"></div>
 
 <script>
 const API = '/api/admin';
@@ -393,6 +490,7 @@ document.querySelectorAll('.tab').forEach(tab => {
     tab.classList.add('active');
     const name = tab.dataset.tab;
     if (name === 'orders') loadOrders();
+    else if (name === 'quick-sale') loadQuickSale();
     else if (name === 'products') loadProducts();
     else if (name === 'dashboard') loadDashboard();
   });
@@ -438,6 +536,7 @@ async function loadOrders(filter = 'all') {
 
         const badgeClass = 'badge-' + o.status;
         const statusMap = { pending: '待支付', preparing: '制作中', ready: '待取餐', completed: '已完成' };
+        const sourceTag = o.source === 'offline' ? ' <span style="font-size:10px;color:#f5a623;font-weight:600">[线下]</span>' : '';
 
         let actionBtn = '';
         if (o.status === 'preparing') {
@@ -448,7 +547,7 @@ async function loadOrders(filter = 'all') {
 
         return `
           <tr>
-            <td><strong>${o.orderNo}</strong><br><span style="color:#999;font-size:11px">${timeStr}</span></td>
+            <td><strong>${o.orderNo}</strong>${sourceTag}<br><span style="color:#999;font-size:11px">${timeStr}</span></td>
             <td>${o.userNickname}</td>
             <td><div class="item-tags">${itemTags}</div></td>
             <td>¥${o.totalPrice}</td>
@@ -615,6 +714,142 @@ async function addProduct() {
   } catch(e) {
     alert('添加失败，请检查后端是否启动');
   }
+}
+
+// ========== 快速录单 ==========
+let qsCart = {};
+
+async function loadQuickSale() {
+  const content = document.getElementById('content');
+  content.innerHTML = '<div class="loading">加载商品中...</div>';
+
+  const res = await authFetch(API + '/products').then(r => r.json());
+  if (!res.success) return;
+
+  qsCart = {};
+
+  const productsHtml = res.data
+    .filter(p => p.is_available)
+    .map(p => `
+      <div class="qs-product-item" id="qs-item-${p.id}">
+        <img src="${p.image}" alt="${p.name}" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 52 52%22><rect fill=%22%23eee%22 width=%2252%22 height=%2252%22 rx=%228%22/><text x=%2226%22 y=%2230%22 text-anchor=%22middle%22 fill=%22%23ccc%22 font-size=%2216%22>🍞</text></svg>'">
+        <div class="qs-product-info">
+          <div class="qs-product-name">${p.name}</div>
+          <div class="qs-product-meta">${p.category} · 库存 ${p.stock}</div>
+          <div class="qs-product-price">¥${p.price}</div>
+        </div>
+        <div class="qs-qty-ctrl">
+          <button class="qs-qty-btn qs-qty-minus" onclick="qsChange(${p.id}, -1)">−</button>
+          <span class="qs-qty-num" id="qs-qty-${p.id}">0</span>
+          <button class="qs-qty-btn qs-qty-plus" onclick="qsChange(${p.id}, 1)">+</button>
+        </div>
+      </div>`
+    ).join('');
+
+  content.innerHTML = `
+    <div class="card" style="position:relative">
+      <div class="card-title">📋 快速录单 — 记录线下收款</div>
+      <div style="font-size:12px;color:#999;margin-bottom:16px">
+        选择顾客购买的馒头和数量，点击"确认录入"即可计入今日营收和商品销量统计（无需走微信支付）
+      </div>
+      <div class="qs-product-grid">${productsHtml}</div>
+      <div class="qs-summary">
+        <div class="qs-summary-info">
+          <div class="qs-summary-item">已选 <strong id="qsCount">0</strong> 件</div>
+          <div class="qs-summary-item">合计 <strong id="qsTotal">¥0</strong></div>
+        </div>
+        <button class="qs-submit-btn" id="qsSubmitBtn" disabled onclick="qsSubmit()">确认录入</button>
+      </div>
+    </div>`;
+}
+
+function qsChange(productId, delta) {
+  const productEl = document.getElementById('qs-item-' + productId);
+  const qtyEl = document.getElementById('qs-qty-' + productId);
+
+  let current = qsCart[productId] || 0;
+  current += delta;
+  if (current < 0) current = 0;
+
+  qsCart[productId] = current;
+  qtyEl.textContent = current;
+
+  if (current > 0) {
+    productEl.classList.add('selected');
+  } else {
+    productEl.classList.remove('selected');
+    delete qsCart[productId];
+  }
+
+  qsUpdateSummary();
+}
+
+function qsUpdateSummary() {
+  let count = 0;
+  for (const qty of Object.values(qsCart)) {
+    count += qty;
+  }
+
+  // 从已渲染的 DOM 中读取价格
+  let total = 0;
+  for (const [id, qty] of Object.entries(qsCart)) {
+    const item = document.getElementById('qs-item-' + id);
+    if (item) {
+      const priceEl = item.querySelector('.qs-product-price');
+      if (priceEl) {
+        const price = parseFloat(priceEl.textContent.replace('¥', ''));
+        total += price * qty;
+      }
+    }
+  }
+
+  document.getElementById('qsCount').textContent = count;
+  document.getElementById('qsTotal').textContent = '¥' + total.toFixed(2);
+
+  const btn = document.getElementById('qsSubmitBtn');
+  btn.disabled = count === 0;
+}
+
+async function qsSubmit() {
+  const btn = document.getElementById('qsSubmitBtn');
+  btn.disabled = true;
+  btn.textContent = '提交中...';
+
+  const items = Object.entries(qsCart).map(([id, quantity]) => ({
+    id: parseInt(id),
+    quantity,
+  }));
+
+  try {
+    const res = await authFetch(API + '/quick-sale', {
+      method: 'POST',
+      body: JSON.stringify({ items }),
+    }).then(r => r.json());
+
+    if (res.success) {
+      qsToast('✅ ' + res.message, 'success');
+      loadQuickSale();    // 刷新面板（重置为 0）
+      loadHeader();       // 刷新顶部今日营收
+    } else {
+      qsToast('❌ ' + res.message, 'error');
+      btn.disabled = false;
+      btn.textContent = '确认录入';
+    }
+  } catch (e) {
+    qsToast('❌ 网络错误，请重试', 'error');
+    btn.disabled = false;
+    btn.textContent = '确认录入';
+  }
+}
+
+function qsToast(msg, type) {
+  const el = document.getElementById('qsToast');
+  el.textContent = msg;
+  el.className = 'qs-toast show ' + (type || '');
+  clearTimeout(el._timeout);
+  el._timeout = setTimeout(() => {
+    el.classList.remove('show');
+  }, 2000);
 }
 
 // ========== 营收看板 ==========

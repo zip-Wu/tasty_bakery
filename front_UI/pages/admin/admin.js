@@ -1,5 +1,5 @@
 const app = getApp();
-const CLOUD_ENV = 'dali-bakery-api-d9frevvce1335562';
+const CLOUD_ENV = 'dali-backern-api-d0es660181ffbe4';
 const SERVICE_NAME = 'dali-bakery-api';
 
 Page({
@@ -10,7 +10,7 @@ Page({
     loginError: '',
 
     // 当前标签页
-    currentTab: 'orders',   // orders | products | dashboard
+    currentTab: 'orders',   // orders | quick-sale | products | dashboard
 
     // 订单
     orderFilter: 'all',
@@ -39,15 +39,40 @@ Page({
     // 分类无需硬编码，管理页手动输入，顾客页自动提取
 
     // 营收
-    dashboard: null
+    dashboard: null,
+
+    // 快速录单
+    qsProducts: [],
+    qsCart: {},
+    qsCount: 0,
+    qsTotal: 0,
+    qsSubmitting: false,
+
+    // 订单轮询提醒
+    newOrderAlert: false,
+    newOrderCount: 0
   },
 
   onLoad() {
-    // 检查是否已保存 token
     const token = wx.getStorageSync('admin_token');
     if (token) {
       this.verifyToken(token);
     }
+  },
+
+  onShow() {
+    // 回到页面时恢复轮询
+    if (this.data.loggedIn && this.data.currentTab === 'orders') {
+      this._startPolling();
+    }
+  },
+
+  onHide() {
+    this._stopPolling();
+  },
+
+  onUnload() {
+    this._stopPolling();
   },
 
   // ========== 登录 ==========
@@ -116,9 +141,13 @@ Page({
 
   // ========== Tab 切换 ==========
   switchTab(e) {
+    this._stopPolling();
     const tab = e.currentTarget.dataset.tab;
     this.setData({ currentTab: tab });
-    if (tab === 'orders') this.loadOrders();
+    if (tab === 'orders') {
+      this.loadOrders();
+      this._startPolling();
+    } else if (tab === 'quick-sale') this.loadQuickSale();
     else if (tab === 'products') this.loadProducts();
     else if (tab === 'dashboard') this.loadDashboard();
   },
@@ -141,6 +170,7 @@ Page({
       if (res.success) {
         this.ordersRaw = res.data;
         this.renderOrders();
+        this._lastOrderIds = (res.data || []).map(o => o.id);
       } else {
         wx.showToast({ title: res.message || '加载失败', icon: 'none' });
       }
@@ -482,6 +512,159 @@ Page({
     }).catch(() => {
       wx.showToast({ title: '加载失败', icon: 'none' });
     });
+  },
+
+  // ========== 快速录单 ==========
+  loadQuickSale() {
+    const token = wx.getStorageSync('admin_token');
+    wx.showLoading({ title: '加载商品...' });
+
+    this._request({
+      url: '/api/admin/products',
+      header: { Authorization: 'Bearer ' + token }
+    }).then(res => {
+      wx.hideLoading();
+      if (res.success) {
+        // 只显示在售商品
+        const products = (res.data || [])
+          .filter(p => p.is_available)
+          .map(p => ({
+            ...p,
+            stock: p.stock || 0,
+          }));
+        this.setData({
+          qsProducts: products,
+          qsCart: {},
+          qsCount: 0,
+          qsTotal: 0,
+        });
+      }
+    }).catch(() => {
+      wx.hideLoading();
+      wx.showToast({ title: '加载失败', icon: 'none' });
+    });
+  },
+
+  qsChange(e) {
+    const id = e.currentTarget.dataset.id;
+    const delta = parseInt(e.currentTarget.dataset.delta) || 0;
+    const cart = { ...this.data.qsCart };
+
+    let qty = cart[id] || 0;
+    qty += delta;
+    if (qty < 0) qty = 0;
+
+    if (qty > 0) {
+      cart[id] = qty;
+    } else {
+      delete cart[id];
+    }
+
+    this.setData({ qsCart: cart });
+    this.qsUpdateSummary();
+  },
+
+  qsUpdateSummary() {
+    const cart = this.data.qsCart;
+    const products = this.data.qsProducts;
+    let count = 0;
+    let total = 0;
+
+    for (const id in cart) {
+      const qty = cart[id];
+      const product = products.find(p => p.id == id);
+      if (product && qty > 0) {
+        count += qty;
+        total += product.price * qty;
+      }
+    }
+
+    this.setData({ qsCount: count, qsTotal: total.toFixed(2) });
+  },
+
+  qsSubmit() {
+    const cart = this.data.qsCart;
+    const items = Object.keys(cart).map(id => ({
+      id: parseInt(id),
+      quantity: cart[id],
+    })).filter(item => item.quantity > 0);
+
+    if (items.length === 0) {
+      wx.showToast({ title: '请先选择商品', icon: 'none' });
+      return;
+    }
+
+    this.setData({ qsSubmitting: true });
+
+    const token = wx.getStorageSync('admin_token');
+    this._request({
+      url: '/api/admin/quick-sale',
+      method: 'POST',
+      data: { items },
+      header: { Authorization: 'Bearer ' + token }
+    }).then(res => {
+      this.setData({ qsSubmitting: false });
+      if (res.success) {
+        wx.showToast({ title: res.message || '录入成功', icon: 'success' });
+        // 刷新面板（重置为 0）
+        this.loadQuickSale();
+      } else {
+        wx.showToast({ title: res.message || '录入失败', icon: 'none' });
+      }
+    }).catch(() => {
+      this.setData({ qsSubmitting: false });
+      wx.showToast({ title: '网络错误', icon: 'none' });
+    });
+  },
+
+  // ========== 订单实时轮询 ==========
+
+  // 每 10 秒拉取一次订单，检测新订单 → 自动刷新 + 震动提醒
+  _startPolling() {
+    this._stopPolling();
+    this._lastOrderIds = (this.data.orders || []).map(o => o.id);
+    this._pollTimer = setInterval(() => this._pollCheck(), 10000);
+  },
+
+  _pollCheck() {
+    if (!this.data.loggedIn || this.data.currentTab !== 'orders') return;
+
+    const token = wx.getStorageSync('admin_token');
+    this._request({
+      url: '/api/admin/orders?status=' + this.data.orderFilter,
+      header: { Authorization: 'Bearer ' + token }
+    }).then(res => {
+      if (!res.success || !res.data) return;
+
+      const orderIds = res.data.map(o => o.id);
+      const newIds = orderIds.filter(id => !this._lastOrderIds.includes(id));
+
+      if (newIds.length > 0) {
+        this.ordersRaw = res.data;
+        this.renderOrders();
+        this._lastOrderIds = orderIds;
+
+        // 震动提醒商家
+        wx.vibrateLong();
+
+        // 显示顶部横幅
+        this.setData({ newOrderAlert: true, newOrderCount: newIds.length });
+        setTimeout(() => {
+          this.setData({ newOrderAlert: false, newOrderCount: 0 });
+        }, 6000);
+      }
+    }).catch(() => {});
+  },
+
+  _stopPolling() {
+    if (this._pollTimer) {
+      clearInterval(this._pollTimer);
+      this._pollTimer = null;
+    }
+  },
+
+  dismissNewAlert() {
+    this.setData({ newOrderAlert: false, newOrderCount: 0 });
   },
 
   // ========== 统一请求封装 ==========

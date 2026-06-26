@@ -1,30 +1,11 @@
 /**
- * 种子数据 — 首次运行时插入分类和门店（仅云端执行）
+ * 种子数据 — 首次运行时插入商品和门店（仅云端执行）
  * 用法：node seed.js
  */
 const { pool } = require('./database');
 
 (async () => {
   console.log('正在初始化数据...');
-
-  // ----- 分类 -----
-  const categories = [
-    ['吐司', 1],
-    ['可颂', 2],
-    ['欧包', 3],
-    ['贝果', 4],
-    ['丹麦', 5],
-    ['蛋糕', 6],
-    ['咖啡', 7],
-  ];
-
-  for (const [name, sort_order] of categories) {
-    await pool.execute(
-      'INSERT IGNORE INTO categories (name, sort_order) VALUES (?, ?)',
-      [name, sort_order]
-    );
-  }
-  console.log(`  ✓ 分类: ${categories.length} 个`);
 
   // ----- 商品（仅一个测试样本） -----
   const products = [

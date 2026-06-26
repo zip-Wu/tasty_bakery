@@ -1,7 +1,7 @@
 /**
  * 大力馒头 — 后端服务入口
  *
- * 技术栈：Express + SQLite (better-sqlite3)
+ * 技术栈：Express + MySQL (mysql2)
  *
  * 启动方式：
  *   1. npm install          — 安装依赖
@@ -10,7 +10,7 @@
  *
  * 项目结构：
  *   app.js          — 入口（本文件）
- *   database.js     — SQLite 初始化 + 表结构
+ *   database.js     — MySQL 连接池 + 表结构
  *   seed.js         — 种子数据
  *   routes/auth.js  — 用户登录/信息
  *   routes/menu.js  — 商品/分类
@@ -33,6 +33,14 @@ const PORT = process.env.PORT || 80;
 
 // ----- 中间件 -----
 app.use(cors());
+
+// 微信支付回调需要原始请求体（必须在 express.json 之前）
+// express.raw 设置 req._body=true，后续 express.json 会自动跳过
+app.use('/api/pay/notify', express.raw({ type: 'application/json' }), (req, res, next) => {
+  req.rawBody = req.body.toString('utf8');
+  next();
+});
+
 app.use(express.json());
 
 // ----- 静态文件 + 管理页面 -----
@@ -40,6 +48,10 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.get('/admin', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'admin.html'));
 });
+
+// 健康检查（云托管负载均衡用）
+app.get('/health', (req, res) => res.status(200).send('ok'));
+app.get('/', (req, res) => res.redirect('/admin'));
 
 // ----- 路由挂载 -----
 // 顾客端 API（无需认证）
@@ -88,9 +100,11 @@ ready.then(() => {
     console.log('    GET  /api/orders/user/:id    — 用户订单');
     console.log('    GET  /api/orders/:id         — 订单详情');
     console.log('    POST /api/orders/:id/status  — 更新状态');
-    console.log('    POST /api/pay/:orderId       — 模拟支付');
+    console.log('    POST /api/pay/:orderId       — 微信支付下单');
+    console.log('    POST /api/pay/notify         — 微信支付回调');
     console.log('    POST /api/orders/:id/accept  — 商家接单');
     console.log('    POST /api/orders/:id/complete — 完成订单');
+    console.log('    POST /api/admin/quick-sale   — 商家快速录单');
     console.log('');
   });
 }).catch(err => {

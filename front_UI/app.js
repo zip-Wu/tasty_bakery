@@ -1,7 +1,7 @@
 // app.js
 // ===== 微信云托管配置 =====
 // 部署方式：微信云托管 callContainer 私有协议，无需域名备案
-const CLOUD_ENV = 'dali-bakery-api-d9frevvce1335562';
+const CLOUD_ENV = 'dali-backern-api-d0es660181ffbe4';
 const SERVICE_NAME = 'dali-bakery-api';
 
 App({
@@ -36,7 +36,7 @@ App({
     }).then(data => {
       this.globalData.userId = userId;
       this.globalData.userInfo = data;
-    }).catch(() => {});
+    }).catch(err => { console.error('[autoLogin] 恢复登录失败:', err); });
   },
 
   // 静默登录（首次或缓存被清后触发，无需用户任何操作）
@@ -53,7 +53,7 @@ App({
           this.globalData.userInfo = data;
           wx.setStorageSync('userId', data.id);
           if (callback) callback(data);
-        }).catch(() => {});
+        }).catch(err => { console.error('[login] 登录失败:', err); });
       }
     });
   },
@@ -75,13 +75,12 @@ App({
           if (res.data && res.data.success) {
             resolve(res.data.data);
           } else {
-            wx.showToast({ title: (res.data && res.data.message) || '请求失败', icon: 'none' });
+            console.error('[request] 业务错误:', options.url, res.data && res.data.message);
             reject(res.data);
           }
         },
         fail: (err) => {
-          console.error('callContainer failed:', err);
-          wx.showToast({ title: '网络错误', icon: 'none' });
+          console.error('[request] 网络错误:', options.url, err);
           reject(err);
         }
       });

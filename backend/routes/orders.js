@@ -3,23 +3,12 @@
  */
 const express = require('express');
 const crypto = require('crypto');
-const { pool } = require('../database');
+const { pool, mysqlNow } = require('../database');
 
 const router = express.Router();
 
 function generateId() {
   return Date.now().toString(36) + crypto.randomBytes(4).toString('hex');
-}
-
-// MySQL 接受的日期格式：YYYY-MM-DD HH:MM:SS
-function mysqlNow() {
-  const d = new Date();
-  return d.getFullYear() + '-' +
-    String(d.getMonth() + 1).padStart(2, '0') + '-' +
-    String(d.getDate()).padStart(2, '0') + ' ' +
-    String(d.getHours()).padStart(2, '0') + ':' +
-    String(d.getMinutes()).padStart(2, '0') + ':' +
-    String(d.getSeconds()).padStart(2, '0');
 }
 
 // ===== 创建订单 =====
@@ -112,40 +101,163 @@ router.post('/orders/:id/status', async (req, res) => {
   res.json({ success: true, data: formatOrder(updated[0]) });
 });
 
-// ===== 模拟支付 =====
+// ===== 微信支付 - 发起支付（智能降级：有凭证真支付，无凭证模拟） =====
+const { createJsapiOrder, generatePrepaySign, decryptNotifyResource, config: payConfig } = require('../services/wechat-pay');
+
+const isRealPay = !!payConfig.mchid;
+
+// 启动时明确告知支付模式（方便排查）
+if (isRealPay) {
+  console.log('[pay] ✅ 真实支付模式 — 商户号 ' + payConfig.mchid);
+} else {
+  console.log('[pay] ⚠️  模拟支付模式 — 未配置微信支付商户号，所有支付将直接完成不扣款');
+  console.log('[pay]    开通商户号后，添加 WX_PAY_MCHID 等 6 个环境变量并重新部署即可启用真支付');
+}
+
 router.post('/pay/:orderId', async (req, res) => {
-  const [rows] = await pool.execute('SELECT * FROM orders WHERE id = ?', [req.params.orderId]);
+  try {
+    const [rows] = await pool.execute('SELECT * FROM orders WHERE id = ?', [req.params.orderId]);
 
-  if (!rows[0]) {
-    return res.json({ success: false, message: '订单不存在' });
+    if (!rows[0]) {
+      return res.json({ success: false, message: '订单不存在' });
+    }
+
+    const order = rows[0];
+    if (order.status !== 'pending') {
+      return res.json({ success: false, message: '订单状态不允许支付' });
+    }
+
+    // ===== 模拟支付模式（商户号未开通） =====
+    if (!isRealPay) {
+      await processMockPayment(order, res);
+      return;
+    }
+
+    // ===== 真实微信支付 =====
+    const [users] = await pool.execute('SELECT openid FROM users WHERE id = ?', [order.user_id]);
+    if (!users[0] || !users[0].openid) {
+      return res.json({ success: false, message: '用户未登录，请重新打开小程序' });
+    }
+
+    const items = typeof order.items === 'string' ? JSON.parse(order.items) : order.items;
+    const description = items.map(i => i.name).join('、').substring(0, 60);
+    const total = Math.round(order.total_price * 100);
+
+    const { prepay_id } = await createJsapiOrder({
+      outTradeNo: order.order_no,
+      total,
+      description,
+      openid: users[0].openid,
+    });
+
+    const payParams = generatePrepaySign(prepay_id);
+
+    res.json({
+      success: true,
+      data: { payParams, order: formatOrder(order) },
+    });
+  } catch (err) {
+    console.error('[pay] 微信支付下单失败:', err.message, err.status);
+    res.json({
+      success: false,
+      message: err.message || '支付发起失败，请稍后重试',
+    });
   }
+});
 
-  const payResult = {
-    success: true,
-    tradeNo: 'MOCK' + Date.now(),
-    timeEnd: mysqlNow(),
-  };
+// 模拟支付：直接完成付款（商户号就绪后自动失效）
+async function processMockPayment(order, res) {
+  const now = mysqlNow();
 
   await pool.execute(
     'UPDATE orders SET status = ?, paid_at = ? WHERE id = ?',
-    ['preparing', payResult.timeEnd, req.params.orderId]
+    ['preparing', now, order.id]
   );
 
-  // 扣减库存：每件商品 stock - 购买数量，stock 归零则自动下架
-  for (const item of (typeof rows[0].items === 'string' ? JSON.parse(rows[0].items) : rows[0].items)) {
+  // 扣减库存
+  const items = typeof order.items === 'string' ? JSON.parse(order.items) : order.items;
+  for (const item of items) {
     await pool.execute(
       'UPDATE products SET stock = GREATEST(stock - ?, 0), is_available = CASE WHEN stock - ? <= 0 THEN 0 ELSE is_available END WHERE id = ?',
       [item.quantity, item.quantity, item.id]
     );
   }
 
+  // 返回时标记 mock，前端无需调 wx.requestPayment
   res.json({
     success: true,
     data: {
-      payResult,
-      order: formatOrder({ ...rows[0], status: 'preparing', paid_at: payResult.timeEnd }),
+      mock: true,
+      mockResult: { success: true, tradeNo: 'MOCK' + Date.now(), timeEnd: now },
+      order: formatOrder({ ...order, status: 'preparing', paid_at: now }),
     },
   });
+}
+
+// ===== 微信支付回调通知 =====
+router.post('/pay/notify', async (req, res) => {
+  const rawBody = req.rawBody; // 由 app.js 中的 express.raw 提供
+  let notifyData;
+
+  try {
+    const bodyJson = JSON.parse(rawBody);
+
+    // 解密回调中的加密资源
+    if (bodyJson.resource) {
+      notifyData = decryptNotifyResource(bodyJson.resource);
+    } else {
+      notifyData = bodyJson;
+    }
+  } catch (err) {
+    console.error('[pay-notify] 解密回调失败:', err.message);
+    return res.status(200).json({ code: 'FAIL', message: 'decrypt failed' });
+  }
+
+  const { out_trade_no, transaction_id, trade_state } = notifyData;
+
+  console.log(`[pay-notify] 收到回调: order_no=${out_trade_no} trade_state=${trade_state}`);
+
+  if (trade_state !== 'SUCCESS') {
+    return res.status(200).json({ code: 'SUCCESS' }); // 非成功状态无需处理
+  }
+
+  try {
+    // 查询订单
+    const [orders] = await pool.execute('SELECT * FROM orders WHERE order_no = ?', [out_trade_no]);
+    if (!orders[0]) {
+      console.warn(`[pay-notify] 订单不存在: ${out_trade_no}`);
+      return res.status(200).json({ code: 'SUCCESS' });
+    }
+
+    const order = orders[0];
+    if (order.status !== 'pending') {
+      console.log(`[pay-notify] 订单 ${out_trade_no} 已处理 (状态: ${order.status})，跳过`);
+      return res.status(200).json({ code: 'SUCCESS' });
+    }
+
+    const now = mysqlNow();
+
+    // 更新订单状态
+    await pool.execute(
+      'UPDATE orders SET status = ?, paid_at = ? WHERE id = ?',
+      ['preparing', now, order.id]
+    );
+
+    // 扣减库存
+    const items = typeof order.items === 'string' ? JSON.parse(order.items) : order.items;
+    for (const item of items) {
+      await pool.execute(
+        'UPDATE products SET stock = GREATEST(stock - ?, 0), is_available = CASE WHEN stock - ? <= 0 THEN 0 ELSE is_available END WHERE id = ?',
+        [item.quantity, item.quantity, item.id]
+      );
+    }
+
+    console.log(`[pay-notify] ✅ 订单 ${out_trade_no} 已更新为 preparing`);
+    res.status(200).json({ code: 'SUCCESS' });
+  } catch (err) {
+    console.error(`[pay-notify] 处理订单失败:`, err.message);
+    res.status(200).json({ code: 'FAIL', message: err.message });
+  }
 });
 
 // ===== 商家接单 =====

@@ -7,7 +7,6 @@
       longitude="{{stores[0].longitude}}"
       latitude="{{stores[0].latitude}}"
       scale="15"
-      show-location="{{true}}"
       markers="{{markers}}"
     ></map>
   </view>

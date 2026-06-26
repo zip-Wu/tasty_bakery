@@ -47,28 +47,63 @@ Page({
     });
   },
 
-  // 执行支付
+  // 执行支付 — 智能降级：真支付或模拟
   doPay() {
     if (this.data.isPaying) return;
 
     this.setData({ isPaying: true });
-
     const app = getApp();
+    const that = this;
+
     app.request({
       url: '/api/pay/' + this.data.orderId,
       method: 'POST',
     }).then(data => {
-      wx.showModal({
-        title: '支付成功',
-        content: '订单已创建，商家正在准备中',
-        showCancel: false,
-        success: () => {
-          wx.switchTab({ url: '/pages/logs/logs' });
+      // 模拟支付：后端已直接完成，无需调 wx.requestPayment
+      if (data.mock) {
+        wx.showModal({
+          title: '支付成功（测试）',
+          content: '商户号未开通，当前为模拟支付。正式开业后将自动切换为真实支付。',
+          showCancel: false,
+          success() {
+            wx.switchTab({ url: '/pages/logs/logs' });
+          }
+        });
+        return;
+      }
+
+      // 真实支付：调起微信支付
+      const { payParams } = data;
+      wx.requestPayment({
+        timeStamp: payParams.timeStamp,
+        nonceStr: payParams.nonceStr,
+        package: payParams.package,
+        signType: payParams.signType,
+        paySign: payParams.paySign,
+        success() {
+          wx.showModal({
+            title: '支付成功',
+            content: '订单已创建，商家正在准备中',
+            showCancel: false,
+            success() {
+              wx.switchTab({ url: '/pages/logs/logs' });
+            }
+          });
+        },
+        fail(err) {
+          if (err.errMsg && err.errMsg.indexOf('cancel') !== -1) {
+            that.setData({ isPaying: false });
+            wx.showToast({ title: '已取消支付', icon: 'none' });
+          } else {
+            that.setData({ isPaying: false });
+            wx.showToast({ title: '支付失败', icon: 'none' });
+          }
         }
       });
-    }).catch(() => {
-      this.setData({ isPaying: false });
-      wx.showToast({ title: '支付失败', icon: 'none' });
+    }).catch(err => {
+      that.setData({ isPaying: false });
+      console.error('支付失败:', err);
+      wx.showToast({ title: (err && err.message) || '发起支付失败', icon: 'none' });
     });
   }
 });

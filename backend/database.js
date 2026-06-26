@@ -10,7 +10,7 @@ const DB_PORT = parseInt(process.env.DB_PORT) || 3306;
 const DB_USER = process.env.DB_USER || 'root';
 const DB_PASS = process.env.DB_PASS || '';
 
-// ========== 连接池 ==========
+// ========== 连接池（设置时区为北京时间 UTC+8） ==========
 const pool = mysql.createPool({
   host: DB_HOST,
   port: DB_PORT,
@@ -20,6 +20,7 @@ const pool = mysql.createPool({
   waitForConnections: true,
   connectionLimit: 5,
   charset: 'utf8mb4',
+  timezone: '+08:00',
 });
 
 // ========== 初始化（创建库 → 建表） ==========
@@ -69,6 +70,12 @@ const ready = (async () => {
       await c.query(`ALTER TABLE products ADD COLUMN stock INT DEFAULT 0`);
       console.log('[db] 已补全 products.stock 列');
     }
+    // 兼容旧表：如果缺 source 列则补齐（区分顾客下单 / 商家录单）
+    const [sourceCols] = await c.query(`SHOW COLUMNS FROM orders LIKE 'source'`);
+    if (sourceCols.length === 0) {
+      await c.query(`ALTER TABLE orders ADD COLUMN source VARCHAR(16) DEFAULT 'customer'`);
+      console.log('[db] 已补全 orders.source 列');
+    }
 
     await c.query(`
       CREATE TABLE IF NOT EXISTS stores (
@@ -113,4 +120,19 @@ const ready = (async () => {
   }
 })();
 
-module.exports = { pool, ready };
+module.exports = { pool, ready, mysqlNow };
+
+/**
+ * 北京时间格式化的当前时间字符串（YYYY-MM-DD HH:MM:SS）
+ * 云托管服务器默认为 UTC，必须显式指定 Asia/Shanghai
+ */
+function mysqlNow() {
+  const now = new Date();
+  const bj = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Shanghai' }));
+  return bj.getFullYear() + '-' +
+    String(bj.getMonth() + 1).padStart(2, '0') + '-' +
+    String(bj.getDate()).padStart(2, '0') + ' ' +
+    String(bj.getHours()).padStart(2, '0') + ':' +
+    String(bj.getMinutes()).padStart(2, '0') + ':' +
+    String(bj.getSeconds()).padStart(2, '0');
+}

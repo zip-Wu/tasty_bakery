@@ -1,7 +1,7 @@
 Page({
   data: {
     userInfo: {
-      avatar: '/images/mock/bread1.png',
+      avatar: '/images/mock/placeholder.png',
       nickname: '加载中...',
       isMember: false,
       memberLevel: '',
@@ -55,7 +55,7 @@ Page({
       url: '/api/user/' + app.globalData.userId,
     }).then(data => {
       this.setData({ userInfo: data });
-    }).catch(() => {});
+    }).catch(err => { console.error('[logs] 加载用户信息失败:', err); });
   },
 
   loadOrderCount() {
@@ -69,7 +69,7 @@ Page({
         if (count[order.status] !== undefined) count[order.status]++;
       });
       this.setData({ orderCount: count });
-    }).catch(() => {});
+    }).catch(err => { console.error('[logs] 加载订单数失败:', err); });
   },
 
   calcCacheSize() {

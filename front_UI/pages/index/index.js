@@ -64,9 +64,9 @@ Page({
       method: 'GET',
     }).then(data => {
       this.setData({ categories: data });
-    }).catch(() => {
+    }).catch(err => {
+      console.error('[loadCategories] 分类加载失败:', err);
       // 保留默认分类作为降级
-      console.log('分类加载失败，使用默认值');
     });
   },
 

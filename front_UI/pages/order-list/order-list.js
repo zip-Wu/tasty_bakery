@@ -78,7 +78,7 @@ Page({
 
       // 更新标签数量
       this.updateTabCounts(allOrders);
-    }).catch(() => {});
+    }).catch(err => { console.error('[order-list] 加载订单失败:', err); });
   },
 
   // 更新标签角标
@@ -120,7 +120,7 @@ Page({
     const app = getApp();
     const order = this.data.orders.find(o => o.id === id);
     if (order) {
-      wx.showToast({ title: '商品已加入购物车', icon: 'success' });
+      wx.showToast({ title: '正在跳转点单页...', icon: 'none' });
       // 跳转到点单页
       setTimeout(() => {
         wx.switchTab({ url: '/pages/index/index' });

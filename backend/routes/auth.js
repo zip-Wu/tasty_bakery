@@ -93,7 +93,18 @@ function customerDisplayName(nickname) {
 
 // 返回给顾客端时统一截掉后缀
 function customerResponse(user) {
-  return { ...user, nickname: customerDisplayName(user.nickname) };
+  return {
+    id: user.id,
+    openid: user.openid,
+    nickname: customerDisplayName(user.nickname),
+    avatar: user.avatar,
+    phone: user.phone,
+    points: user.points,
+    balance: user.balance,
+    couponCount: user.coupon_count,
+    memberLevel: user.member_level,
+    isMember: !!user.is_member,
+  };
 }
 
 // ===== 微信登录（code 换取 openid） =====
