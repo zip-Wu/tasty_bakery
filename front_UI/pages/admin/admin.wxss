@@ -88,6 +88,39 @@
 .banner-text { font-size: 26rpx; color: #856404; font-weight: bold; }
 .banner-close { font-size: 28rpx; color: #c79002; padding: 0 8rpx; }
 
+/* 轮询状态栏 */
+.poll-bar {
+  display: flex;
+  align-items: center;
+  padding: 12rpx 0;
+  margin-bottom: 12rpx;
+  font-size: 22rpx;
+  color: #999;
+}
+.poll-indicator {
+  width: 12rpx; height: 12rpx;
+  border-radius: 50%;
+  background: #ccc;
+  margin-right: 10rpx;
+  flex-shrink: 0;
+}
+.poll-indicator.active {
+  background: #27ae60;
+  animation: pollPulse 2s ease-in-out infinite;
+}
+@keyframes pollPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+.poll-text { flex: 1; }
+.poll-refresh {
+  color: #f5a623;
+  padding: 4rpx 16rpx;
+  border: 1px solid #f5a623;
+  border-radius: 20rpx;
+  font-size: 22rpx;
+}
+
 /* 订单卡片 */
 .order-list { margin-top: 16rpx; }
 .order-card {

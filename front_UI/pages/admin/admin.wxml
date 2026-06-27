@@ -44,6 +44,13 @@
       <text class="banner-close">✕</text>
     </view>
 
+    <!-- 轮询状态栏 -->
+    <view class="poll-bar">
+      <view class="poll-indicator {{isPolling ? 'active' : ''}}"></view>
+      <text class="poll-text">{{isPolling ? '自动刷新中 · 上次 ' + lastPollTime : '轮询已停止'}}</text>
+      <view class="poll-refresh" bindtap="manualRefresh">⟳ 手动刷新</view>
+    </view>
+
     <!-- 订单列表 -->
     <view class="order-list">
       <view class="order-card" wx:for="{{orders}}" wx:key="id">

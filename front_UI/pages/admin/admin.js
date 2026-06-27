@@ -50,7 +50,9 @@ Page({
 
     // 订单轮询提醒
     newOrderAlert: false,
-    newOrderCount: 0
+    newOrderCount: 0,
+    lastPollTime: '',
+    isPolling: false,
   },
 
   onLoad() {
@@ -99,6 +101,7 @@ Page({
         wx.setStorageSync('admin_token', res.data.token);
         this.setData({ loggedIn: true, loginError: '' });
         this.loadOrders();
+        this._startPolling();
       } else {
         this.setData({ loginError: res.message || '密码错误' });
       }
@@ -117,8 +120,9 @@ Page({
     }).then(res => {
       if (res.success) {
         this.setData({ loggedIn: true });
-        this.orders = res.data;
+        this.ordersRaw = res.data;
         this.renderOrders();
+        this._startPolling();
       } else {
         wx.removeStorageSync('admin_token');
       }
@@ -619,46 +623,85 @@ Page({
 
   // ========== 订单实时轮询 ==========
 
-  // 每 10 秒拉取一次订单，检测新订单 → 自动刷新 + 震动提醒
+  // 启动轮询：递归 setTimeout 比 setInterval 更可靠
+  // 原因：setInterval 在微信环境中可能被节流/暂停，且不等待请求完成就触发下一次
   _startPolling() {
     this._stopPolling();
     this._lastOrderIds = (this.data.orders || []).map(o => o.id);
-    this._pollTimer = setInterval(() => this._pollCheck(), 10000);
+    this._polling = true;
+    this.setData({ isPolling: true });
+    this._scheduleNextPoll();
   },
 
-  _pollCheck() {
-    if (!this.data.loggedIn || this.data.currentTab !== 'orders') return;
+  _scheduleNextPoll() {
+    if (!this._polling) return;
+    // 10 秒后执行一次检查
+    this._pollTimer = setTimeout(() => {
+      this._doPoll();
+    }, 10000);
+  },
+
+  async _doPoll() {
+    if (!this._polling || !this.data.loggedIn || this.data.currentTab !== 'orders') return;
 
     const token = wx.getStorageSync('admin_token');
-    this._request({
-      url: '/api/admin/orders?status=' + this.data.orderFilter,
-      header: { Authorization: 'Bearer ' + token }
-    }).then(res => {
-      if (!res.success || !res.data) return;
+    try {
+      const res = await this._request({
+        url: '/api/admin/orders?status=' + this.data.orderFilter,
+        header: { Authorization: 'Bearer ' + token }
+      });
+
+      if (!res || !res.success || !res.data) {
+        this._updatePollTime();
+        this._scheduleNextPoll();
+        return;
+      }
 
       const orderIds = res.data.map(o => o.id);
       const newIds = orderIds.filter(id => !this._lastOrderIds.includes(id));
 
+      // 始终更新订单数据（状态可能变化）
+      this.ordersRaw = res.data;
+      this.renderOrders();
+      this._lastOrderIds = orderIds;
+
       if (newIds.length > 0) {
-        this.ordersRaw = res.data;
-        this.renderOrders();
-        this._lastOrderIds = orderIds;
-
-        // 震动提醒商家
         wx.vibrateLong();
-
-        // 显示顶部横幅
         this.setData({ newOrderAlert: true, newOrderCount: newIds.length });
         setTimeout(() => {
           this.setData({ newOrderAlert: false, newOrderCount: 0 });
         }, 6000);
       }
-    }).catch(() => {});
+    } catch (e) {
+      // 网络波动静默跳过
+    }
+
+    this._updatePollTime();
+    this._scheduleNextPoll();
+  },
+
+  _updatePollTime() {
+    const now = new Date();
+    this.setData({
+      lastPollTime: String(now.getHours()).padStart(2, '0') + ':' +
+                    String(now.getMinutes()).padStart(2, '0') + ':' +
+                    String(now.getSeconds()).padStart(2, '0')
+    });
+  },
+
+  // 手动刷新（供商家点击）
+  manualRefresh() {
+    wx.showToast({ title: '刷新中...', icon: 'loading', duration: 800 });
+    // 强制立即拉取一次（不等定时器）
+    this._lastOrderIds = (this.data.orders || []).map(o => o.id);
+    this._doPoll();
   },
 
   _stopPolling() {
+    this._polling = false;
+    this.setData({ isPolling: false });
     if (this._pollTimer) {
-      clearInterval(this._pollTimer);
+      clearTimeout(this._pollTimer);
       this._pollTimer = null;
     }
   },
