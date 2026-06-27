@@ -1,7 +1,7 @@
 Page({
   data: {
     userInfo: {
-      avatar: '/images/mock/placeholder.png',
+      avatar: 'https://api.dicebear.com/9.x/fun-emoji/svg?seed=default',
       nickname: '加载中...',
       isMember: false,
       memberLevel: '',
@@ -112,7 +112,7 @@ Page({
   goAbout() {
     wx.showModal({
       title: '关于我们',
-      content: '格创·壹号店\n\n用心烘焙每一份美味\n\n版本：v1.0.0',
+      content: '大力馒头·信息港店\n\n用心烘焙每一份美味\n\n版本：v1.0.0',
       showCancel: false, confirmText: '知道了'
     });
   },

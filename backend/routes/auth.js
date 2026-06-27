@@ -129,7 +129,7 @@ router.post('/login', async (req, res) => {
       openid: openId,
       // 生成唯一可辨识的顾客名，商家在管理后台能区分不同顾客
       nickname: nickname || randomNick(),
-      avatar: avatar || 'https://picsum.photos/200/200?random=100',
+      avatar: avatar || `https://api.dicebear.com/9.x/fun-emoji/svg?seed=${encodeURIComponent(openId.slice(0,10))}`,
       phone: '',
       points: 0,
       balance: 0.00,

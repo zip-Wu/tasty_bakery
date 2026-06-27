@@ -111,7 +111,7 @@ const ready = (async () => {
     // 3. 初始化门店
     await c.query(`
       INSERT IGNORE INTO stores (name, address, phone, hours, latitude, longitude, is_open) VALUES
-      ('大力馒头·格创壹号店', '广东省珠海市香洲区唐家湾镇香山路639号', '0756-1234567', '08:00-21:00', 22.3568, 113.5542, 1)
+      ('大力馒头·信息港店', '珠海市高新区唐家湾镇香山路88号2栋1层101-10室（信息港711便利店后面）', '0756-1234567', '08:00-21:00', 22.366749, 113.554455, 1)
     `);
 
     console.log('[db] 初始化完成');

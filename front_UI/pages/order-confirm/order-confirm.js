@@ -37,7 +37,7 @@ Page({
       const order = data;
       // 确保地址有值
       if (!order.address) {
-        order.address = '广东省珠海市香洲区唐家湾镇香山路639号';
+        order.address = '珠海市高新区唐家湾镇香山路88号2栋1层101-10室';
       }
       console.log('设置订单数据:', order);
       this.setData({ order });

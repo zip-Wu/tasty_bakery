@@ -49,7 +49,7 @@ Page({
     order.totalQuantity = order.items.reduce((sum, item) => sum + item.quantity, 0);
     
     // 门店地址
-    order.address = order.address || '广东省珠海市香洲区唐家湾镇香山路639号';
+    order.address = order.address || '珠海市高新区唐家湾镇香山路88号2栋1层101-10室';
     
     // 状态文字
     order.statusText = statusInfo.text;
@@ -98,7 +98,7 @@ Page({
   callStore() {
     wx.showModal({
       title: '联系门店',
-      content: '格创·壹号店\n📞 0756-1234567\n\n营业时间：08:00 - 21:00',
+      content: '大力馒头·信息港店\n📞 0756-1234567\n\n营业时间：08:00 - 21:00',
       showCancel: false,
       confirmText: '拨打'
     });

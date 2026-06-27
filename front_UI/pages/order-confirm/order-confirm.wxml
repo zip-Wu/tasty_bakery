@@ -2,8 +2,8 @@
 <view class="order-confirm">
   <!-- 门店信息 -->
   <view class="store-info">
-    <view class="store-name">{{order.storeName || '格创·壹号店'}}</view>
-    <view class="store-addr">{{order.address || '广东省珠海市香洲区唐家湾镇香山路639号'}}</view>
+    <view class="store-name">{{order.storeName || '信息港店'}}</view>
+    <view class="store-addr">{{order.address || '珠海市高新区唐家湾镇香山路88号2栋1层101-10室'}}</view>
   </view>
 
   <!-- 订单商品 -->

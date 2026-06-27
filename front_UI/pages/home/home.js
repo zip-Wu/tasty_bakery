@@ -1,11 +1,11 @@
 Page({
   data: {
-    // 活动横幅数据
+    // 活动横幅数据 — 更换图片：把新图片放到 /images/ 目录下，改下面的文件名即可
     activities: [
-      { id: 1, image: 'https://picsum.photos/320/200?random=201' },
-      { id: 2, image: 'https://picsum.photos/320/200?random=202' },
-      { id: 3, image: 'https://picsum.photos/320/200?random=203' },
-      { id: 4, image: 'https://picsum.photos/320/200?random=204' }
+      { id: 1, image: '/images/activity-1.png' },
+      { id: 2, image: '/images/activity-2.png' },
+      { id: 3, image: '/images/activity-3.png' },
+      { id: 4, image: '/images/activity-4.png' }
     ],
     _adminTapCount: 0,
     _adminTapTimer: null

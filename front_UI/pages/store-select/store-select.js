@@ -21,22 +21,10 @@ Page({
         app.request({
           url: `/api/stores?lat=${loc.latitude}&lng=${loc.longitude}`,
         }).then(stores => {
-          // 生成地图标记点
-          const markers = stores.map(s => ({
-            id: s.id,
-            latitude: s.latitude,
-            longitude: s.longitude,
-            title: s.name,
-            iconPath: '',
-            width: 30,
-            height: 30
-          }));
-
           that.setData({
             stores,
-            markers,
+            markers: buildMarkers(stores),
             loading: false,
-            // 默认选中最近的门店
             selectedStoreId: stores.length > 0 ? stores[0].id : null
           });
         }).catch(() => {
@@ -45,10 +33,11 @@ Page({
         });
       },
       fail() {
-        // 用户拒绝定位 → 用降级数据（不传坐标）
+        // 用户拒绝定位 → 用降级数据（不传坐标），但地图标记点仍要显示
         app.request({ url: '/api/stores' }).then(stores => {
           that.setData({
             stores,
+            markers: buildMarkers(stores),
             loading: false,
             selectedStoreId: stores.length > 0 ? stores[0].id : null
           });
@@ -75,3 +64,25 @@ Page({
     wx.switchTab({ url: '/pages/index/index' });
   }
 });
+
+// 根据门店数据生成地图标记点（无论用户是否授权定位都要显示）
+function buildMarkers(stores) {
+  return stores.map(s => ({
+    id: s.id,
+    latitude: s.latitude,
+    longitude: s.longitude,
+    title: s.name,
+    iconPath: '',
+    width: 30,
+    height: 30,
+    callout: {
+      content: s.name,
+      color: '#333',
+      fontSize: 13,
+      borderRadius: 8,
+      bgColor: '#fff',
+      padding: 8,
+      display: 'ALWAYS'
+    }
+  }));
+}

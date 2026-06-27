@@ -1,14 +1,5 @@
 // pages/index/index.js
 
-// ============================================================
-// 离线模拟开关：设为 true 时，后端连不上就用本地数据渲染
-// ★★★ 上线前必须改成 false，并把本文件里 useMockData() 删掉 ★★★
-// ============================================================
-const USE_MOCK  = false  // ← 上线前改成 false
-const ALLOW_MOCK = USE_MOCK
-
-const { mockProducts, mockCategories } = require('../../utils/mock');
-
 Page({
   data: {
     // 分类数据（从后端动态加载，初始仅「全部」）
@@ -26,8 +17,8 @@ Page({
 
     // 门店信息
     store: {
-      name: '格创·壹号店',
-      address: '广东省珠海市香洲区唐家湾镇香山路639号',
+      name: '信息港店',
+      address: '珠海市高新区唐家湾镇香山路88号2栋1层101-10室',
       distance: '约 0.1km'
     },
 
@@ -86,22 +77,8 @@ Page({
       });
       console.log('商品加载成功，数量:', data.length);
     }).catch((err) => {
-      if (ALLOW_MOCK) {
-        console.log('后端未连接，使用离线模拟数据');
-        this.useMockData();
-      } else {
-        console.error('请求失败:', err);
-        wx.showToast({ title: '网络请求失败', icon: 'none' });
-      }
-    });
-  },
-
-  // 离线模式：用本地模拟数据渲染界面
-  useMockData() {
-    this.setData({
-      breadList: mockProducts,
-      filteredBreadList: mockProducts,
-      categories: mockCategories
+      console.error('[loadProducts] 商品加载失败:', err);
+      wx.showToast({ title: '加载商品失败，请检查网络', icon: 'none' });
     });
   },
 
@@ -255,7 +232,7 @@ Page({
       totalPrice: cartTotal,
       storeId: store.id || 1,
       storeName: store.name,
-      address: store.address || '广东省珠海市香洲区唐家湾镇香山路639号'
+      address: store.address || '珠海市高新区唐家湾镇香山路88号2栋1层101-10室'
     };
 
     console.log('创建订单，发送数据:', requestData);
