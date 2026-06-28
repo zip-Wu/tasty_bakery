@@ -86,6 +86,12 @@ Page({
     const app = getApp();
     this.setData({ userId: app.globalData.userId });
 
+    // 下单成功后清空购物车
+    if (app.globalData.clearCartOnReturn) {
+      app.globalData.clearCartOnReturn = false;
+      this.setData({ cart: {}, cartCount: 0, cartTotal: 0 });
+    }
+
     // 更新TabBar选中状态
     if (typeof this.getTabBar === 'function' && this.getTabBar()) {
       this.getTabBar().setData({ selected: 1 });
@@ -244,6 +250,8 @@ Page({
     }).then(data => {
       console.log('创建订单返回:', data);
       wx.hideLoading();
+      // 标记：下次回到点单页时清空购物车
+      app.globalData.clearCartOnReturn = true;
       wx.navigateTo({
         url: '/pages/order-confirm/order-confirm?orderId=' + data.id
       });
