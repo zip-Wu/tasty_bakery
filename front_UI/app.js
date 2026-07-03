@@ -1,8 +1,8 @@
 // app.js
 // ===== 微信云托管配置 =====
 // 部署方式：微信云托管 callContainer 私有协议，无需域名备案
-const CLOUD_ENV = 'dali-backern-api-d0es660181ffbe4';
-const SERVICE_NAME = 'dali-bakery-api';
+// 云环境 ID 非机密信息（小程序编译后包含在代码包中）
+const { CLOUD_ENV, SERVICE_NAME } = require('./config');
 
 App({
   onLaunch() {

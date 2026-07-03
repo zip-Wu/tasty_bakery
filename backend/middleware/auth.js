@@ -8,14 +8,20 @@
  */
 const jwt = require('jsonwebtoken');
 
-// 管理员密码的哈希 → 部署时通过环境变量 ADMIN_PASSWORD 设置
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123456';
+// 管理员密码 — 通过环境变量 ADMIN_PASSWORD 设置（无默认值，强制配置）
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '';
 
-// JWT 密钥 → 通过环境变量 JWT_SECRET 设置，避免重启后失效
-const JWT_SECRET = process.env.JWT_SECRET || 'dali-mantou-2024-secret-key';
+// JWT 密钥 — 通过环境变量 JWT_SECRET 设置（无默认值，强制配置）
+const JWT_SECRET = process.env.JWT_SECRET || '';
 
-// Token 有效期：12 小时（一个班次），生产环境通过 JWT_SECRET 环境变量加固
+// Token 有效期：12 小时（一个班次）
 const TOKEN_EXPIRES = '12h';
+
+// 启动时校验
+if (!ADMIN_PASSWORD || !JWT_SECRET) {
+  console.warn('[auth] ⚠  ADMIN_PASSWORD 或 JWT_SECRET 未设置，认证功能不可用。');
+  console.warn('[auth]    请在云托管环境变量中配置后重新部署。');
+}
 
 /**
  * 验证密码并签发 token

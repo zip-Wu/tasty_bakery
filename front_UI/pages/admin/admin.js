@@ -1,6 +1,5 @@
 const app = getApp();
-const CLOUD_ENV = 'dali-backern-api-d0es660181ffbe4';
-const SERVICE_NAME = 'dali-bakery-api';
+const { CLOUD_ENV, SERVICE_NAME } = require('../../config');
 
 Page({
   data: {

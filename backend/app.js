@@ -86,8 +86,7 @@ ready.then(() => {
     console.log('  🍞  大力馒头 后端服务已启动');
     console.log(`  📍  小程序 API: http://localhost:${PORT}`);
     console.log(`  🛠  商家管理:   http://localhost:${PORT}/admin`);
-    console.log(`  🔐  管理密码:   admin123456`);
-    console.log(`      部署后通过环境变量 ADMIN_PASSWORD 修改`);
+    console.log(`  🔐  管理密码:   (通过环境变量 ADMIN_PASSWORD 设置)`);
     console.log('');
     console.log('  可用接口:');
     console.log('    POST /api/login              — 用户登录');
