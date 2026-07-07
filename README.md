@@ -22,7 +22,7 @@ A full-stack order-and-pickup system for a bakery in Zhuhai, China. Customers sc
   商家登录 → 看新订单(手机震动) → 标记制作完成 → 标记已取餐 → 营收看板
 ```
 
-两端通过 `wx.cloud.callContainer` 私有协议直连同一套 Express API，订单状态变更秒级双向可见。完整代码量约 2000 行，独立完成全栈开发。
+两端通过 `wx.cloud.callContainer` 私有协议直连同一套 Express API，订单状态变更秒级双向可见。完成全栈开发。
 
 ---
 
