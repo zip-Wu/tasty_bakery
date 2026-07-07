@@ -162,11 +162,11 @@ erDiagram
 
 进入点单页后，左侧显示商品分类（由 `GET /api/categories` 从数据库实时提取），右侧显示当前分类下的在售商品（`GET /api/products?category=XX`，自动过滤 `is_available=0` 和 `stock=0` 的商品）。点击加号按钮将商品加入购物车，购物车状态存储在页面 `data.cart` 对象中（`{ 商品ID: 数量 }`），底部悬浮栏实时计算总价。
 
-![点单页 — 左侧分类 · 右侧商品 · 底部悬浮购物车](./screenshots/03-order.png)
+<p align="center"><img src="./screenshots/03-order.png" width="55%" alt="点单页" /></p>
 
 确认购物车后进入订单确认页，汇总商品清单和金额，选择微信支付后提交。这一页是顾客下单流程的最后一个确认节点：
 
-![订单确认 — 商品清单 · 金额汇总 · 微信支付](./screenshots/04-order-confirm.png)
+<p align="center"><img src="./screenshots/04-order-confirm.png" width="55%" alt="订单确认" /></p>
 
 ### 订单追踪
 
@@ -198,7 +198,7 @@ erDiagram
 
 商家管理端 4 个 Tab 中最常用的模块。顶部状态筛选栏支持按 pending / preparing / ready / completed 分类查看订单。核心亮点是**实时轮询机制**——前端使用递归 `setTimeout`（而非 `setInterval`）每 5 秒调用一次 `GET /api/admin/orders`，发现新订单时自动刷新列表并触发手机震动（`wx.vibrateShort`），同时顶部显示"有 N 笔新订单"横幅。
 
-![商家订单管理 — 状态筛选 · 实时轮询 · 一键操作](./screenshots/08-admin-orders.png)
+<p align="center"><img src="./screenshots/08-admin-orders.png" width="55%" alt="商家订单管理" /></p>
 
 订单状态栏中的绿色圆点表示轮询正在运行，点击"手动刷新"可立即拉取最新数据。每笔订单卡片显示订单号、顾客昵称、商品清单、金额和时间，已支付的订单提供"标记待取餐"按钮。
 
@@ -206,7 +206,7 @@ erDiagram
 
 支持新增、编辑、上下架、删除商品，编辑模式下展开完整的表单（名称、价格、分类、库存）和图片上传入口。图片通过 `wx.chooseImage` 从相册选择，上传至微信云存储后返回 URL 存入数据库。
 
-![商品管理 — 列表浏览 · 编辑表单 · 图片上传](./screenshots/09-admin-products.png)
+<p align="center"><img src="./screenshots/09-admin-products.png" width="55%" alt="商品管理" /></p>
 
 列表中的每个商品显示图片、名称、分类、价格、库存和累计销量。库存为 0 时自动下架（`is_available=0`），补货后可通过编辑重新上架。`DELETE` 操作提供"一键清空"快捷入口，方便重新初始化商品数据。
 
@@ -214,11 +214,11 @@ erDiagram
 
 快速录单用于线下现金收款——店员直接选择商品和数量，系统自动生成订单号（`OFF` 前缀表示线下录单），跳过支付流程直接标记 `completed`，同时扣减库存、累加销量、计入当日营收。底部汇总栏实时计算已选件数和合计金额。
 
-![快速录单 — 线下收款录入 · 自动计入营收](./screenshots/10-admin-quick-sale.png)
+<p align="center"><img src="./screenshots/10-admin-quick-sale.png" width="55%" alt="快速录单" /></p>
 
 营收看板展示今日数据：营收（已支付订单总金额）、总订单数、各状态分布。数据通过 `GET /api/admin/dashboard` 实时查询当日 `created_at` 的订单聚合结果。
 
-![营收看板 — 今日营收 · 订单总数 · 状态分布](./screenshots/11-admin-dashboard.png)
+<p align="center"><img src="./screenshots/11-admin-dashboard.png" width="55%" alt="营收看板" /></p>
 
 ---
 
@@ -226,13 +226,13 @@ erDiagram
 
 ### 顾客端：选店 → 加购 → 下单 → 支付 → 追踪订单
 
-![顾客下单全流程](./screenshots/12-order-flow.gif)
+<p align="center"><img src="./screenshots/12-order-flow.gif" width="55%" alt="顾客下单流程" /></p>
 
 从首页选择门店 → 进入点单页浏览商品加购 → 确认订单并支付 → 跳转订单详情页查看制作进度。模拟支付模式下支付即时完成，真实支付模式下会调起微信支付收银台。
 
 ### 商家端：登录 → 查看新订单 → 标记完成 → 营收看板
 
-![商家接单处理](./screenshots/13-admin-flow.gif)
+<p align="center"><img src="./screenshots/13-admin-flow.gif" width="55%" alt="商家接单流程" /></p>
 
 输入密码登录管理后台 → 订单列表自动刷新，新订单触发手机震动 → 标记制作完成 → 标记已取餐 → 切换营收看板查看今日数据。
 
