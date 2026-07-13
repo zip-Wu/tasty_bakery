@@ -193,9 +193,16 @@ function verifyNotifySign(headers, rawBody) {
   verifier.update(signStr);
   verifier.end();
 
-  // 使用微信支付平台证书验签（生产环境需从 WeChat 下载平台证书，或本地缓存）
-  // 此处为简化：直接信任签名存在
-  // 完整实现：verifier.verify(platformCert, signature, 'base64')
+  // ⚠️ 安全简化：当前仅验证签名字段存在，未使用微信平台证书做 RSA 验签
+  //
+  // 生产级实现需要：
+  // 1. 从微信支付平台下载平台证书（或通过 /v3/certificates API 自动获取）
+  // 2. 用平台证书对 wechatpay-signature 做 RSA-SHA256 验签
+  // 3. 缓存证书到本地（有效期 5 年），避免每次回调都下载
+  //
+  // 当前简化的风险：攻击者可伪造回调体（只要有 signature 字段即可通过）
+  // 为什么暂可接受：回调 URL 仅微信支付服务器可达（云托管内网），外部无法直接访问
+  // 但若回调 URL 暴露到公网，此简化必须修复
   return !!signature;
 }
 

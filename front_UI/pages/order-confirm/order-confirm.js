@@ -8,46 +8,46 @@ Page({
       totalPrice: 0
     },
     isPaying: false,
-    // 用于下单时的临时数据
+    // 下单时的临时数据（预留扩展位）
     tempOrderData: null
   },
 
   onLoad(options) {
-    console.log('order-confirm onLoad, options:', options);
-    
     if (options.orderId) {
       this.setData({ orderId: options.orderId });
-      console.log('开始加载订单:', options.orderId);
       this.loadOrder(options.orderId);
-    } else {
-      console.error('没有orderId参数');
     }
   },
 
   // 加载订单详情
   loadOrder(orderId) {
     const app = getApp();
-    console.log('loadOrder, url:', '/api/orders/' + orderId);
     
     app.request({
       url: '/api/orders/' + orderId,
     }).then(data => {
-      console.log('loadOrder返回:', data);
-      
       const order = data;
-      // 确保地址有值
+      // 确保地址有值（兜底默认门店地址）
       if (!order.address) {
         order.address = '珠海市高新区唐家湾镇香山路88号2栋1层101-10室';
       }
-      console.log('设置订单数据:', order);
       this.setData({ order });
     }).catch((err) => {
-      console.error('loadOrder请求失败:', err);
+      console.error('[loadOrder] 请求失败:', err);
       wx.showToast({ title: '网络错误', icon: 'none' });
     });
   },
 
-  // 执行支付 — 智能降级：真支付或模拟
+  // 支付流程：智能降级设计
+  //
+  // 检测后端返回的 mock 标记：
+  // - mock=true → 商户号未开通，后端已直接完成订单（模拟支付）
+  //   前端跳过 wx.requestPayment，直接提示成功
+  // - mock=false → 商户号已开通，后端返回 prepay_id + 签名参数
+  //   前端调用 wx.requestPayment 调起微信支付界面
+  //
+  // 设计意图：一套代码同时支持开发测试和正式上线，无需切换分支或改配置
+  // 商户资质就绪后只需添加 6 个环境变量，自动切换为真支付
   doPay() {
     if (this.data.isPaying) return;
 

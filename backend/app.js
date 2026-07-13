@@ -54,16 +54,16 @@ app.get('/health', (req, res) => res.status(200).send('ok'));
 app.get('/', (req, res) => res.redirect('/admin'));
 
 // ----- 路由挂载 -----
-// 顾客端 API（无需认证）
+// 顾客端 API（无需认证）— 微信小程序用户通过 openid 自动鉴权，无需手动登录
 app.use('/api', require('./routes/auth'));
 app.use('/api', require('./routes/menu'));
 app.use('/api', require('./routes/orders'));
 app.use('/api', require('./routes/store'));
 
-// 管理员登录（无需认证）
+// 管理员登录（无需认证）— 登录本身就是获取认证的过程，不能要求已有 token
 app.use('/api', require('./routes/admin-auth'));
 
-// 管理员 API（需要认证）
+// 管理员 API（需要认证）— requireAdmin 中间件验证 JWT，保护所有后续路由
 app.use('/api', requireAdmin, require('./routes/admin'));
 
 // ----- 404 -----

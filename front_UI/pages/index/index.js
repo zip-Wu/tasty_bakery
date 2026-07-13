@@ -10,7 +10,10 @@ Page({
     breadList: [],
     filteredBreadList: [],
 
-    // 购物车
+    // 购物车状态：页面级 data，而非全局 app.globalData
+    // 原因：购物车只对点单页有意义，结算完成后自动清空（通过 clearCartOnReturn 标记）
+    // 如果用全局状态，需在多个页面生命周期中手动同步清空时机，更容易遗漏
+    // 代价：返回点单页时购物车已清空（对用户来说是预期行为——已下单的商品不应还在车里）
     cart: {},
     cartCount: 0,
     cartTotal: 0,
@@ -35,7 +38,7 @@ Page({
       return;
     }
 
-    // 设置API地址（调试用）
+    // 设置 API 地址标识
     this.setData({ apiBase: '云托管' });
 
     // 从全局获取选中的门店信息
@@ -64,18 +67,15 @@ Page({
   // 加载商品列表
   loadProducts() {
     const app = getApp();
-    console.log('加载商品，API地址: 云托管');
     
     app.request({
       url: '/api/products',
       method: 'GET',
     }).then(data => {
-      console.log('商品接口返回:', data);
       this.setData({
         breadList: data,
         filteredBreadList: data
       });
-      console.log('商品加载成功，数量:', data.length);
     }).catch((err) => {
       console.error('[loadProducts] 商品加载失败:', err);
       wx.showToast({ title: '加载商品失败，请检查网络', icon: 'none' });
@@ -112,13 +112,15 @@ Page({
   // 切换分类
   switchCategory(e) {
     const category = e.currentTarget.dataset.category;
-    console.log('切换分类:', category);
     this.setData({ currentCategory: category }, () => {
       this.filterBreadList();
     });
   },
 
-  // 筛选面包列表（空分类/无分类 商品只出现在"全部"中）
+  // 前端分类筛选：商品总量 < 100，全量加载到前端后本地筛选
+  // 原因：避免了每次切换分类都请求后端（减少网络延迟，用户体验更流畅）
+  // 代价：商品量增大到数千时需改为后端筛选 + 分页
+  // 降级：如果 loadProducts 失败，用户看到空列表而非卡在加载中
   filterBreadList() {
     const { breadList, currentCategory } = this.data;
     console.log('筛选，原始数据:', breadList.length, '分类:', currentCategory);
@@ -135,7 +137,6 @@ Page({
   // 加入购物车
   addToCart(e) {
     const id = e.currentTarget.dataset.id;
-    console.log('加入购物车:', id);
     
     const cart = { ...this.data.cart };
     if (cart[id]) {
@@ -146,10 +147,9 @@ Page({
     this.updateCart(cart);
   },
 
-  // 减少购物车
+  // 减少购物车数量
   minusFromCart(e) {
     const id = e.currentTarget.dataset.id;
-    console.log('减少购物车:', id);
     
     const cart = { ...this.data.cart };
     if (cart[id] > 1) {
@@ -199,13 +199,11 @@ Page({
     const { cart, cartTotal, store } = this.data;
     const userId = app.globalData.userId;
 
-    // 检查用户ID
     if (!userId) {
       wx.showToast({ title: '用户未登录', icon: 'none' });
       return;
     }
 
-    // 检查购物车
     if (Object.keys(cart).length === 0) {
       wx.showToast({ title: '购物车为空', icon: 'none' });
       return;
@@ -241,16 +239,13 @@ Page({
       address: store.address || '珠海市高新区唐家湾镇香山路88号2栋1层101-10室'
     };
 
-    console.log('创建订单，发送数据:', requestData);
-
     app.request({
       url: '/api/orders',
       method: 'POST',
       data: requestData,
     }).then(data => {
-      console.log('创建订单返回:', data);
       wx.hideLoading();
-      // 标记：下次回到点单页时清空购物车
+      // 标记：下次回到点单页时清空购物车（在下单成功后触发，而非立即清空）
       app.globalData.clearCartOnReturn = true;
       wx.navigateTo({
         url: '/pages/order-confirm/order-confirm?orderId=' + data.id

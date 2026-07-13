@@ -621,9 +621,15 @@ Page({
   },
 
   // ========== 订单实时轮询 ==========
+  // 递归 setTimeout 代替 setInterval
+  //
+  // 原因 1：setInterval 在微信小程序环境中可能被后台节流/暂停
+  // 原因 2：setInterval 不等上一次请求完成就触发下一次，可能导致请求堆积
+  // 原因 3：递归 setTimeout 保证每次请求完成后才安排下一次，天然串行
+  //
+  // 已知局限：轮询有 10 秒延迟，高峰时段可能漏掉新订单
+  // 升级路径：WebSocket / Server-Sent Events 实时推送 + 降级到轮询
 
-  // 启动轮询：递归 setTimeout 比 setInterval 更可靠
-  // 原因：setInterval 在微信环境中可能被节流/暂停，且不等待请求完成就触发下一次
   _startPolling() {
     this._stopPolling();
     this._lastOrderIds = (this.data.orders || []).map(o => o.id);

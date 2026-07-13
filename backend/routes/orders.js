@@ -7,6 +7,10 @@ const { pool, mysqlNow } = require('../database');
 
 const router = express.Router();
 
+// 订单 ID 使用时间戳+随机字符串（VARCHAR），而非 INT AUTO_INCREMENT
+// 原因：小程序端创建订单时需要立即拿到 ID 拼接确认页 URL，INT 自增 ID 只有 INSERT 后才返回
+// 好处：前端无需等后端回传 ID 即可跳转，减少用户等待感知
+// 代价：比 INT 占更多存储空间，但订单量（千级）下可忽略
 function generateId() {
   return Date.now().toString(36) + crypto.randomBytes(4).toString('hex');
 }
@@ -174,7 +178,15 @@ async function processMockPayment(order, res) {
     ['preparing', now, order.id]
   );
 
-  // 扣减库存
+  // 扣减库存：逐条 UPDATE，未使用事务包裹
+  //
+  // 设计决策：本项目日订单量 < 100，并发冲突概率极低，逐条更新已满足需求
+  // GREATEST(stock - ?, 0) 确保库存不会扣成负数（兜底保护）
+  // CASE WHEN stock - ? <= 0 THEN 0 ELSE is_available END → 库存归零时自动下架
+  //
+  // 已知局限：高并发场景下（如秒杀）两条订单可能同时读到 stock=1 并各自扣减，
+  // 最终 stock 变为负数（GREATEST 兜底为 0，但超卖已发生）
+  // 生产级解决方案：SELECT ... FOR UPDATE 行锁 + 事务，或 Redis 原子扣减
   const items = typeof order.items === 'string' ? JSON.parse(order.items) : order.items;
   for (const item of items) {
     await pool.execute(

@@ -1,6 +1,11 @@
 /**
- * 数据库模块 — MySQL 连接池
- * 自动创建数据库和表结构，并初始化门店
+ * 数据库模块 — MySQL 连接池 + 自动建表
+ *
+ * 设计决策：不使用 ORM（如 Sequelize），直接写 SQL
+ * - 原因 1：本项目仅 4 张表、27 个 API，ORM 引入的抽象和学习成本大于收益
+ * - 原因 2：mysql2/promise 的参数化查询已足够防注入，ORM 的主要安全优势在此规模下不显著
+ * - 原因 3：自动建表 + 列迁移（ALTER TABLE）比 ORM 的 sync 更可控，不会意外删列
+ * - 代价：SQL 与 JS 对象需手动映射（formatOrder 等函数），表增多时维护成本上升
  */
 const mysql = require('mysql2/promise');
 
@@ -10,7 +15,7 @@ const DB_PORT = parseInt(process.env.DB_PORT) || 3306;
 const DB_USER = process.env.DB_USER || 'root';
 const DB_PASS = process.env.DB_PASS || '';
 
-// ========== 连接池（设置时区为北京时间 UTC+8） ==========
+// ========== 连接池（时区设为 UTC+8 北京时间，避免云托管服务器 UTC 时区导致时间偏移） ==========
 const pool = mysql.createPool({
   host: DB_HOST,
   port: DB_PORT,
@@ -23,7 +28,7 @@ const pool = mysql.createPool({
   timezone: '+08:00',
 });
 
-// ========== 初始化（创建库 → 建表） ==========
+// ========== 初始化（创建库 → 建表 → 列迁移 → 种子数据） ==========
 const ready = (async () => {
   // 1. 创建数据库
   const conn = await mysql.createConnection({ host: DB_HOST, port: DB_PORT, user: DB_USER, password: DB_PASS });
@@ -64,7 +69,8 @@ const ready = (async () => {
         created_at   DATETIME DEFAULT CURRENT_TIMESTAMP
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
     `);
-    // 兼容旧表：如果缺 stock 列则补齐
+    // 兼容旧表：如果缺 stock 列则补齐（新增库存管理功能后，已有部署的数据库缺少此列）
+    // 设计意图：避免全量删表重建，保留历史订单数据
     const [stockCols] = await c.query(`SHOW COLUMNS FROM products LIKE 'stock'`);
     if (stockCols.length === 0) {
       await c.query(`ALTER TABLE products ADD COLUMN stock INT DEFAULT 0`);
