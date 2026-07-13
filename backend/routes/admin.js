@@ -6,7 +6,7 @@ const { pool, mysqlNow } = require('../database');
 
 const router = express.Router();
 
-// ===== 获取全部订单 =====
+// ========== 获取全部订单 ==========
 router.get('/admin/orders', async (req, res) => {
   const { status } = req.query;
 
@@ -46,7 +46,7 @@ router.get('/admin/orders', async (req, res) => {
   res.json({ success: true, data: result });
 });
 
-// ===== 标记制作完成 =====
+// ========== 标记制作完成 ==========
 router.post('/admin/orders/:id/ready', async (req, res) => {
   const [rows] = await pool.execute('SELECT * FROM orders WHERE id = ?', [req.params.id]);
 
@@ -58,7 +58,7 @@ router.post('/admin/orders/:id/ready', async (req, res) => {
   res.json({ success: true, message: '已标记为待取餐' });
 });
 
-// ===== 商家标记已完成 =====
+// ========== 商家标记已完成 ==========
 router.post('/admin/orders/:id/complete', async (req, res) => {
   const [rows] = await pool.execute('SELECT * FROM orders WHERE id = ?', [req.params.id]);
 
@@ -83,7 +83,7 @@ router.post('/admin/orders/:id/complete', async (req, res) => {
   res.json({ success: true, message: '已标记为已完成' });
 });
 
-// ===== 获取全部商品 =====
+// ========== 获取全部商品 ==========
 router.get('/admin/products', async (req, res) => {
   const [products] = await pool.execute(
     'SELECT id, name, price, image, category, sales, stock, is_available FROM products ORDER BY id'
@@ -91,7 +91,7 @@ router.get('/admin/products', async (req, res) => {
   res.json({ success: true, data: products });
 });
 
-// ===== 新增商品 =====
+// ========== 新增商品 ==========
 router.post('/admin/products', async (req, res) => {
   const { name, price, category, image, stock } = req.body;
 
@@ -108,7 +108,9 @@ router.post('/admin/products', async (req, res) => {
   res.json({ success: true, data: rows[0] });
 });
 
-// ===== 更新商品 =====
+// ========== 更新商品 ==========
+// 仅更新传入的字段（动态拼接 UPDATE），未传入的字段保持原值不变
+// is_available 字段在前端是 boolean，存储时转为 0/1
 router.put('/admin/products/:id', async (req, res) => {
   const { is_available, price, name, category, image, stock } = req.body;
   const [rows] = await pool.execute('SELECT * FROM products WHERE id = ?', [req.params.id]);
@@ -154,7 +156,7 @@ router.put('/admin/products/:id', async (req, res) => {
   res.json({ success: true, data: updated[0] });
 });
 
-// ===== 删除单个商品 =====
+// ========== 删除单个商品 ==========
 router.delete('/admin/products/:id', async (req, res) => {
   const [rows] = await pool.execute('SELECT * FROM products WHERE id = ?', [req.params.id]);
 
@@ -166,14 +168,14 @@ router.delete('/admin/products/:id', async (req, res) => {
   res.json({ success: true, message: '商品已删除' });
 });
 
-// ===== 一键清空所有商品 =====
+// ========== 一键清空所有商品 ==========
 router.post('/admin/products/reset', async (req, res) => {
   const [[{ cnt }]] = await pool.execute('SELECT COUNT(*) as cnt FROM products');
   await pool.execute('DELETE FROM products');
   res.json({ success: true, message: `已清空 ${cnt} 个商品` });
 });
 
-// ===== 商家快速录单（离线销售记录） =====
+// ========== 商家快速录单（离线销售记录） ==========
 router.post('/admin/quick-sale', async (req, res) => {
   const { items } = req.body;
 
@@ -250,7 +252,7 @@ router.post('/admin/quick-sale', async (req, res) => {
   });
 });
 
-// ===== 今日营收看板 =====
+// ========== 今日营收看板 ==========
 router.get('/admin/dashboard', async (req, res) => {
   const bjNow = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Shanghai' }));
   const today = bjNow.getFullYear() + '-' +

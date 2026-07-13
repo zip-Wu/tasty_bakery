@@ -66,6 +66,7 @@ Page({
     }).then(orders => {
       const count = { pending: 0, preparing: 0, ready: 0, completed: 0, refund: 0 };
       orders.forEach(order => {
+        // 只统计已知状态（未知状态忽略，避免污染计数对象）
         if (count[order.status] !== undefined) count[order.status]++;
       });
       this.setData({ orderCount: count });
@@ -94,6 +95,7 @@ Page({
     wx.switchTab({ url: '/pages/order-list/order-list' });
   },
 
+  // TODO: 以下功能待后续版本实现
   goMemberCenter() { wx.showToast({ title: '会员中心开发中', icon: 'none' }); },
   goCoupons() { wx.showToast({ title: '优惠券功能开发中', icon: 'none' }); },
   goBalance() { wx.showToast({ title: '余额功能开发中', icon: 'none' }); },

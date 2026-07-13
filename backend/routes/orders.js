@@ -15,7 +15,7 @@ function generateId() {
   return Date.now().toString(36) + crypto.randomBytes(4).toString('hex');
 }
 
-// ===== 创建订单 =====
+// ========== 创建订单 ==========
 router.post('/orders', async (req, res) => {
   try {
     const { userId, items, totalPrice, storeId, storeName, pickupTime } = req.body;
@@ -54,7 +54,7 @@ router.post('/orders', async (req, res) => {
   }
 });
 
-// ===== 用户订单列表 =====
+// ========== 用户订单列表 ==========
 router.get('/orders/user/:userId', async (req, res) => {
   const [orders] = await pool.execute(
     'SELECT * FROM orders WHERE user_id = ? ORDER BY created_at DESC',
@@ -65,7 +65,7 @@ router.get('/orders/user/:userId', async (req, res) => {
   res.json({ success: true, data: result });
 });
 
-// ===== 订单详情 =====
+// ========== 订单详情 ==========
 router.get('/orders/:id', async (req, res) => {
   const [rows] = await pool.execute('SELECT * FROM orders WHERE id = ?', [req.params.id]);
 
@@ -76,7 +76,7 @@ router.get('/orders/:id', async (req, res) => {
   res.json({ success: true, data: formatOrder(rows[0]) });
 });
 
-// ===== 更新订单状态（通用） =====
+// ========== 更新订单状态（通用） ==========
 router.post('/orders/:id/status', async (req, res) => {
   const { status } = req.body;
   const [rows] = await pool.execute('SELECT * FROM orders WHERE id = ?', [req.params.id]);
@@ -105,7 +105,7 @@ router.post('/orders/:id/status', async (req, res) => {
   res.json({ success: true, data: formatOrder(updated[0]) });
 });
 
-// ===== 微信支付 - 发起支付（智能降级：有凭证真支付，无凭证模拟） =====
+// ========== 微信支付 - 发起支付（智能降级：有凭证真支付，无凭证模拟） ==========
 const { createJsapiOrder, generatePrepaySign, decryptNotifyResource, config: payConfig } = require('../services/wechat-pay');
 
 const isRealPay = !!payConfig.mchid;
@@ -131,13 +131,13 @@ router.post('/pay/:orderId', async (req, res) => {
       return res.json({ success: false, message: '订单状态不允许支付' });
     }
 
-    // ===== 模拟支付模式（商户号未开通） =====
+    // ========== 模拟支付模式（商户号未开通） ==========
     if (!isRealPay) {
       await processMockPayment(order, res);
       return;
     }
 
-    // ===== 真实微信支付 =====
+    // ========== 真实微信支付 ==========
     const [users] = await pool.execute('SELECT openid FROM users WHERE id = ?', [order.user_id]);
     if (!users[0] || !users[0].openid) {
       return res.json({ success: false, message: '用户未登录，请重新打开小程序' });
@@ -206,7 +206,7 @@ async function processMockPayment(order, res) {
   });
 }
 
-// ===== 微信支付回调通知 =====
+// ========== 微信支付回调通知 ==========
 router.post('/pay/notify', async (req, res) => {
   const rawBody = req.rawBody; // 由 app.js 中的 express.raw 提供
   let notifyData;
@@ -272,7 +272,7 @@ router.post('/pay/notify', async (req, res) => {
   }
 });
 
-// ===== 商家接单 =====
+// ========== 商家接单 ==========
 router.post('/orders/:id/accept', async (req, res) => {
   const [rows] = await pool.execute('SELECT * FROM orders WHERE id = ?', [req.params.id]);
 
@@ -289,7 +289,7 @@ router.post('/orders/:id/accept', async (req, res) => {
   res.json({ success: true, data: formatOrder({ ...rows[0], status: 'preparing', accepted_at: now }) });
 });
 
-// ===== 完成订单（用户确认取餐） =====
+// ========== 完成订单（用户确认取餐） ==========
 router.post('/orders/:id/complete', async (req, res) => {
   const [rows] = await pool.execute('SELECT * FROM orders WHERE id = ?', [req.params.id]);
 
@@ -315,7 +315,7 @@ router.post('/orders/:id/complete', async (req, res) => {
   res.json({ success: true, data: formatOrder({ ...rows[0], status: 'completed', completed_at: now }) });
 });
 
-// ===== 工具函数 =====
+// ========== 工具函数 ==========
 function formatOrder(row) {
   return {
     id: row.id,

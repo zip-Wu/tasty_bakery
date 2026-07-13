@@ -31,7 +31,7 @@ process.on('unhandledRejection', (reason) => {
 const app = express();
 const PORT = process.env.PORT || 80;
 
-// ----- 中间件 -----
+// ========== 中间件 ==========
 app.use(cors());
 
 // 微信支付回调需要原始请求体（必须在 express.json 之前）
@@ -43,7 +43,7 @@ app.use('/api/pay/notify', express.raw({ type: 'application/json' }), (req, res,
 
 app.use(express.json());
 
-// ----- 静态文件 + 管理页面 -----
+// ========== 静态文件 + 管理页面 ==========
 app.use(express.static(path.join(__dirname, 'public')));
 app.get('/admin', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'admin.html'));
@@ -53,7 +53,7 @@ app.get('/admin', (req, res) => {
 app.get('/health', (req, res) => res.status(200).send('ok'));
 app.get('/', (req, res) => res.redirect('/admin'));
 
-// ----- 路由挂载 -----
+// ========== 路由挂载 ==========
 // 顾客端 API（无需认证）— 微信小程序用户通过 openid 自动鉴权，无需手动登录
 app.use('/api', require('./routes/auth'));
 app.use('/api', require('./routes/menu'));
@@ -66,18 +66,18 @@ app.use('/api', require('./routes/admin-auth'));
 // 管理员 API（需要认证）— requireAdmin 中间件验证 JWT，保护所有后续路由
 app.use('/api', requireAdmin, require('./routes/admin'));
 
-// ----- 404 -----
+// ========== 404 ==========
 app.use((req, res) => {
   res.status(404).json({ success: false, message: `接口不存在: ${req.method} ${req.path}` });
 });
 
-// ----- 全局错误处理 -----
+// ========== 全局错误处理 ==========
 app.use((err, req, res, next) => {
   console.error('服务器错误:', err);
   res.status(500).json({ success: false, message: '服务器内部错误' });
 });
 
-// ----- 启动 -----
+// ========== 启动 ==========
 const { ready } = require('./database');
 
 ready.then(() => {

@@ -35,6 +35,7 @@ Page({
     wx.navigateTo({ url: '/pages/store-select/store-select' });
   },
 
+  // TODO: 以下功能待后续版本实现
   goMember() {
     wx.showToast({ title: '会员功能开发中', icon: 'none' });
   },

@@ -6,7 +6,7 @@ const { pool } = require('../database');
 
 const router = express.Router();
 
-// ===== 获取商品列表 =====
+// ========== 获取商品列表 ==========
 router.get('/products', async (req, res) => {
   const { category } = req.query;
 
@@ -24,7 +24,7 @@ router.get('/products', async (req, res) => {
   res.json({ success: true, data: products });
 });
 
-// ===== 获取分类（从商品数据自动提取） =====
+// ========== 获取分类（从商品数据自动提取） ==========
 router.get('/categories', async (req, res) => {
   const [rows] = await pool.execute(
     "SELECT DISTINCT category FROM products WHERE category IS NOT NULL AND category != '' AND is_available = 1 AND stock > 0 ORDER BY category"

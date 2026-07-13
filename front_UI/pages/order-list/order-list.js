@@ -113,15 +113,14 @@ Page({
     wx.navigateTo({ url: '/pages/order-detail/order-detail?id=' + id });
   },
 
-  // 再来一单
+  // 再来一单：跳转回点单页（当前版本不自动还原购物车，仅导航）
   reorder(e) {
     const id = e.currentTarget.dataset.id;
-    // 模拟把商品加入购物车
     const app = getApp();
     const order = this.data.orders.find(o => o.id === id);
     if (order) {
       wx.showToast({ title: '正在跳转点单页...', icon: 'none' });
-      // 跳转到点单页
+      // 延迟 1 秒跳转：留给 toast 足够的展示时间，避免 switchTab 立即打断
       setTimeout(() => {
         wx.switchTab({ url: '/pages/index/index' });
       }, 1000);

@@ -36,7 +36,7 @@ function generateId() {
   return Date.now().toString(36) + crypto.randomBytes(4).toString('hex');
 }
 
-// ===== 调用微信 code2Session 换取真实 openid =====
+// ========== 调用微信 code2Session 换取真实 openid ==========
 function getOpenId(code) {
   return new Promise((resolve, reject) => {
     if (!WX_APP_SECRET) {
@@ -50,11 +50,11 @@ function getOpenId(code) {
       '&grant_type=authorization_code';
 
     https.get(url, getHttpsOptions(), (wxRes) => {
-      var data = '';
-      wxRes.on('data', function(chunk) { data += chunk; });
-      wxRes.on('end', function() {
+      let data = '';
+      wxRes.on('data', (chunk) => { data += chunk; });
+      wxRes.on('end', () => {
         try {
-          var result = JSON.parse(data);
+          const result = JSON.parse(data);
           if (result.openid) {
             resolve(result.openid);
           } else {
@@ -107,7 +107,7 @@ function customerResponse(user) {
   };
 }
 
-// ===== 微信登录（code 换取 openid） =====
+// ========== 微信登录（code 换取 openid） ==========
 router.post('/login', async (req, res) => {
   const { nickname, avatar, code } = req.body;
 
@@ -147,7 +147,7 @@ router.post('/login', async (req, res) => {
   res.json({ success: true, data: customerResponse(user) });
 });
 
-// ===== 获取用户信息 =====
+// ========== 获取用户信息 ==========
 router.get('/user/:id', async (req, res) => {
   const [rows] = await pool.execute('SELECT * FROM users WHERE id = ?', [req.params.id]);
 
@@ -158,7 +158,7 @@ router.get('/user/:id', async (req, res) => {
   res.json({ success: true, data: customerResponse(rows[0]) });
 });
 
-// ===== 更新用户信息 =====
+// ========== 更新用户信息 ==========
 router.post('/user/:id', async (req, res) => {
   const [rows] = await pool.execute('SELECT * FROM users WHERE id = ?', [req.params.id]);
 
