@@ -7,8 +7,16 @@ const https = require('https');
 const tls = require('tls');
 const fs = require('fs');
 const { pool } = require('../database');
+const { requireUser } = require('../middleware/auth');
 
 const router = express.Router();
+
+// WHY 安全：/login 是用户登录入口，尚未获取用户身份，不需要 requireUser
+// /user/:id 等数据操作需要在路由内验证归属
+router.use((req, res, next) => {
+  if (req.path === '/login') return next();
+  requireUser(req, res, next);
+});
 
 // 微信小程序 AppID（通过环境变量注入）
 const WX_APP_ID = process.env.WX_APP_ID;
@@ -149,21 +157,19 @@ router.post('/login', async (req, res) => {
 
 // ========== 获取用户信息 ==========
 router.get('/user/:id', async (req, res) => {
-  const [rows] = await pool.execute('SELECT * FROM users WHERE id = ?', [req.params.id]);
-
-  if (!rows[0]) {
-    return res.json({ success: false, message: '用户不存在' });
+  // WHY 安全：验证只能读取自己的用户信息，消除 IDOR（此前任何人均可通过 URL 中的 id 读取任意用户数据）
+  if (req.params.id !== req.user.id) {
+    return res.status(403).json({ success: false, message: '无权查看他人信息' });
   }
 
-  res.json({ success: true, data: customerResponse(rows[0]) });
+  res.json({ success: true, data: customerResponse(req.user) });
 });
 
 // ========== 更新用户信息 ==========
 router.post('/user/:id', async (req, res) => {
-  const [rows] = await pool.execute('SELECT * FROM users WHERE id = ?', [req.params.id]);
-
-  if (!rows[0]) {
-    return res.json({ success: false, message: '用户不存在' });
+  // WHY 安全：验证只能更新自己的用户信息，消除 IDOR
+  if (req.params.id !== req.user.id) {
+    return res.status(403).json({ success: false, message: '无权修改他人信息' });
   }
 
   const updates = req.body;
@@ -179,14 +185,14 @@ router.post('/user/:id', async (req, res) => {
   }
 
   if (fields.length > 0) {
-    values.push(req.params.id);
+    values.push(req.user.id);
     await pool.execute(
       `UPDATE users SET ${fields.join(', ')}, updated_at = NOW() WHERE id = ?`,
       values
     );
   }
 
-  const [updated] = await pool.execute('SELECT * FROM users WHERE id = ?', [req.params.id]);
+  const [updated] = await pool.execute('SELECT * FROM users WHERE id = ?', [req.user.id]);
   res.json({ success: true, data: customerResponse(updated[0]) });
 });
 

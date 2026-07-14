@@ -7,6 +7,7 @@
  *   router.use('/admin', requireAdmin);
  */
 const jwt = require('jsonwebtoken');
+const { pool } = require('../database');
 
 // 管理员密码 — 通过环境变量 ADMIN_PASSWORD 设置（无默认值，强制配置）
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '';
@@ -56,4 +57,39 @@ function requireAdmin(req, res, next) {
   }
 }
 
-module.exports = { signToken, requireAdmin };
+// ===================== 顾客端认证中间件 =====================
+
+/**
+ * Express 中间件：从微信网关注入的 X-WX-OPENID 解析当前用户
+ *
+ * WHY 安全：此前顾客端 API 信任客户端传入的 userId，攻击者可冒用任意用户身份下单/查数据（IDOR）。
+ *          微信云托管的 callContainer 通道会在网关层做设备级 HMAC 签名验证，
+ *          验证通过后才会注入 X-WX-OPENID 头并转发到容器。
+ *          攻击者公网直连容器时无法伪造此头（密钥在微信客户端本地），会被直接拒绝。
+ *          因此该头由微信网关保证可信，后端仅做解析即可。
+ *
+ * 依赖：前端使用 wx.cloud.callContainer() 调用后端（app.js 已确认）。
+ */
+async function requireUser(req, res, next) {
+  const openid = req.headers['x-wx-openid'];
+
+  if (!openid) {
+    return res.status(401).json({ success: false, message: '未获取到用户身份，请从微信客户端打开小程序' });
+  }
+
+  try {
+    const [rows] = await pool.execute('SELECT * FROM users WHERE openid = ?', [openid]);
+
+    if (!rows[0]) {
+      return res.status(401).json({ success: false, message: '用户不存在，请重新打开小程序登录' });
+    }
+
+    req.user = rows[0];
+    next();
+  } catch (err) {
+    console.error('[auth] requireUser 数据库查询失败:', err.message);
+    return res.status(500).json({ success: false, message: '服务异常，请稍后重试' });
+  }
+}
+
+module.exports = { signToken, requireAdmin, requireUser };

@@ -54,16 +54,20 @@ app.get('/health', (req, res) => res.status(200).send('ok'));
 app.get('/', (req, res) => res.redirect('/admin'));
 
 // ========== 路由挂载 ==========
-// 顾客端 API（无需认证）— 微信小程序用户通过 openid 自动鉴权，无需手动登录
-app.use('/api', require('./routes/auth'));
+// 顾客端只读 API（无需用户身份）— 商品浏览、门店查询
 app.use('/api', require('./routes/menu'));
-app.use('/api', require('./routes/orders'));
 app.use('/api', require('./routes/store'));
 
-// 管理员登录（无需认证）— 登录本身就是获取认证的过程，不能要求已有 token
+// 顾客端身份相关 — login 路由无需用户身份，user/:id 路由内部已加 requireUser 保护
+app.use('/api', require('./routes/auth'));
+
+// 顾客端订单 — 内部所有路由使用 req.user（来自 requireUser 中间件），不再信任客户端 userId
+app.use('/api', require('./routes/orders'));
+
+// 管理员登录（无需管理员认证）— 登录本身就是获取 JWT 的过程
 app.use('/api', require('./routes/admin-auth'));
 
-// 管理员 API（需要认证）— requireAdmin 中间件验证 JWT，保护所有后续路由
+// 管理员 API（需要 JWT 认证）— requireAdmin 验证 Bearer token
 app.use('/api', requireAdmin, require('./routes/admin'));
 
 // ========== 404 ==========

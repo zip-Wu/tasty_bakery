@@ -4,8 +4,16 @@
 const express = require('express');
 const crypto = require('crypto');
 const { pool, mysqlNow } = require('../database');
+const { requireUser } = require('../middleware/auth');
 
 const router = express.Router();
+
+// WHY 安全：路由级 requireUser 中间件，确保所有订单操作都绑定到真实用户身份
+// /pay/notify 是微信服务器回调，不适用用户认证，故跳过
+router.use((req, res, next) => {
+  if (req.path === '/pay/notify') return next();
+  requireUser(req, res, next);
+});
 
 // 订单 ID 使用时间戳+随机字符串（VARCHAR），而非 INT AUTO_INCREMENT
 // 原因：小程序端创建订单时需要立即拿到 ID 拼接确认页 URL，INT 自增 ID 只有 INSERT 后才返回
@@ -18,9 +26,11 @@ function generateId() {
 // ========== 创建订单 ==========
 router.post('/orders', async (req, res) => {
   try {
-    const { userId, items, totalPrice, storeId, storeName, pickupTime } = req.body;
+    // WHY 安全：用户身份来自 requireUser 中间件解析的 X-WX-OPENID，不再信任客户端传入的 userId（消除 IDOR）
+    const userId = req.user.id;
+    const { items, totalPrice, storeId, storeName, pickupTime } = req.body;
 
-    if (!userId || !items || !items.length) {
+    if (!items || !items.length) {
       return res.json({ success: false, message: '缺少必要参数' });
     }
 
@@ -56,9 +66,14 @@ router.post('/orders', async (req, res) => {
 
 // ========== 用户订单列表 ==========
 router.get('/orders/user/:userId', async (req, res) => {
+  // WHY 安全：验证 URL 中的 userId 与当前登录用户一致，禁止查看他人订单
+  if (req.params.userId !== req.user.id) {
+    return res.status(403).json({ success: false, message: '无权查看他人订单' });
+  }
+
   const [orders] = await pool.execute(
     'SELECT * FROM orders WHERE user_id = ? ORDER BY created_at DESC',
-    [req.params.userId]
+    [req.user.id]
   );
 
   const result = orders.map(formatOrder);
@@ -73,30 +88,44 @@ router.get('/orders/:id', async (req, res) => {
     return res.json({ success: false, message: '订单不存在' });
   }
 
+  // WHY 安全：验证订单归属，禁止查看他人订单详情
+  if (rows[0].user_id !== req.user.id) {
+    return res.status(403).json({ success: false, message: '无权查看他人订单' });
+  }
+
   res.json({ success: true, data: formatOrder(rows[0]) });
 });
 
 // ========== 更新订单状态（通用） ==========
 router.post('/orders/:id/status', async (req, res) => {
   const { status } = req.body;
+
+  // WHY 安全：禁止通过通用状态接口将订单设为 paid/completed
+  // paid 只能由支付流程内部调用（/pay/:orderId 或 /pay/notify 回调），completed 需要走授权接单/完成流程
+  if (status === 'paid') {
+    return res.status(403).json({ success: false, message: '支付状态不可手动设置，请走支付流程' });
+  }
+  if (status === 'completed') {
+    return res.status(403).json({ success: false, message: '完成状态不可直接设置，请通过取餐完成流程操作' });
+  }
+
   const [rows] = await pool.execute('SELECT * FROM orders WHERE id = ?', [req.params.id]);
 
   if (!rows[0]) {
     return res.json({ success: false, message: '订单不存在' });
   }
 
+  // WHY 安全：验证订单归属，禁止修改他人订单状态
+  if (rows[0].user_id !== req.user.id) {
+    return res.status(403).json({ success: false, message: '无权修改他人订单' });
+  }
+
   const now = mysqlNow();
   const setClauses = ['status = ?'];
   const params = [status];
 
-  if (status === 'paid') {
-    setClauses.push('paid_at = ?');
-    params.push(now);
-  }
-  if (status === 'completed') {
-    setClauses.push('completed_at = ?');
-    params.push(now);
-  }
+  // 时间戳仅对合法状态生效（paid/completed 已在上方拦截）
+  // 保留此逻辑以便未来可能扩展的状态类型
 
   params.push(req.params.id);
   await pool.execute(`UPDATE orders SET ${setClauses.join(', ')} WHERE id = ?`, params);
@@ -106,7 +135,7 @@ router.post('/orders/:id/status', async (req, res) => {
 });
 
 // ========== 微信支付 - 发起支付（智能降级：有凭证真支付，无凭证模拟） ==========
-const { createJsapiOrder, generatePrepaySign, decryptNotifyResource, config: payConfig } = require('../services/wechat-pay');
+const { createJsapiOrder, generatePrepaySign, decryptNotifyResource, verifyNotifySign, config: payConfig } = require('../services/wechat-pay');
 
 const isRealPay = !!payConfig.mchid;
 
@@ -124,6 +153,11 @@ router.post('/pay/:orderId', async (req, res) => {
 
     if (!rows[0]) {
       return res.json({ success: false, message: '订单不存在' });
+    }
+
+    // WHY 安全：验证订单归属，禁止支付他人订单
+    if (rows[0].user_id !== req.user.id) {
+      return res.status(403).json({ success: false, message: '无权支付他人订单' });
     }
 
     const order = rows[0];
@@ -211,6 +245,13 @@ router.post('/pay/notify', async (req, res) => {
   const rawBody = req.rawBody; // 由 app.js 中的 express.raw 提供
   let notifyData;
 
+  // WHY 安全：验证微信支付回调签名，确保回调确实来自微信支付服务器（非伪造）
+  // 此前 verifyNotifySign 从未被任何路由调用——回调实际是零验签状态
+  if (!verifyNotifySign(req.headers, rawBody)) {
+    console.error('[pay-notify] 签名验证失败，拒绝回调');
+    return res.status(401).json({ code: 'FAIL', message: 'signature verification failed' });
+  }
+
   try {
     const bodyJson = JSON.parse(rawBody);
 
@@ -280,6 +321,11 @@ router.post('/orders/:id/accept', async (req, res) => {
     return res.json({ success: false, message: '订单不存在' });
   }
 
+  // WHY 安全：接单操作限制订单归属用户（防止恶意接单）
+  if (rows[0].user_id !== req.user.id) {
+    return res.status(403).json({ success: false, message: '无权操作他人订单' });
+  }
+
   const now = mysqlNow();
   await pool.execute(
     'UPDATE orders SET status = ?, accepted_at = ? WHERE id = ?',
@@ -295,6 +341,11 @@ router.post('/orders/:id/complete', async (req, res) => {
 
   if (!rows[0]) {
     return res.json({ success: false, message: '订单不存在' });
+  }
+
+  // WHY 安全：完成订单限制订单归属用户（防止恶意完成他人订单）
+  if (rows[0].user_id !== req.user.id) {
+    return res.status(403).json({ success: false, message: '无权操作他人订单' });
   }
 
   const now = mysqlNow();
