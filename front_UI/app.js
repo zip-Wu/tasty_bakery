@@ -8,14 +8,6 @@ App({
   onLaunch() {
     wx.cloud.init({ env: CLOUD_ENV });
 
-    // 生成/读取设备唯一标识，区分不同用户
-    // 生产环境：后端用 wx.login 的 code 换 openid 替代 deviceId
-    let deviceId = wx.getStorageSync('deviceId');
-    if (!deviceId) {
-      deviceId = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
-      wx.setStorageSync('deviceId', deviceId);
-    }
-
     // 恢复登录状态
     const userId = wx.getStorageSync('userId');
     if (userId) {
@@ -41,13 +33,12 @@ App({
 
   // 静默登录（首次或缓存被清后触发，无需用户任何操作）
   login(callback) {
-    const deviceId = wx.getStorageSync('deviceId');
     wx.login({
       success: (res) => {
         this.request({
           url: '/api/login',
           method: 'POST',
-          data: { code: res.code, deviceId: deviceId },
+          data: { code: res.code },
         }).then(data => {
           this.globalData.userId = data.id;
           this.globalData.userInfo = data;
