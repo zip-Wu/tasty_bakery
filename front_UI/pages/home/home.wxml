@@ -9,7 +9,7 @@
     <image class="service-card" src="/images/png/youjifuwu.png" mode="widthFix" bindtap="goDelivery"></image>
   </view>
 
-  <!-- 活动区（横向滚动） -->
+  <!-- 活动区（绝对定位，固定在 TabBar 上方，活动栏永远靠近 tab） -->
   <scroll-view scroll-x enhanced show-scrollbar="{{false}}" class="activity-scroll">
     <view class="activity-list">
       <view class="activity-item" wx:for="{{activities}}" wx:key="id">

@@ -14,6 +14,27 @@ Page({
     _adminTapTimer: null
   },
 
+  onLoad() {
+    // 精确计算两个 spacer 高度，让 service-row↔activity↔tab 视觉等距
+    // 100vh 的 rpx 值因手机而异，必须用 JS 算
+    try {
+      const sys = wx.getSystemInfoSync();
+      const winH = sys.windowHeight;     // 屏高 px
+      const winW = sys.windowWidth;       // 屏宽 px
+      // 固定元素 rpx 高度（与 wxss 中元素实际高度一致）
+      const fixedRpx = 560 + 80 + 331 + 240;  // banner + service-row margin + service-row + activity
+      // 100vh 转 rpx
+      const screenHrpx = winH * 750 / winW;
+      // 剩余空间 = 屏高 - 固定元素 - tab 安全区(158rpx)
+      const remaining = screenHrpx - fixedRpx - 158;
+      // 两个 spacer 等分剩余，最小 0
+      const gapRpx = Math.max(0, Math.floor(remaining / 2));
+      this.setData({ spacerHeight: gapRpx });
+    } catch (e) {
+      this.setData({ spacerHeight: 100 });  // 兜底
+    }
+  },
+
   onShow() {
     if (typeof this.getTabBar === 'function' && this.getTabBar()) {
       this.getTabBar().setData({ selected: 0 });
