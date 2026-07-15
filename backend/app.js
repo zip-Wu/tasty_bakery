@@ -61,7 +61,7 @@ app.use('/api', require('./routes/store'));
 // 顾客端身份相关 — login 路由无需用户身份，user/:id 路由内部已加 requireUser 保护
 app.use('/api', require('./routes/auth'));
 
-// 顾客端订单 — 内部所有路由使用 req.user（来自 requireUser 中间件），不再信任客户端 userId
+// 顾客端订单 — requireUser 中间件通过 X-WX-OPENID 注入 req.user，所有端点用 req.user.id 替代客户端传入的 userId，防 IDOR 越权
 app.use('/api', require('./routes/orders'));
 
 // 管理员登录（无需管理员认证）— 登录本身就是获取 JWT 的过程
@@ -87,10 +87,10 @@ const { ready } = require('./database');
 ready.then(() => {
   app.listen(PORT, () => {
     console.log('');
-    console.log('  🍞  大力馒头 后端服务已启动');
-    console.log(`  📍  小程序 API: http://localhost:${PORT}`);
-    console.log(`  🛠  商家管理:   http://localhost:${PORT}/admin`);
-    console.log(`  🔐  管理密码:   (通过环境变量 ADMIN_PASSWORD 设置)`);
+    console.log('  大力馒头 后端服务已启动');
+    console.log(`  小程序 API: http://localhost:${PORT}`);
+    console.log(`  商家管理: http://localhost:${PORT}/admin`);
+    console.log('  管理密码: (通过环境变量 ADMIN_PASSWORD 设置)');
     console.log('');
     console.log('  可用接口:');
     console.log('    POST /api/login              — 用户登录');
