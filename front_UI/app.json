@@ -13,7 +13,7 @@
   "window": {
     "navigationBarTextStyle": "black",
     "navigationBarTitleText": "大力馒头",
-    "navigationBarBackgroundColor": "#FFEB99",
+    "navigationBarBackgroundColor": "#F3D624",
     "backgroundTextStyle": "dark"
   },
   "permission": {

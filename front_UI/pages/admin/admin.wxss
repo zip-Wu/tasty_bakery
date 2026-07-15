@@ -362,7 +362,7 @@
 .qs-summary-num { font-size: 32rpx; color: #f5a623; font-weight: bold; }
 .qs-submit-btn {
   background: #f5a623 !important;
-  color: #fff !important;
+  color: #333 !important;
   border-radius: 40rpx !important;
   font-size: 28rpx !important;
   font-weight: bold !important;

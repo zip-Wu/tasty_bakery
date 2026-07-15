@@ -46,7 +46,7 @@
 
       <!-- 空状态 -->
       <view class="empty-goods" wx:if="{{filteredBreadList.length === 0}}">
-        <text class="empty-icon">🍞</text>
+        <image class="empty-icon" src="/images/svg/bread.svg" mode="aspectFit"></image>
         <text class="empty-text">暂无商品</text>
       </view>
     </scroll-view>
@@ -56,7 +56,7 @@
   <view class="cart-bar">
     <view class="cart-info">
       <view class="cart-icon">
-        <text class="cart-icon-text">🛒</text>
+        <image class="cart-icon-img" src="/images/svg/cart.svg" mode="aspectFit"></image>
         <view class="cart-badge" wx:if="{{cartCount > 0}}">{{cartCount}}</view>
       </view>
       <view class="cart-price-wrap">

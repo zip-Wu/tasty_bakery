@@ -19,7 +19,7 @@
     <view class="order-list">
       <!-- 空状态 -->
       <view class="empty-state" wx:if="{{orders.length === 0}}">
-        <text class="empty-icon">📋</text>
+        <image class="empty-icon" src="/images/svg/clipboard.svg" mode="aspectFit"></image>
         <text class="empty-text">暂无相关订单</text>
       </view>
 

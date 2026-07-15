@@ -1,50 +1,15 @@
-<!-- 首页 - 大力馒头风格 -->
-<view class="home-page tab-bar-page">
-  <!-- 顶部大Banner - 占位图（连续点击5次进入商家管理） -->
-  <view class="banner-section">
-    <image class="banner-img" src="/images/banner.png" mode="aspectFill" bindtap="onBannerTap"></image>
+<!-- 首页 - SVG 图片布局 -->
+<view class="home-page">
+  <!-- 顶部 Banner（点击5次进入商家管理） -->
+  <image class="banner" src="/images/png/banner.png" mode="widthFix" bindtap="onBannerTap"></image>
+
+  <!-- 门店自提 / 邮寄服务 -->
+  <view class="service-row">
+    <image class="service-card" src="/images/png/mendianziti.png" mode="widthFix" bindtap="goToOrder"></image>
+    <image class="service-card" src="/images/png/youjifuwu.png" mode="widthFix" bindtap="goDelivery"></image>
   </view>
 
-  <!-- 两大功能入口：门店自提 / 邮寄服务 -->
-  <view class="service-cards">
-    <view class="service-card" bindtap="goToOrder">
-      <view class="service-icon-wrap pickup">
-        <text class="service-emoji-large">🛒</text>
-      </view>
-      <text class="service-name">门店自提</text>
-    </view>
-    <view class="service-card" bindtap="goDelivery">
-      <view class="service-icon-wrap delivery">
-        <text class="service-emoji-large">🏍️</text>
-      </view>
-      <text class="service-name">邮寄服务</text>
-    </view>
-  </view>
-
-  <!-- 会员提示条 -->
-  <view class="member-tip-bar" bindtap="goMember">
-    <text class="member-tip-text">Hi,注册会员后才有积分哦~</text>
-    <view class="member-code-btn">
-      <text class="code-icon">📱</text>
-      <text class="code-text">会员码</text>
-    </view>
-  </view>
-
-  <!-- 积分商城 + 充值中心 -->
-  <view class="func-row">
-    <view class="func-item" bindtap="goToPointMall">
-      <text class="func-name">积分商城</text>
-      <text class="func-arrow">›</text>
-      <view class="func-icon-float">🛍️</view>
-    </view>
-    <view class="func-item" bindtap="goRecharge">
-      <text class="func-name">充值中心</text>
-      <text class="func-arrow">›</text>
-      <view class="func-icon-float">🍑</view>
-    </view>
-  </view>
-
-  <!-- 活动/公告横幅区 - 占位图 -->
+  <!-- 活动区（横向滚动） -->
   <scroll-view scroll-x enhanced show-scrollbar="{{false}}" class="activity-scroll">
     <view class="activity-list">
       <view class="activity-item" wx:for="{{activities}}" wx:key="id">
@@ -53,6 +18,6 @@
     </view>
   </scroll-view>
 
-  <!-- 自定义悬浮TabBar -->
+  <!-- 自定义 TabBar -->
   <custom-tab-bar></custom-tab-bar>
 </view>

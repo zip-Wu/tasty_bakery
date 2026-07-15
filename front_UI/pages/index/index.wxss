@@ -49,10 +49,11 @@ page {
 
 .store-tag {
   font-size: 24rpx;
-  color: #f5a623;
-  border: 2rpx solid #f5a623;
+  color: #8B6914;
+  border: 2rpx solid #F3D624;
   padding: 8rpx 20rpx;
   border-radius: 8rpx;
+  background: #FFFDEB;
 }
 
 /* 主内容区 */
@@ -73,7 +74,6 @@ page {
   height: 100%;
   background: #f5f5f5;
   flex-shrink: 0;
-  padding-bottom: 100rpx;
 }
 
 .category-item {
@@ -84,7 +84,7 @@ page {
 
 .category-item.active {
   background: #fff;
-  border-left-color: #f5a623;
+  border-left-color: #F3D624;
 }
 
 .category-name {
@@ -93,7 +93,7 @@ page {
 }
 
 .category-item.active .category-name {
-  color: #f5a623;
+  color: #333;
   font-weight: bold;
 }
 
@@ -104,7 +104,6 @@ page {
   background: #fff;
   padding: 0 20rpx;
   box-sizing: border-box;
-  padding-bottom: 100rpx;
 }
 
 .category-title {
@@ -186,8 +185,8 @@ page {
 }
 
 .count-btn.plus {
-  background: #f5a623;
-  color: #fff;
+  background: #F3D624;
+  color: #333;
 }
 
 .goods-count {
@@ -206,7 +205,8 @@ page {
 }
 
 .empty-icon {
-  font-size: 80rpx;
+  width: 80rpx;
+  height: 80rpx;
   margin-bottom: 16rpx;
 }
 
@@ -218,7 +218,7 @@ page {
 /* 底部购物车栏 - 悬浮胶囊样式 */
 .cart-bar {
   position: fixed;
-  bottom: 154rpx; /* 悬浮在tabBar上方：24rpx(间距) + 110rpx(tabBar) + 20rpx(间距) */
+  bottom: 170rpx; /* 悬浮在tabBar上方：24rpx(间距) + 110rpx(tabBar) + 20rpx(间距) */
   left: 24rpx;
   right: 24rpx;
   display: flex;
@@ -255,6 +255,11 @@ page {
   font-size: 40rpx;
 }
 
+.cart-icon-img {
+  width: 44rpx;
+  height: 44rpx;
+}
+
 .cart-badge {
   position: absolute;
   top: -8rpx;
@@ -287,7 +292,7 @@ page {
 
 .checkout-btn {
   background: #ccc;
-  color: #fff;
+  color: #333;
   font-size: 30rpx;
   font-weight: bold;
   border-radius: 50rpx;
@@ -295,5 +300,5 @@ page {
 }
 
 .checkout-btn.active {
-  background: #f5a623;
+  background: #F3D624;
 }

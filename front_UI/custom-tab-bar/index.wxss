@@ -1,6 +1,6 @@
 .custom-tab-bar {
   position: fixed;
-  bottom: 24rpx;
+  bottom: 48rpx;
   left: 50%;
   transform: translateX(-50%);
   width: 702rpx;
@@ -18,30 +18,18 @@
 
 .tab-item {
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-width: 100rpx;
+  flex: 1;
   height: 100%;
-  position: relative;
 }
 
-.tab-icon {
-  font-size: 40rpx;
-  margin-bottom: 4rpx;
+.tab-image {
+  width: 95rpx;
+  height: 87rpx;
+  display: block;
 }
 
-.tab-text {
-  font-size: 22rpx;
-  color: #999;
-  font-weight: 500;
-}
-
-.tab-item.active .tab-text {
-  color: #f5a623;
-  font-weight: bold;
-}
-
-.tab-item.active .tab-icon {
-  transform: scale(1.1);
+.tab-item.active .tab-image {
+  transform: scale(1.05);
 }

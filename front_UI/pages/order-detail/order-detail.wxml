@@ -3,7 +3,7 @@
   <!-- 订单状态追踪 -->
   <view class="status-tracker">
     <view class="status-bg">
-      <view class="status-icon">{{statusIcon}}</view>
+      <image class="status-icon" src="{{statusIcon}}" mode="aspectFit"></image>
       <view class="status-text">{{order.statusText}}</view>
     </view>
 

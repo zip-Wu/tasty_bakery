@@ -1,11 +1,14 @@
 Page({
   data: {
-    // 活动横幅数据 — 更换图片：把新图片放到 /images/ 目录下，改下面的文件名即可
+    // 活动横幅数据 — 更换图片：把新图片放到 /images/png/ 目录下，改下面的文件名即可
+    // 数量可任意增减（建议 6~10 张，过多会影响滚动性能）
     activities: [
-      { id: 1, image: '/images/activity-1.png' },
-      { id: 2, image: '/images/activity-2.png' },
-      { id: 3, image: '/images/activity-3.png' },
-      { id: 4, image: '/images/activity-4.png' }
+      { id: 1, image: '/images/png/products.png' },
+      { id: 2, image: '/images/png/products.png' },
+      { id: 3, image: '/images/png/products.png' },
+      { id: 4, image: '/images/png/products.png' },
+      { id: 5, image: '/images/png/products.png' },
+      { id: 6, image: '/images/png/products.png' }
     ],
     _adminTapCount: 0,
     _adminTapTimer: null
@@ -38,14 +41,6 @@ Page({
   // TODO: 以下功能待后续版本实现
   goMember() {
     wx.showToast({ title: '会员功能开发中', icon: 'none' });
-  },
-
-  goToPointMall() {
-    wx.showToast({ title: '积分商城开发中', icon: 'none' });
-  },
-
-  goRecharge() {
-    wx.showToast({ title: '充值功能开发中', icon: 'none' });
   },
 
   goDelivery() {

@@ -2,12 +2,12 @@ Page({
   data: {
     orderId: '',
     order: {},
-    statusIcon: '⏳',
+    statusIcon: '/images/svg/order-pending.svg',
     statusMap: {
-      pending: { icon: '💰', text: '待支付' },
-      preparing: { icon: '👨‍🍳', text: '制作中' },
-      ready: { icon: '📦', text: '待取餐' },
-      completed: { icon: '✅', text: '已完成' }
+      pending: { icon: '/images/svg/order-pending.svg', text: '待支付' },
+      preparing: { icon: '/images/svg/order-preparing.svg', text: '制作中' },
+      ready: { icon: '/images/svg/order-ready.svg', text: '待取餐' },
+      completed: { icon: '/images/svg/order-completed.svg', text: '已完成' }
     }
   },
 
@@ -37,7 +37,7 @@ Page({
   // 处理订单数据
   processOrder(order) {
     // 状态图标和文字
-    const statusInfo = this.data.statusMap[order.status] || { icon: '📋', text: order.status };
+    const statusInfo = this.data.statusMap[order.status] || { icon: '/images/svg/clipboard.svg', text: order.status };
     
     // 时间格式化
     order.createdAtDisplay = this.formatTime(order.createdAt);
@@ -98,7 +98,7 @@ Page({
   callStore() {
     wx.showModal({
       title: '联系门店',
-      content: '大力馒头·信息港店\n📞 0756-1234567\n\n营业时间：08:00 - 21:00',
+      content: '大力馒头·信息港店\n电话：0756-1234567\n\n营业时间：08:00 - 21:00',
       showCancel: false,
       confirmText: '拨打'
     });

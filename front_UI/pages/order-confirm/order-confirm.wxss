@@ -8,9 +8,9 @@ page {
 
 /* ========== 门店信息 ========== */
 .store-info {
-  background: linear-gradient(135deg, #f5a623 0%, #e6951c 100%);
+  background: #F3D624;
   padding: 40rpx 30rpx;
-  color: #fff;
+  color: #333;
 }
 
 .store-name {
@@ -65,7 +65,7 @@ page {
 
 .item-price {
   font-size: 26rpx;
-  color: #f5a623;
+  color: #e53935;
   font-weight: bold;
 }
 
@@ -100,7 +100,7 @@ page {
 }
 
 .total-price {
-  color: #f5a623;
+  color: #e53935;
   font-size: 36rpx;
 }
 
@@ -129,12 +129,13 @@ page {
 }
 
 .pay-method.selected {
-  border-color: #f5a623;
+  border-color: #F3D624;
   background: #fffbf5;
 }
 
 .method-icon {
-  font-size: 40rpx;
+  width: 40rpx;
+  height: 40rpx;
   margin-right: 16rpx;
 }
 
@@ -144,10 +145,9 @@ page {
   color: #333;
 }
 
-.check {
-  color: #f5a623;
-  font-size: 32rpx;
-  font-weight: bold;
+.check-icon {
+  width: 32rpx;
+  height: 32rpx;
 }
 
 /* ========== 底部支付栏 ========== */
@@ -177,13 +177,13 @@ page {
 .total-amount {
   font-size: 44rpx;
   font-weight: bold;
-  color: #f5a623;
+  color: #e53935;
   margin-left: 8rpx;
 }
 
 .pay-btn {
-  background: linear-gradient(135deg, #f5a623 0%, #e6951c 100%);
-  color: #fff;
+  background: #F3D624;
+  color: #333;
   font-size: 32rpx;
   font-weight: bold;
   padding: 24rpx 60rpx;

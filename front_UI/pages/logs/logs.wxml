@@ -9,7 +9,8 @@
       <view class="user-detail">
         <text class="nickname">{{userInfo.nickname}}</text>
         <view class="member-tag-row">
-          <text class="member-tag {{userInfo.isMember ? 'gold' : 'none'}}">{{userInfo.isMember ? '👑 ' + userInfo.memberLevel + '会员' : '未开通会员'}}</text>
+          <image wx:if="{{userInfo.isMember}}" class="member-crown" src="/images/svg/crown.svg" mode="aspectFit"></image>
+          <text class="member-tag {{userInfo.isMember ? 'gold' : 'none'}}">{{userInfo.isMember ? userInfo.memberLevel + '会员' : '未开通会员'}}</text>
         </view>
       </view>
       <view class="arrow" bindtap="goSettings">›</view>
@@ -43,34 +44,34 @@
     <view class="order-grid">
       <view class="order-item" bindtap="goOrders" data-status="pending">
         <view class="order-icon-wrap">
-          <text class="order-icon">💰</text>
+          <image class="order-icon" src="/images/svg/order-pending.svg" mode="aspectFit"></image>
           <view class="badge" wx:if="{{orderCount.pending > 0}}">{{orderCount.pending}}</view>
         </view>
         <text class="order-text">待支付</text>
       </view>
       <view class="order-item" bindtap="goOrders" data-status="preparing">
         <view class="order-icon-wrap">
-          <text class="order-icon">👨‍🍳</text>
+          <image class="order-icon" src="/images/svg/order-preparing.svg" mode="aspectFit"></image>
           <view class="badge" wx:if="{{orderCount.preparing > 0}}">{{orderCount.preparing}}</view>
         </view>
         <text class="order-text">制作中</text>
       </view>
       <view class="order-item" bindtap="goOrders" data-status="ready">
         <view class="order-icon-wrap">
-          <text class="order-icon">📦</text>
+          <image class="order-icon" src="/images/svg/order-ready.svg" mode="aspectFit"></image>
           <view class="badge" wx:if="{{orderCount.ready > 0}}">{{orderCount.ready}}</view>
         </view>
         <text class="order-text">待取餐</text>
       </view>
       <view class="order-item" bindtap="goOrders" data-status="completed">
         <view class="order-icon-wrap">
-          <text class="order-icon">✅</text>
+          <image class="order-icon" src="/images/svg/order-completed.svg" mode="aspectFit"></image>
         </view>
         <text class="order-text">已完成</text>
       </view>
       <view class="order-item" bindtap="goOrders" data-status="refund">
         <view class="order-icon-wrap">
-          <text class="order-icon">↩️</text>
+          <image class="order-icon" src="/images/svg/order-refund.svg" mode="aspectFit"></image>
           <view class="badge" wx:if="{{orderCount.refund > 0}}">{{orderCount.refund}}</view>
         </view>
         <text class="order-text">退款/售后</text>
@@ -85,22 +86,22 @@
     </view>
     <view class="tool-list">
       <view class="tool-item" bindtap="goFavorites">
-        <text class="tool-icon">❤️</text>
+        <image class="tool-icon" src="/images/svg/tool-favorites.svg" mode="aspectFit"></image>
         <text class="tool-name">我的收藏</text>
         <text class="tool-arrow">›</text>
       </view>
       <view class="tool-item" bindtap="goAddress">
-        <text class="tool-icon">📍</text>
+        <image class="tool-icon" src="/images/svg/tool-address.svg" mode="aspectFit"></image>
         <text class="tool-name">收货地址</text>
         <text class="tool-arrow">›</text>
       </view>
       <view class="tool-item" bindtap="goContact">
-        <text class="tool-icon">💬</text>
+        <image class="tool-icon" src="/images/svg/tool-contact.svg" mode="aspectFit"></image>
         <text class="tool-name">联系客服</text>
         <text class="tool-arrow">›</text>
       </view>
       <view class="tool-item" bindtap="goAbout">
-        <text class="tool-icon">ℹ️</text>
+        <image class="tool-icon" src="/images/svg/tool-about.svg" mode="aspectFit"></image>
         <text class="tool-name">关于我们</text>
         <text class="tool-arrow">›</text>
       </view>
@@ -111,7 +112,7 @@
   <view class="section bottom-section">
     <view class="tool-list">
       <view class="tool-item" bindtap="clearCache">
-        <text class="tool-icon">🗑️</text>
+        <image class="tool-icon" src="/images/svg/tool-cache.svg" mode="aspectFit"></image>
         <text class="tool-name">清除缓存</text>
         <text class="tool-extra">{{cacheSize}}</text>
         <text class="tool-arrow">›</text>

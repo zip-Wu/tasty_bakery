@@ -34,9 +34,9 @@
   <view class="pay-section">
     <view class="pay-title">支付方式</view>
     <view class="pay-method selected">
-      <text class="method-icon">💳</text>
+      <image class="method-icon" src="/images/svg/credit-card.svg" mode="aspectFit"></image>
       <text class="method-name">微信支付</text>
-      <text class="check">✓</text>
+      <image class="check-icon" src="/images/svg/check.svg" mode="aspectFit"></image>
     </view>
   </view>
 
