@@ -115,7 +115,6 @@ ready.then(() => {
     console.log('    POST /api/orders/:id/status  — 更新状态');
     console.log('    POST /api/pay/:orderId       — 微信支付下单');
     console.log('    POST /api/pay/notify         — 微信支付回调');
-    console.log('    POST /api/orders/:id/accept  — 商家接单');
     console.log('    POST /api/orders/:id/complete — 完成订单');
     console.log('    POST /api/admin/quick-sale   — 商家快速录单');
     console.log('');
