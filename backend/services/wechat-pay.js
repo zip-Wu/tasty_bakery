@@ -108,6 +108,11 @@ function apiRequest(method, path, body) {
       });
     });
 
+    req.setTimeout(30000, () => {
+      req.destroy();
+      reject({ message: '微信支付 API 请求超时' });
+    });
+
     req.on('error', (e) => reject({ message: '微信支付请求失败: ' + e.message }));
     req.write(bodyStr);
     req.end();
@@ -127,6 +132,13 @@ function apiRequest(method, path, body) {
  * @returns {Object} { prepay_id, ... }
  */
 async function createJsapiOrder({ outTradeNo, total, description, openid }) {
+  if (!Number.isInteger(total) || total <= 0) {
+    throw new Error('支付金额无效');
+  }
+  if (!outTradeNo || !/^[a-zA-Z0-9_-]{6,64}$/.test(outTradeNo)) {
+    throw new Error('订单号格式无效');
+  }
+
   const body = {
     appid: config.appid,
     mchid: config.mchid,
@@ -202,8 +214,13 @@ function verifyNotifySign(headers, rawBody) {
   //          支付启用后必须配置 WX_PAY_PLATFORM_CERT，否则 RSA 验签无法执行。
   const platformCert = (process.env.WX_PAY_PLATFORM_CERT || '').replace(/\\n/g, '\n');
   if (!platformCert) {
-    console.warn('[pay-notify] WX_PAY_PLATFORM_CERT 未配置 — 仅做字段存在性检查');
-    return !!signature;
+    // 真实支付模式下缺少平台证书 = 致命错误，拒绝回调
+    if (config.mchid) {
+      console.error('[pay-notify] 致命错误：真实支付模式下 WX_PAY_PLATFORM_CERT 未配置，拒绝回调');
+      return false;
+    }
+    // 模拟支付模式：微信不会真回调，静默拒绝
+    return false;
   }
 
   const signStr = `${timestamp}\n${nonce}\n${rawBody}\n`;

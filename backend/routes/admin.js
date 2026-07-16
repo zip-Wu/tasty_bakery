@@ -2,6 +2,7 @@
  * 商家管理路由 — 后台 API
  */
 const express = require('express');
+const crypto = require('crypto');
 const { pool, mysqlNow } = require('../database');
 
 const router = express.Router();
@@ -54,6 +55,11 @@ router.post('/admin/orders/:id/ready', async (req, res) => {
     return res.json({ success: false, message: '订单不存在' });
   }
 
+  // WHY 安全：仅允许 preparing 状态的订单标记为待取餐
+  if (rows[0].status !== 'preparing') {
+    return res.json({ success: false, message: `当前状态"${rows[0].status}"不支持标记为待取餐` });
+  }
+
   await pool.execute("UPDATE orders SET status = 'ready' WHERE id = ?", [req.params.id]);
   res.json({ success: true, message: '已标记为待取餐' });
 });
@@ -66,12 +72,20 @@ router.post('/admin/orders/:id/complete', async (req, res) => {
     return res.json({ success: false, message: '订单不存在' });
   }
 
+  // WHY 安全：仅允许 ready 状态的订单完成
+  if (rows[0].status === 'completed') {
+    return res.json({ success: false, message: '订单已完成，无需重复操作' });
+  }
+  if (rows[0].status !== 'ready') {
+    return res.json({ success: false, message: `当前状态"${rows[0].status}"不支持标记为已完成` });
+  }
+
   await pool.execute(
     "UPDATE orders SET status = 'completed', completed_at = ? WHERE id = ?",
     [mysqlNow(), req.params.id]
   );
 
-  // 订单完成时累加销量
+  // 累加销量（此端点的 complete 仅由商家操作，与 orders.js 的 /complete 互斥，不会重复累计）
   const items = typeof rows[0].items === 'string' ? JSON.parse(rows[0].items) : rows[0].items;
   for (const item of items) {
     await pool.execute(
@@ -95,13 +109,26 @@ router.get('/admin/products', async (req, res) => {
 router.post('/admin/products', async (req, res) => {
   const { name, price, category, image, stock } = req.body;
 
-  if (!name || !price) {
+  if (!name || price === undefined) {
     return res.json({ success: false, message: '商品名称和价格不能为空' });
+  }
+
+  const parsedPrice = parseFloat(price);
+  if (isNaN(parsedPrice) || parsedPrice <= 0) {
+    return res.json({ success: false, message: '价格必须为正数' });
+  }
+  if (name.length > 128) {
+    return res.json({ success: false, message: '商品名称不能超过128个字符' });
+  }
+
+  const parsedStock = parseInt(stock) || 0;
+  if (parsedStock < 0) {
+    return res.json({ success: false, message: '库存不能为负数' });
   }
 
   const [result] = await pool.execute(
     'INSERT INTO products (name, price, image, category, stock) VALUES (?, ?, ?, ?, ?)',
-    [name, parseFloat(price), image || '', category || '', parseInt(stock) || 0]
+    [name, parsedPrice, image || '', category || '', parsedStock]
   );
 
   const [rows] = await pool.execute('SELECT * FROM products WHERE id = ?', [result.insertId]);
@@ -124,11 +151,15 @@ router.put('/admin/products/:id', async (req, res) => {
 
   if (is_available !== undefined) {
     updates.push('is_available = ?');
-    params.push(is_available ? 1 : 0);
+    params.push(is_available === true || is_available === 1 ? 1 : 0);
   }
   if (price !== undefined) {
     updates.push('price = ?');
-    params.push(price);
+    const p = parseFloat(price);
+    if (isNaN(p) || p <= 0) {
+      return res.json({ success: false, message: '价格必须为正数' });
+    }
+    params.push(p);
   }
   if (name !== undefined) {
     updates.push('name = ?');
@@ -144,7 +175,11 @@ router.put('/admin/products/:id', async (req, res) => {
   }
   if (stock !== undefined) {
     updates.push('stock = ?');
-    params.push(parseInt(stock) || 0);
+    const s = parseInt(stock);
+    if (isNaN(s) || s < 0) {
+      return res.json({ success: false, message: '库存不能为负数' });
+    }
+    params.push(s);
   }
 
   if (updates.length > 0) {
@@ -170,6 +205,9 @@ router.delete('/admin/products/:id', async (req, res) => {
 
 // ========== 一键清空所有商品 ==========
 router.post('/admin/products/reset', async (req, res) => {
+  if (req.body.confirm !== 'DELETE_ALL_PRODUCTS') {
+    return res.status(400).json({ success: false, message: '请在管理端输入确认码后再执行清空操作' });
+  }
   const [[{ cnt }]] = await pool.execute('SELECT COUNT(*) as cnt FROM products');
   await pool.execute('DELETE FROM products');
   res.json({ success: true, message: `已清空 ${cnt} 个商品` });
@@ -217,12 +255,12 @@ router.post('/admin/quick-sale', async (req, res) => {
   }
 
   // 3. 生成订单号（OFF 前缀 = 线下录单）
-  const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  const id = Date.now().toString(36) + crypto.randomBytes(4).toString('hex');
   const bjNow = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Shanghai' }));
   const today = bjNow.getFullYear().toString().slice(2) +
     String(bjNow.getMonth() + 1).padStart(2, '0') +
     String(bjNow.getDate()).padStart(2, '0');
-  const orderNo = 'OFF' + today + '-' + Math.random().toString(36).slice(2, 6).toUpperCase();
+  const orderNo = 'OFF' + today + '-' + crypto.randomBytes(3).toString('hex').toUpperCase().slice(0, 5);
 
   // 4. 插入订单（直接 completed，跳过支付流程）
   const now = mysqlNow();
@@ -266,7 +304,7 @@ router.get('/admin/dashboard', async (req, res) => {
       SUM(CASE WHEN status = 'preparing' THEN 1 ELSE 0 END) as preparing,
       SUM(CASE WHEN status = 'ready' THEN 1 ELSE 0 END) as ready,
       SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed,
-      SUM(CASE WHEN status != 'pending' THEN total_price ELSE 0 END) as revenue
+      SUM(CASE WHEN status IN ('preparing', 'ready', 'completed') THEN total_price ELSE 0 END) as revenue
     FROM orders
     WHERE DATE(created_at) = ?
   `, [today]);

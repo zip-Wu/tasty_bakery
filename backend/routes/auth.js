@@ -52,12 +52,12 @@ function getOpenId(code) {
       return;
     }
     const url = 'https://api.weixin.qq.com/sns/jscode2session' +
-      '?appid=' + WX_APP_ID +
-      '&secret=' + WX_APP_SECRET +
-      '&js_code=' + code +
+      '?appid=' + encodeURIComponent(WX_APP_ID) +
+      '&secret=' + encodeURIComponent(WX_APP_SECRET) +
+      '&js_code=' + encodeURIComponent(code) +
       '&grant_type=authorization_code';
 
-    https.get(url, getHttpsOptions(), (wxRes) => {
+    const req = https.get(url, getHttpsOptions(), (wxRes) => {
       let data = '';
       wxRes.on('data', (chunk) => { data += chunk; });
       wxRes.on('end', () => {
@@ -72,7 +72,12 @@ function getOpenId(code) {
           reject(e);
         }
       });
-    }).on('error', reject);
+    });
+    req.on('error', reject);
+    req.setTimeout(10000, () => {
+      req.destroy();
+      reject(new Error('请求微信服务器超时'));
+    });
   });
 }
 
@@ -99,11 +104,10 @@ function customerDisplayName(nickname) {
   return nickname;
 }
 
-// 返回给顾客端时统一截掉后缀
+// 返回给顾客端时统一截掉后缀（不暴露 openid，后端通过 X-WX-OPENID 头识别用户）
 function customerResponse(user) {
   return {
     id: user.id,
-    openid: user.openid,
     nickname: customerDisplayName(user.nickname),
     avatar: user.avatar,
     phone: user.phone,
@@ -119,16 +123,23 @@ function customerResponse(user) {
 router.post('/login', async (req, res) => {
   const { nickname, avatar, code } = req.body;
 
+  if (!code || typeof code !== 'string') {
+    return res.json({ success: false, message: '缺少登录凭证，请重新打开小程序' });
+  }
+
   let openId;
   try {
     openId = await getOpenId(code);
-    console.log('[auth] openid:', openId.slice(0, 8) + '...');
+    console.log('[auth] 用户登录成功 (openid hash:', require('crypto').createHash('sha256').update(openId).digest('hex').slice(0, 8) + ')');
   } catch (e) {
     console.error('[auth] code2Session 失败:', e.message);
     return res.json({ success: false, message: '微信登录失败，请重试' });
   }
 
-  const [rows] = await pool.execute('SELECT * FROM users WHERE openid = ?', [openId]);
+  const [rows] = await pool.execute(
+    'SELECT id, openid, nickname, avatar, phone, points, balance, coupon_count, member_level, is_member FROM users WHERE openid = ?',
+    [openId]
+  );
   let user = rows[0];
 
   if (!user) {
@@ -192,7 +203,10 @@ router.post('/user/:id', async (req, res) => {
     );
   }
 
-  const [updated] = await pool.execute('SELECT * FROM users WHERE id = ?', [req.user.id]);
+  const [updated] = await pool.execute(
+    'SELECT id, openid, nickname, avatar, phone, points, balance, coupon_count, member_level, is_member FROM users WHERE id = ?',
+    [req.user.id]
+  );
   res.json({ success: true, data: customerResponse(updated[0]) });
 });
 

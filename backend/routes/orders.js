@@ -26,22 +26,48 @@ function generateId() {
 // ========== 创建订单 ==========
 router.post('/orders', async (req, res) => {
   try {
-    // WHY 安全：用户身份来自 requireUser 中间件解析的 X-WX-OPENID，不再信任客户端传入的 userId（消除 IDOR）
     const userId = req.user.id;
     const { items, totalPrice, storeId, storeName, pickupTime } = req.body;
 
-    if (!items || !items.length) {
-      return res.json({ success: false, message: '缺少必要参数' });
+    // 验证 items 结构
+    if (!items || !Array.isArray(items) || !items.length) {
+      return res.json({ success: false, message: '缺少商品信息' });
+    }
+    if (!items.every(i => i.id && i.quantity > 0)) {
+      return res.json({ success: false, message: '商品数据格式错误' });
+    }
+
+    // WHY 安全：服务端根据数据库真实价格重算总额，不信任客户端传入的 totalPrice
+    const ids = items.map(i => i.id);
+    const placeholders = ids.map(() => '?').join(',');
+    const [dbProducts] = await pool.execute(
+      `SELECT id, price FROM products WHERE id IN (${placeholders})`,
+      ids
+    );
+    const priceMap = {};
+    dbProducts.forEach(p => { priceMap[p.id] = p.price; });
+
+    let serverTotal = 0;
+    for (const item of items) {
+      const dbPrice = priceMap[item.id];
+      if (!dbPrice) {
+        return res.json({ success: false, message: `商品已下架，请刷新页面` });
+      }
+      serverTotal += dbPrice * item.quantity;
+    }
+
+    if (Math.abs(serverTotal - totalPrice) > 0.01) {
+      return res.json({ success: false, message: '价格异常，请刷新后重试' });
     }
 
     const order = {
       id: generateId(),
-      orderNo: 'ORD' + Date.now(),
+      orderNo: 'ORD' + Date.now().toString(36) + crypto.randomBytes(3).toString('hex').toUpperCase(),
       userId,
       storeId: storeId || null,
       storeName: storeName || '',
       items: JSON.stringify(items),
-      totalPrice,
+      totalPrice: serverTotal,
       status: 'pending',
       pickupTime: pickupTime || null,
     };
@@ -60,7 +86,7 @@ router.post('/orders', async (req, res) => {
     res.json({ success: true, data: order });
   } catch (err) {
     console.error('[orders] 创建订单异常:', err.message, err.stack);
-    res.status(500).json({ success: false, message: '创建订单失败: ' + err.message });
+    res.status(500).json({ success: false, message: '创建订单失败，请稍后重试' });
   }
 });
 
@@ -97,16 +123,25 @@ router.get('/orders/:id', async (req, res) => {
 });
 
 // ========== 更新订单状态（通用） ==========
+// WHY 安全：状态必须属于 ALLOWED_STATUSES 白名单，且不能在任意状态间跳转
+const ALLOWED_STATUSES = ['pending', 'preparing', 'ready', 'completed'];
+const TRANSITIONS = {
+  pending:   ['preparing'],
+  preparing: ['ready'],
+  ready:     ['completed'],
+  completed: [],
+};
+
 router.post('/orders/:id/status', async (req, res) => {
   const { status } = req.body;
 
-  // WHY 安全：禁止通过通用状态接口将订单设为 paid/completed
-  // paid 只能由支付流程内部调用（/pay/:orderId 或 /pay/notify 回调），completed 需要走授权接单/完成流程
-  if (status === 'paid') {
-    return res.status(403).json({ success: false, message: '支付状态不可手动设置，请走支付流程' });
+  if (!ALLOWED_STATUSES.includes(status)) {
+    return res.status(400).json({ success: false, message: `无效状态: ${status}` });
   }
+
+  // 禁止手动设置 paid（需走支付流程）和 completed（需走取餐确认流程）
   if (status === 'completed') {
-    return res.status(403).json({ success: false, message: '完成状态不可直接设置，请通过取餐完成流程操作' });
+    return res.status(403).json({ success: false, message: '请通过取餐确认流程完成订单' });
   }
 
   const [rows] = await pool.execute('SELECT * FROM orders WHERE id = ?', [req.params.id]);
@@ -115,20 +150,18 @@ router.post('/orders/:id/status', async (req, res) => {
     return res.json({ success: false, message: '订单不存在' });
   }
 
-  // WHY 安全：验证订单归属，禁止修改他人订单状态
   if (rows[0].user_id !== req.user.id) {
     return res.status(403).json({ success: false, message: '无权修改他人订单' });
   }
 
-  const now = mysqlNow();
-  const setClauses = ['status = ?'];
-  const params = [status];
+  if (!TRANSITIONS[rows[0].status]?.includes(status)) {
+    return res.status(400).json({
+      success: false,
+      message: `不允许从 "${rows[0].status}" 直接变为 "${status}"`,
+    });
+  }
 
-  // 时间戳仅对合法状态生效（paid/completed 已在上方拦截）
-  // 保留此逻辑以便未来可能扩展的状态类型
-
-  params.push(req.params.id);
-  await pool.execute(`UPDATE orders SET ${setClauses.join(', ')} WHERE id = ?`, params);
+  await pool.execute('UPDATE orders SET status = ? WHERE id = ?', [status, req.params.id]);
 
   const [updated] = await pool.execute('SELECT * FROM orders WHERE id = ?', [req.params.id]);
   res.json({ success: true, data: formatOrder(updated[0]) });
@@ -172,8 +205,8 @@ router.post('/pay/:orderId', async (req, res) => {
     }
 
     // ========== 真实微信支付 ==========
-    const [users] = await pool.execute('SELECT openid FROM users WHERE id = ?', [order.user_id]);
-    if (!users[0] || !users[0].openid) {
+    const openid = req.user.openid;
+    if (!openid) {
       return res.json({ success: false, message: '用户未登录，请重新打开小程序' });
     }
 
@@ -185,7 +218,7 @@ router.post('/pay/:orderId', async (req, res) => {
       outTradeNo: order.order_no,
       total,
       description,
-      openid: users[0].openid,
+      openid: openid,
     });
 
     const payParams = generatePrepaySign(prepay_id);
@@ -195,49 +228,61 @@ router.post('/pay/:orderId', async (req, res) => {
       data: { payParams, order: formatOrder(order) },
     });
   } catch (err) {
-    console.error('[pay] 微信支付下单失败:', err.message, err.status);
+    console.error('[pay] 微信支付下单失败:', err);
     res.json({
       success: false,
-      message: err.message || '支付发起失败，请稍后重试',
+      message: '支付发起失败，请稍后重试',
     });
   }
 });
 
 // 模拟支付：直接完成付款（商户号就绪后自动失效）
+// WHY 安全：使用事务 + 行锁（FOR UPDATE）防止库存超卖
 async function processMockPayment(order, res) {
-  const now = mysqlNow();
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
 
-  await pool.execute(
-    'UPDATE orders SET status = ?, paid_at = ? WHERE id = ?',
-    ['preparing', now, order.id]
-  );
-
-  // 扣减库存：逐条 UPDATE，未使用事务包裹
-  //
-  // 设计决策：本项目日订单量 < 100，并发冲突概率极低，逐条更新已满足需求
-  // GREATEST(stock - ?, 0) 确保库存不会扣成负数（兜底保护）
-  // CASE WHEN stock - ? <= 0 THEN 0 ELSE is_available END → 库存归零时自动下架
-  //
-  // 已知局限：高并发场景下（如秒杀）两条订单可能同时读到 stock=1 并各自扣减，
-  // 最终 stock 变为负数（GREATEST 兜底为 0，但超卖已发生）
-  // 生产级解决方案：SELECT ... FOR UPDATE 行锁 + 事务，或 Redis 原子扣减
-  const items = typeof order.items === 'string' ? JSON.parse(order.items) : order.items;
-  for (const item of items) {
-    await pool.execute(
-      'UPDATE products SET stock = GREATEST(stock - ?, 0), is_available = CASE WHEN stock - ? <= 0 THEN 0 ELSE is_available END WHERE id = ?',
-      [item.quantity, item.quantity, item.id]
+    // 更新订单状态
+    const now = mysqlNow();
+    await conn.execute(
+      'UPDATE orders SET status = ?, paid_at = ? WHERE id = ?',
+      ['preparing', now, order.id]
     );
-  }
 
-  // 返回时标记 mock，前端无需调 wx.requestPayment
-  res.json({
-    success: true,
-    data: {
-      mock: true,
-      mockResult: { success: true, tradeNo: 'MOCK' + Date.now(), timeEnd: now },
-      order: formatOrder({ ...order, status: 'preparing', paid_at: now }),
-    },
-  });
+    // 扣减库存（逐条获取行锁，防止并发超卖）
+    const items = typeof order.items === 'string' ? JSON.parse(order.items) : order.items;
+    for (const item of items) {
+      const [[row]] = await conn.execute(
+        'SELECT stock FROM products WHERE id = ? FOR UPDATE',
+        [item.id]
+      );
+      if (!row || row.stock < item.quantity) {
+        throw new Error(`商品库存不足 (id=${item.id}, 库存=${row ? row.stock : 0}, 需要=${item.quantity})`);
+      }
+      await conn.execute(
+        'UPDATE products SET stock = stock - ?, is_available = CASE WHEN stock - ? <= 0 THEN 0 ELSE is_available END WHERE id = ?',
+        [item.quantity, item.quantity, item.id]
+      );
+    }
+
+    await conn.commit();
+
+    res.json({
+      success: true,
+      data: {
+        mock: true,
+        mockResult: { success: true, tradeNo: 'MOCK' + Date.now(), timeEnd: now },
+        order: formatOrder({ ...order, status: 'preparing', paid_at: now }),
+      },
+    });
+  } catch (err) {
+    await conn.rollback();
+    console.error('[pay] 模拟支付失败:', err.message);
+    res.status(500).json({ success: false, message: '支付处理失败，请稍后重试' });
+  } finally {
+    conn.release();
+  }
 }
 
 // ========== 微信支付回调通知 ==========
@@ -288,24 +333,41 @@ router.post('/pay/notify', async (req, res) => {
       return res.status(200).json({ code: 'SUCCESS' });
     }
 
-    const now = mysqlNow();
+    // WHY 安全：使用事务保证订单更新与库存扣减的原子性
+    const conn = await pool.getConnection();
+    try {
+      await conn.beginTransaction();
 
-    // 更新订单状态
-    await pool.execute(
-      'UPDATE orders SET status = ?, paid_at = ? WHERE id = ?',
-      ['preparing', now, order.id]
-    );
-
-    // 扣减库存
-    const items = typeof order.items === 'string' ? JSON.parse(order.items) : order.items;
-    for (const item of items) {
-      await pool.execute(
-        'UPDATE products SET stock = GREATEST(stock - ?, 0), is_available = CASE WHEN stock - ? <= 0 THEN 0 ELSE is_available END WHERE id = ?',
-        [item.quantity, item.quantity, item.id]
+      const now = mysqlNow();
+      await conn.execute(
+        'UPDATE orders SET status = ?, paid_at = ? WHERE id = ?',
+        ['preparing', now, order.id]
       );
+
+      const items = typeof order.items === 'string' ? JSON.parse(order.items) : order.items;
+      for (const item of items) {
+        const [[row]] = await conn.execute(
+          'SELECT stock FROM products WHERE id = ? FOR UPDATE',
+          [item.id]
+        );
+        if (!row || row.stock < item.quantity) {
+          throw new Error(`库存不足: id=${item.id}`);
+        }
+        await conn.execute(
+          'UPDATE products SET stock = stock - ?, is_available = CASE WHEN stock - ? <= 0 THEN 0 ELSE is_available END WHERE id = ?',
+          [item.quantity, item.quantity, item.id]
+        );
+      }
+
+      await conn.commit();
+      console.log(`[pay-notify] 订单 ${out_trade_no} 已更新为 preparing`);
+    } catch (innerErr) {
+      await conn.rollback();
+      throw innerErr;
+    } finally {
+      conn.release();
     }
 
-    console.log(`[pay-notify] ✅ 订单 ${out_trade_no} 已更新为 preparing`);
     res.status(200).json({ code: 'SUCCESS' });
   } catch (err) {
     console.error(`[pay-notify] 处理订单失败:`, err.message);
@@ -313,29 +375,8 @@ router.post('/pay/notify', async (req, res) => {
   }
 });
 
-// ========== 商家接单 ==========
-router.post('/orders/:id/accept', async (req, res) => {
-  const [rows] = await pool.execute('SELECT * FROM orders WHERE id = ?', [req.params.id]);
-
-  if (!rows[0]) {
-    return res.json({ success: false, message: '订单不存在' });
-  }
-
-  // WHY 安全：接单操作限制订单归属用户（防止恶意接单）
-  if (rows[0].user_id !== req.user.id) {
-    return res.status(403).json({ success: false, message: '无权操作他人订单' });
-  }
-
-  const now = mysqlNow();
-  await pool.execute(
-    'UPDATE orders SET status = ?, accepted_at = ? WHERE id = ?',
-    ['preparing', now, req.params.id]
-  );
-
-  res.json({ success: true, data: formatOrder({ ...rows[0], status: 'preparing', accepted_at: now }) });
-});
-
 // ========== 完成订单（用户确认取餐） ==========
+// WHY 安全：仅允许 ready 状态的订单完成，防止跳过支付和制作流程
 router.post('/orders/:id/complete', async (req, res) => {
   const [rows] = await pool.execute('SELECT * FROM orders WHERE id = ?', [req.params.id]);
 
@@ -343,9 +384,12 @@ router.post('/orders/:id/complete', async (req, res) => {
     return res.json({ success: false, message: '订单不存在' });
   }
 
-  // WHY 安全：完成订单限制订单归属用户（防止恶意完成他人订单）
   if (rows[0].user_id !== req.user.id) {
     return res.status(403).json({ success: false, message: '无权操作他人订单' });
+  }
+
+  if (rows[0].status !== 'ready') {
+    return res.json({ success: false, message: '订单尚未制作完成，无法取餐' });
   }
 
   const now = mysqlNow();
@@ -354,7 +398,7 @@ router.post('/orders/:id/complete', async (req, res) => {
     ['completed', now, req.params.id]
   );
 
-  // 订单完成时累加销量
+  // 订单完成时累加销量（仅首次 complete 累加，防重复操作）
   const items = typeof rows[0].items === 'string' ? JSON.parse(rows[0].items) : rows[0].items;
   for (const item of items) {
     await pool.execute(
