@@ -8,30 +8,16 @@
       <image class="avatar" src="{{userInfo.avatar}}" mode="aspectFill"></image>
       <view class="user-detail">
         <text class="nickname">{{userInfo.nickname}}</text>
-        <view class="member-tag-row">
-          <image wx:if="{{userInfo.isMember}}" class="member-crown" src="/images/svg/crown.svg" mode="aspectFit"></image>
-          <text class="member-tag {{userInfo.isMember ? 'gold' : 'none'}}">{{userInfo.isMember ? userInfo.memberLevel + '会员' : '未开通会员'}}</text>
-        </view>
       </view>
       <view class="arrow" bindtap="goSettings">›</view>
     </view>
   </view>
 
-  <!-- 会员资产卡片 -->
+  <!-- 积分卡片 -->
   <view class="asset-card">
-    <view class="asset-item" bindtap="goMemberCenter">
+    <view class="asset-item">
       <text class="asset-num">{{userInfo.points}}</text>
       <text class="asset-label">积分</text>
-    </view>
-    <view class="asset-divider"></view>
-    <view class="asset-item" bindtap="goCoupons">
-      <text class="asset-num">{{userInfo.couponCount || 0}}</text>
-      <text class="asset-label">优惠券</text>
-    </view>
-    <view class="asset-divider"></view>
-    <view class="asset-item" bindtap="goBalance">
-      <text class="asset-num">¥{{userInfo.balance}}</text>
-      <text class="asset-label">余额</text>
     </view>
   </view>
 

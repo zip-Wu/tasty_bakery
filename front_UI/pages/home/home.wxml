@@ -3,10 +3,16 @@
   <!-- 顶部 Banner（点击5次进入商家管理） -->
   <image class="banner" src="/images/png/banner.png" mode="widthFix" bindtap="onBannerTap"></image>
 
-  <!-- 门店自提 / 邮寄服务 -->
+  <!-- 点餐 / 门店地址 -->
   <view class="service-row">
-    <image class="service-card" src="/images/png/mendianziti.png" mode="widthFix" bindtap="goToOrder"></image>
-    <image class="service-card" src="/images/png/youjifuwu.png" mode="widthFix" bindtap="goDelivery"></image>
+    <view class="service-card" bindtap="goToOrder">
+      <text class="card-icon">🍞</text>
+      <text class="card-title">点餐</text>
+    </view>
+    <view class="service-card" bindtap="goToAddress">
+      <text class="card-icon">📍</text>
+      <text class="card-title">门店地址</text>
+    </view>
   </view>
 
   <!-- 活动区（绝对定位，固定在 TabBar 上方，活动栏永远靠近 tab） -->

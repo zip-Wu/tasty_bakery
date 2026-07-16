@@ -3,9 +3,11 @@
   <view class="store-bar">
     <view class="store-info">
       <text class="store-name">{{store.name}} ></text>
-      <text class="store-distance">{{store.distance}}</text>
+      <view class="distance-row">
+        <text class="store-distance">{{store.distance}}</text>
+        <view class="locate-btn" wx:if="{{store.distance === '未知距离'}}" bindtap="tryCalcDistance">获取距离</view>
+      </view>
     </view>
-    <view class="store-tag">门店自提</view>
   </view>
 
   <!-- 主内容区：左分类 + 右商品 -->

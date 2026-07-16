@@ -268,6 +268,13 @@ async function processMockPayment(order, res) {
 
     await conn.commit();
 
+    // 积分：每支付 1 元累加 1 积分（向下取整），仅提供情绪价值
+    const earnedPoints = Math.floor(parseFloat(order.total_price));
+    if (earnedPoints > 0) {
+      await pool.execute('UPDATE users SET points = points + ? WHERE id = ?', [earnedPoints, order.user_id]);
+      console.log(`[pay-mock] 用户 ${order.user_id} 积分 +${earnedPoints}`);
+    }
+
     res.json({
       success: true,
       data: {
@@ -361,6 +368,13 @@ router.post('/pay/notify', async (req, res) => {
 
       await conn.commit();
       console.log(`[pay-notify] 订单 ${out_trade_no} 已更新为 preparing`);
+
+      // 积分：每支付 1 元累加 1 积分（向下取整），仅提供情绪价值
+      const earnedPoints = Math.floor(parseFloat(order.total_price));
+      if (earnedPoints > 0) {
+        await pool.execute('UPDATE users SET points = points + ? WHERE id = ?', [earnedPoints, order.user_id]);
+        console.log(`[pay-notify] 用户 ${order.user_id} 积分 +${earnedPoints}`);
+      }
     } catch (innerErr) {
       await conn.rollback();
       throw innerErr;
@@ -424,9 +438,25 @@ function formatOrder(row) {
     pickupTime: row.pickup_time,
     createdAt: row.created_at,
     paidAt: row.paid_at,
+    readyAt: row.ready_at,
     acceptedAt: row.accepted_at,
     completedAt: row.completed_at,
   };
 }
 
 module.exports = router;
+
+// ========== 自动完成定时器：ready 超过 1 小时的订单自动标记 completed ==========
+setInterval(async () => {
+  try {
+    const [result] = await pool.execute(
+      `UPDATE orders SET status = 'completed', completed_at = NOW()
+       WHERE status = 'ready' AND ready_at < DATE_SUB(NOW(), INTERVAL 1 HOUR)`
+    );
+    if (result.affectedRows > 0) {
+      console.log(`[auto-complete] ${result.affectedRows} 笔订单自动完成`);
+    }
+  } catch (err) {
+    console.error('[auto-complete] 定时器异常:', err.message);
+  }
+}, 60000);

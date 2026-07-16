@@ -32,22 +32,51 @@ Page({
   onLoad() {
     const app = getApp();
 
-    // 如果没有选过门店，自动跳转门店选择页（tabBar 点单按钮直连场景）
+    // 自动加载门店（不再跳转 store-select）
     if (!app.globalData.selectedStore) {
-      wx.redirectTo({ url: '/pages/store-select/store-select' });
-      return;
+      this.loadDefaultStore();
+    } else {
+      this.setData({ store: app.globalData.selectedStore });
     }
 
-    // 设置 API 地址标识
     this.setData({ apiBase: '云托管' });
-
-    // 从全局获取选中的门店信息
-    const store = app.globalData.selectedStore || this.data.store;
-    this.setData({ store });
-
-    // 加载商品 + 分类
     this.loadProducts();
     this.loadCategories();
+  },
+
+  // 无门店时自动加载第一个门店，并尝试获取位置计算距离
+  loadDefaultStore() {
+    const app = getApp();
+    app.request({ url: '/api/stores' }).then(stores => {
+      if (stores.length > 0) {
+        const store = stores[0];
+        store.distance = '未知距离';
+        app.globalData.selectedStore = store;
+        this.setData({ store });
+        this.tryCalcDistance();
+      }
+    }).catch(() => {
+      // 保持默认 store 兜底
+    });
+  },
+
+  // 尝试获取位置计算门店距离（用户未授权时显示"未知距离" + 获取按钮）
+  tryCalcDistance() {
+    wx.getLocation({
+      type: 'gcj02',
+      success: (loc) => {
+        const app = getApp();
+        app.request({
+          url: `/api/stores?lat=${loc.latitude}&lng=${loc.longitude}`
+        }).then(stores => {
+          if (stores.length > 0) {
+            const store = stores[0];
+            app.globalData.selectedStore = store;
+            this.setData({ store });
+          }
+        });
+      }
+    });
   },
 
   // 加载分类（从后端拉取，非硬编码）
@@ -173,7 +202,7 @@ Page({
       }
     }
 
-    this.setData({ cart, cartCount: count, cartTotal: total });
+    this.setData({ cart, cartCount: count, cartTotal: parseFloat(total.toFixed(2)) });
   },
 
   // 去结算

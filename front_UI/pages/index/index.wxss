@@ -47,13 +47,20 @@ page {
   margin-top: 4rpx;
 }
 
-.store-tag {
-  font-size: 24rpx;
+.distance-row {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  margin-top: 4rpx;
+}
+
+.locate-btn {
+  font-size: 22rpx;
   color: #8B6914;
-  border: 2rpx solid #F3D624;
-  padding: 8rpx 20rpx;
-  border-radius: 8rpx;
   background: #FFFDEB;
+  border: 2rpx solid #F3D624;
+  border-radius: 16rpx;
+  padding: 4rpx 16rpx;
 }
 
 /* 主内容区 */

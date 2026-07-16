@@ -43,15 +43,6 @@ Component({
       const index = data.index;
       const path = data.path;
 
-      // 点单页需要检测门店
-      if (path === '/pages/index/index') {
-        const app = getApp();
-        if (!app.globalData.selectedStore) {
-          wx.navigateTo({ url: '/pages/store-select/store-select' });
-          return;
-        }
-      }
-
       wx.switchTab({
         url: path
       });

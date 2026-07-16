@@ -20,23 +20,15 @@
       <view class="timeline-item {{order.paidAt ? 'done active' : ''}}">
         <view class="timeline-dot"></view>
         <view class="timeline-content">
-          <text class="timeline-title">支付成功</text>
+          <text class="timeline-title">开始制作</text>
           <text class="timeline-time" wx:if="{{order.paidAtDisplay}}">{{order.paidAtDisplay}}</text>
         </view>
       </view>
 
-      <view class="timeline-item {{order.acceptedAt ? 'done active' : ''}}">
+      <view class="timeline-item {{order.readyAt ? 'done active' : ''}}">
         <view class="timeline-dot"></view>
         <view class="timeline-content">
-          <text class="timeline-title">商家接单</text>
-          <text class="timeline-time" wx:if="{{order.acceptedAtDisplay}}">{{order.acceptedAtDisplay}}</text>
-        </view>
-      </view>
-
-      <view class="timeline-item {{order.status === 'ready' || order.status === 'completed' ? 'done active' : ''}}">
-        <view class="timeline-dot"></view>
-        <view class="timeline-content">
-          <text class="timeline-title">制作完成</text>
+          <text class="timeline-title">可取餐</text>
           <text class="timeline-time" wx:if="{{order.readyAtDisplay}}">{{order.readyAtDisplay}}</text>
         </view>
       </view>
@@ -44,7 +36,7 @@
       <view class="timeline-item {{order.status === 'completed' ? 'done active' : ''}}">
         <view class="timeline-dot"></view>
         <view class="timeline-content">
-          <text class="timeline-title">已取餐</text>
+          <text class="timeline-title">已完成</text>
           <text class="timeline-time" wx:if="{{order.completedAtDisplay}}">{{order.completedAtDisplay}}</text>
         </view>
       </view>
@@ -100,6 +92,5 @@
   <view class="bottom-actions">
     <view class="action-btn secondary" bindtap="callStore">联系门店</view>
     <view class="action-btn primary" wx:if="{{order.status === 'pending'}}" bindtap="goPay">立即支付</view>
-    <view class="action-btn primary" wx:if="{{order.status === 'ready'}}" bindtap="confirmPickup">确认取餐</view>
   </view>
 </view>

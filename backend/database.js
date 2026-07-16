@@ -1,11 +1,14 @@
 /**
- * 数据库模块 — MySQL 连接池 + 自动建表
+ * 数据库模块 — MySQL 连接池 + 首次建表
  *
  * 设计决策：不使用 ORM（如 Sequelize），直接写 SQL
  * - 原因 1：本项目仅 4 张表、27 个 API，ORM 引入的抽象和学习成本大于收益
  * - 原因 2：mysql2/promise 的参数化查询已足够防注入，ORM 的主要安全优势在此规模下不显著
- * - 原因 3：自动建表 + 列迁移（ALTER TABLE）比 ORM 的 sync 更可控，不会意外删列
  * - 代价：SQL 与 JS 对象需手动映射（formatOrder 等函数），表增多时维护成本上升
+ *
+ * 冷启动守护：ready 函数开头检查 orders 表是否已存在，已存在则直接跳过建表，
+ * 避免云托管缩容到 0 后每次冷启动都跑 6+ 条冗余 SQL。
+ * 全新部署时需先删库再启动，ready 会自动完成首次建表。
  */
 const mysql = require('mysql2/promise');
 
@@ -57,7 +60,7 @@ pool.on('error', (err) => {
   }
 });
 
-// ========== 初始化（创建库 → 建表 → 列迁移 → 种子数据） ==========
+// ========== 初始化（创建库 → 建表 → 种子数据） ==========
 const ready = (async () => {
   // 1. 创建数据库（带重试：MySQL 容器可能尚未就绪）
   await connectWithRetry({ host: DB_HOST, port: DB_PORT, user: DB_USER, password: DB_PASS });
@@ -66,21 +69,24 @@ const ready = (async () => {
   await conn.end();
   console.log(`[db] 数据库 '${DB_NAME}' 就绪`);
 
-  // 2. 建表
+  // 2. 冷启动守护：表已存在则跳过建表（云托管缩容到 0 后每次唤醒都走这条路）
   const c = await pool.getConnection();
   try {
+    const [tables] = await c.query(`SHOW TABLES LIKE 'orders'`);
+    if (tables.length > 0) {
+      console.log('[db] 数据库已初始化，跳过建表');
+      return;
+    }
+
+    // 3. 首次部署：建表
     await c.query(`
       CREATE TABLE IF NOT EXISTS users (
         id           VARCHAR(64) PRIMARY KEY,
         openid       VARCHAR(128) UNIQUE,
-        nickname     VARCHAR(64) DEFAULT '面包爱好者',
+        nickname     VARCHAR(64) DEFAULT '大力馒头宝',
         avatar       TEXT,
-        phone        VARCHAR(20) DEFAULT '',
         points       INT DEFAULT 0,
-        balance      DECIMAL(10,2) DEFAULT 0,
-        coupon_count INT DEFAULT 0,
-        member_level VARCHAR(32) DEFAULT '',
-        is_member    TINYINT DEFAULT 0,
+        nick_number  INT UNIQUE,
         created_at   DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at   DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
@@ -99,19 +105,6 @@ const ready = (async () => {
         created_at   DATETIME DEFAULT CURRENT_TIMESTAMP
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
     `);
-    // 兼容旧表：如果缺 stock 列则补齐（新增库存管理功能后，已有部署的数据库缺少此列）
-    // 设计意图：避免全量删表重建，保留历史订单数据
-    const [stockCols] = await c.query(`SHOW COLUMNS FROM products LIKE 'stock'`);
-    if (stockCols.length === 0) {
-      await c.query(`ALTER TABLE products ADD COLUMN stock INT DEFAULT 0`);
-      console.log('[db] 已补全 products.stock 列');
-    }
-    // 兼容旧表：如果缺 source 列则补齐（区分顾客下单 / 商家录单）
-    const [sourceCols] = await c.query(`SHOW COLUMNS FROM orders LIKE 'source'`);
-    if (sourceCols.length === 0) {
-      await c.query(`ALTER TABLE orders ADD COLUMN source VARCHAR(16) DEFAULT 'customer'`);
-      console.log('[db] 已补全 orders.source 列');
-    }
 
     await c.query(`
       CREATE TABLE IF NOT EXISTS stores (
@@ -136,21 +129,23 @@ const ready = (async () => {
         items        TEXT NOT NULL,
         total_price  DECIMAL(10,2) NOT NULL,
         status       VARCHAR(16) DEFAULT 'pending',
+        source       VARCHAR(16) DEFAULT 'customer',
         pickup_time  DATETIME,
         created_at   DATETIME DEFAULT CURRENT_TIMESTAMP,
         paid_at      DATETIME,
+        ready_at     DATETIME,
         accepted_at  DATETIME,
         completed_at DATETIME
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
     `);
 
-    // 3. 初始化门店
+    // 4. 初始化门店
     await c.query(`
       INSERT IGNORE INTO stores (name, address, phone, hours, latitude, longitude, is_open) VALUES
       ('大力馒头·信息港店', '珠海市高新区唐家湾镇香山路88号2栋1层101-10室（信息港711便利店后面）', '0756-1234567', '08:00-21:00', 22.366749, 113.554455, 1)
     `);
 
-    console.log('[db] 初始化完成');
+    console.log('[db] 初始化完成（首次建表）');
   } finally {
     c.release();
   }

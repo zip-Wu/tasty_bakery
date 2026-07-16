@@ -22,7 +22,7 @@ Page({
       const winH = sys.windowHeight;     // 屏高 px
       const winW = sys.windowWidth;       // 屏宽 px
       // 固定元素 rpx 高度（与 wxss 中元素实际高度一致）
-      const fixedRpx = 560 + 80 + 331 + 240;  // banner + service-row margin + service-row + activity
+      const fixedRpx = 560 + 80 + 200 + 240;  // banner + margin + card-height + activity
       // 100vh 转 rpx
       const screenHrpx = winH * 750 / winW;
       // 剩余空间 = 屏高 - 固定元素 - tab 安全区(158rpx)
@@ -56,15 +56,10 @@ Page({
   },
 
   goToOrder() {
+    wx.switchTab({ url: '/pages/index/index' });
+  },
+
+  goToAddress() {
     wx.navigateTo({ url: '/pages/store-select/store-select' });
-  },
-
-  // TODO: 以下功能待后续版本实现
-  goMember() {
-    wx.showToast({ title: '会员功能开发中', icon: 'none' });
-  },
-
-  goDelivery() {
-    wx.showToast({ title: '邮寄功能开发中', icon: 'none' });
   }
 });

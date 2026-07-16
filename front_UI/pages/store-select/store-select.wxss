@@ -124,6 +124,16 @@ page {
   color: #4caf50;
 }
 
+.nav-btn {
+  font-size: 24rpx;
+  color: #333;
+  background: #F3D624;
+  border-radius: 20rpx;
+  padding: 8rpx 20rpx;
+  margin-top: 8rpx;
+  font-weight: bold;
+}
+
 /* 确认按钮 */
 .confirm-btn {
   width: 100%;

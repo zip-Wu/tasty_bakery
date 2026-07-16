@@ -3,11 +3,7 @@ Page({
     userInfo: {
       avatar: 'https://api.dicebear.com/9.x/fun-emoji/svg?seed=default',
       nickname: '加载中...',
-      isMember: false,
-      memberLevel: '',
-      points: 0,
-      couponCount: 0,
-      balance: '0.00'
+      points: 0
     },
     orderCount: {
       pending: 0, preparing: 0, ready: 0, completed: 0, refund: 0
@@ -96,9 +92,6 @@ Page({
   },
 
   // TODO: 以下功能待后续版本实现
-  goMemberCenter() { wx.showToast({ title: '会员中心开发中', icon: 'none' }); },
-  goCoupons() { wx.showToast({ title: '优惠券功能开发中', icon: 'none' }); },
-  goBalance() { wx.showToast({ title: '余额功能开发中', icon: 'none' }); },
   goFavorites() { wx.showToast({ title: '收藏功能开发中', icon: 'none' }); },
   goAddress() { wx.showToast({ title: '地址管理开发中', icon: 'none' }); },
   goSettings() { wx.showToast({ title: '设置功能开发中', icon: 'none' }); },

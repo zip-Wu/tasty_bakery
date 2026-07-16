@@ -79,7 +79,7 @@ router.post('/admin/orders/:id/ready', async (req, res) => {
     return res.json({ success: false, message: `当前状态"${rows[0].status}"不支持标记为待取餐` });
   }
 
-  await pool.execute("UPDATE orders SET status = 'ready' WHERE id = ?", [req.params.id]);
+  await pool.execute("UPDATE orders SET status = 'ready', ready_at = ? WHERE id = ?", [mysqlNow(), req.params.id]);
   res.json({ success: true, message: '已标记为待取餐' });
 });
 

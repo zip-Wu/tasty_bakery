@@ -64,6 +64,20 @@ Page({
     const app = getApp();
     app.globalData.selectedStore = store;
     wx.switchTab({ url: '/pages/index/index' });
+  },
+
+  // 跳转第三方地图导航（wx.openLocation 打开微信内置地图，用户可点"导航"选择高德/百度/腾讯）
+  openNavigation(e) {
+    const id = e.currentTarget.dataset.id;
+    const store = this.data.stores.find(s => s.id === id);
+    if (!store) return;
+    wx.openLocation({
+      latitude: store.latitude,
+      longitude: store.longitude,
+      name: store.name,
+      address: store.address,
+      scale: 18
+    });
   }
 });
 

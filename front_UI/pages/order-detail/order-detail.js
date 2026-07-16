@@ -77,7 +77,7 @@ Page({
     // 时间格式化
     order.createdAtDisplay = this.formatTime(order.createdAt);
     order.paidAtDisplay = order.paidAt ? this.formatTime(order.paidAt) : '';
-    order.acceptedAtDisplay = order.acceptedAt ? this.formatTime(order.acceptedAt) : '';
+    order.readyAtDisplay = order.readyAt ? this.formatTime(order.readyAt) : '';
     order.completedAtDisplay = order.completedAt ? this.formatTime(order.completedAt) : '';
     
     // 商品总数
@@ -106,28 +106,6 @@ Page({
   goPay() {
     wx.navigateTo({
       url: '/pages/order-confirm/order-confirm?orderId=' + this.data.orderId
-    });
-  },
-
-  // 确认取餐
-  confirmPickup() {
-    const app = getApp();
-    wx.showModal({
-      title: '确认取餐',
-      content: '请确认您已取到餐品',
-      success: (res) => {
-        if (res.confirm) {
-          app.request({
-            url: '/api/orders/' + this.data.orderId + '/complete',
-            method: 'POST',
-          }).then(() => {
-            wx.showToast({ title: '取餐确认成功', icon: 'success' });
-            this.loadOrder(this.data.orderId);
-          }).catch(() => {
-            wx.showToast({ title: '操作失败，请重试', icon: 'none' });
-          });
-        }
-      }
     });
   },
 

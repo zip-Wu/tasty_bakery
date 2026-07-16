@@ -81,47 +81,56 @@ function getOpenId(code) {
   });
 }
 
-// 大力馒头主题随机昵称生成（商家端可区分，顾客端不重样）
-const NICK_PREFIX = [
-  '馒头侠', '蒸笼客', '碳水控', '揉面师',
-  '发酵粉', '面团迷', '笼屉君', '发面手',
-  '热气腾', '麦香客', '蒸功夫', '面团仔',
-  '膨松粉', '蒸汽侠', '面点控', '白胖墩',
-  '竹笼客', '发酵君', '热乎团', '碳水侠'
-];
+// ========== 顺序编号昵称生成（大力馒头宝001 ~ 大力馒头宝999） ==========
+// 新用户按注册顺序分配编号，超过 999 回绕到 001
+// nick_number 列有 UNIQUE 约束，并发注册冲突时捕获错误并重试
+async function createUserWithNickNumber(conn, user) {
+  for (let attempt = 0; attempt < 10; attempt++) {
+    const [rows] = await conn.execute('SELECT MAX(nick_number) AS max_num FROM users');
+    const current = rows[0].max_num;
+    let next;
+    if (current === null) {
+      next = 1;
+    } else if (current >= 999) {
+      next = 1;
+    } else {
+      next = current + 1;
+    }
+    const padded = String(next).padStart(3, '0');
+    const nickname = '大力馒头宝' + padded;
 
-function randomNick() {
-  const prefix = NICK_PREFIX[Math.floor(Math.random() * NICK_PREFIX.length)];
-  const suffix = generateId().slice(-3).toUpperCase();
-  return prefix + suffix;
-}
-
-// 顾客端显示用：截掉身份标识后缀（如 "馒头侠A3F" → "馒头侠"）
-function customerDisplayName(nickname) {
-  if (nickname && /[A-Z0-9]{3}$/.test(nickname)) {
-    return nickname.slice(0, -3);
+    try {
+      await conn.execute(
+        `INSERT INTO users (id, openid, nickname, avatar, points, nick_number)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [user.id, user.openid, nickname, user.avatar, user.points, next]
+      );
+      return { ...user, nickname };
+    } catch (err) {
+      // ER_DUP_ENTRY: 并发注册拿到了相同编号，重试
+      if (err.code === 'ER_DUP_ENTRY') {
+        console.warn('[auth] 昵称编号冲突，重试 (attempt ' + (attempt + 1) + ')');
+        continue;
+      }
+      throw err;
+    }
   }
-  return nickname;
+  throw new Error('昵称编号分配失败（并发冲突过多）');
 }
 
-// 返回给顾客端时统一截掉后缀（不暴露 openid，后端通过 X-WX-OPENID 头识别用户）
+// 返回给顾客端的用户信息（不暴露 openid）
 function customerResponse(user) {
   return {
     id: user.id,
-    nickname: customerDisplayName(user.nickname),
+    nickname: user.nickname,
     avatar: user.avatar,
-    phone: user.phone,
     points: user.points,
-    balance: user.balance,
-    couponCount: user.coupon_count,
-    memberLevel: user.member_level,
-    isMember: !!user.is_member,
   };
 }
 
 // ========== 微信登录（code 换取 openid） ==========
 router.post('/login', async (req, res) => {
-  const { nickname, avatar, code } = req.body;
+  const { avatar, code } = req.body;
 
   if (!code || typeof code !== 'string') {
     return res.json({ success: false, message: '缺少登录凭证，请重新打开小程序' });
@@ -137,30 +146,25 @@ router.post('/login', async (req, res) => {
   }
 
   const [rows] = await pool.execute(
-    'SELECT id, openid, nickname, avatar, phone, points, balance, coupon_count, member_level, is_member FROM users WHERE openid = ?',
+    'SELECT id, openid, nickname, avatar, points FROM users WHERE openid = ?',
     [openId]
   );
   let user = rows[0];
 
   if (!user) {
-    user = {
-      id: generateId(),
-      openid: openId,
-      // 生成唯一可辨识的顾客名，商家在管理后台能区分不同顾客
-      nickname: nickname || randomNick(),
-      avatar: avatar || `https://api.dicebear.com/9.x/fun-emoji/svg?seed=${encodeURIComponent(openId.slice(0,10))}`,
-      phone: '',
-      points: 0,
-      balance: 0.00,
-      member_level: '',
-      is_member: 0,
-    };
-
-    await pool.execute(
-      `INSERT INTO users (id, openid, nickname, avatar, phone, points, balance, member_level, is_member)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [user.id, user.openid, user.nickname, user.avatar, user.phone, user.points, user.balance, user.member_level, user.is_member]
-    );
+    // 新用户：分配顺序编号昵称（大力馒头宝001 ~ 999），处理并发冲突
+    const conn = await pool.getConnection();
+    try {
+      user = {
+        id: generateId(),
+        openid: openId,
+        avatar: avatar || `https://api.dicebear.com/9.x/fun-emoji/svg?seed=${encodeURIComponent(openId.slice(0,10))}`,
+        points: 0,
+      };
+      user = await createUserWithNickNumber(conn, user);
+    } finally {
+      conn.release();
+    }
   }
 
   res.json({ success: true, data: customerResponse(user) });
@@ -187,7 +191,7 @@ router.post('/user/:id', async (req, res) => {
   const fields = [];
   const values = [];
 
-  const allowedFields = ['nickname', 'avatar', 'phone'];
+  const allowedFields = ['nickname', 'avatar'];
   for (const key of allowedFields) {
     if (updates[key] !== undefined) {
       fields.push(`${key} = ?`);
@@ -204,7 +208,7 @@ router.post('/user/:id', async (req, res) => {
   }
 
   const [updated] = await pool.execute(
-    'SELECT id, openid, nickname, avatar, phone, points, balance, coupon_count, member_level, is_member FROM users WHERE id = ?',
+    'SELECT id, openid, nickname, avatar, points FROM users WHERE id = ?',
     [req.user.id]
   );
   res.json({ success: true, data: customerResponse(updated[0]) });
