@@ -21,17 +21,52 @@ Page({
   onShow() {
     if (this.data.orderId) {
       this.loadOrder(this.data.orderId);
+      this._startPolling();  // 回到前台时恢复轮询
     }
   },
 
-  // 加载订单
+  onHide() {
+    this._stopPolling();  // 切到后台时停止轮询，省电
+  },
+
+  onUnload() {
+    this._stopPolling();
+  },
+
+  // 加载订单（含错误提示，不再静默吞错）
   loadOrder(orderId) {
     const app = getApp();
     app.request({
       url: '/api/orders/' + orderId,
     }).then(data => {
       this.processOrder(data);
-    }).catch(() => {});
+      // 订单已终态时停止轮询
+      if (data.status === 'completed') {
+        this._stopPolling();
+      }
+    }).catch(() => {
+      wx.showToast({ title: '加载订单失败', icon: 'none' });
+    });
+  },
+
+  // 轮询订单状态（每 5 秒，订单进行中）
+  _startPolling() {
+    this._stopPolling();
+    if (!this.data.orderId) return;
+    this._pollTimer = setTimeout(() => {
+      this.loadOrder(this.data.orderId);
+      // 非终态继续轮询
+      if (this.data.order.status !== 'completed') {
+        this._startPolling();
+      }
+    }, 5000);
+  },
+
+  _stopPolling() {
+    if (this._pollTimer) {
+      clearTimeout(this._pollTimer);
+      this._pollTimer = null;
+    }
   },
 
   // 处理订单数据
@@ -88,7 +123,9 @@ Page({
           }).then(() => {
             wx.showToast({ title: '取餐确认成功', icon: 'success' });
             this.loadOrder(this.data.orderId);
-          }).catch(() => {});
+          }).catch(() => {
+            wx.showToast({ title: '操作失败，请重试', icon: 'none' });
+          });
         }
       }
     });

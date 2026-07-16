@@ -52,6 +52,11 @@ Page({
     newOrderCount: 0,
     lastPollTime: '',
     isPolling: false,
+
+    // 订单分页
+    orderPage: 1,
+    orderHasMore: false,
+    orderLoadingMore: false,
   },
 
   onLoad() {
@@ -113,14 +118,13 @@ Page({
   verifyToken(token) {
     // JWT 简单验证：尝试请求订单来判断 token 是否有效
     this._request({
-      url: '/api/admin/orders?status=all',
+      url: '/api/admin/orders?status=all&pageSize=1',
       method: 'GET',
       header: { Authorization: 'Bearer ' + token }
     }).then(res => {
       if (res.success) {
         this.setData({ loggedIn: true });
-        this.ordersRaw = res.data;
-        this.renderOrders();
+        this.loadOrders();
         this._startPolling();
       } else {
         wx.removeStorageSync('admin_token');
@@ -158,28 +162,58 @@ Page({
   // ========== 订单管理 ==========
   filterOrders(e) {
     const filter = e.currentTarget.dataset.filter;
-    this.setData({ orderFilter: filter });
+    this.setData({ orderFilter: filter, orderPage: 1 });
     this.loadOrders();
   },
 
   loadOrders() {
     const { orderFilter } = this.data;
     const token = wx.getStorageSync('admin_token');
+    const page = this.data.orderPage || 1;
+
+    // 加载更多时追加，首次加载时替换
+    const isLoadMore = page > 1;
 
     this._request({
-      url: '/api/admin/orders?status=' + orderFilter,
+      url: '/api/admin/orders?status=' + orderFilter + '&page=' + page + '&pageSize=50',
       header: { Authorization: 'Bearer ' + token }
     }).then(res => {
       if (res.success) {
-        this.ordersRaw = res.data;
+        const { list, total, page: currentPage, hasMore } = res.data;
+        const newOrders = list || [];
+
+        if (isLoadMore) {
+          // 追加模式：拼接已有订单
+          const existingOrders = this.data.ordersRaw || [];
+          this.ordersRaw = [...existingOrders, ...newOrders];
+        } else {
+          this.ordersRaw = newOrders;
+          this._lastOrderIds = newOrders.map(o => o.id);
+        }
+
+        this.setData({
+          orderPage: currentPage,
+          orderHasMore: hasMore,
+          orderLoadingMore: false,
+        });
+
         this.renderOrders();
-        this._lastOrderIds = (res.data || []).map(o => o.id);
       } else {
         wx.showToast({ title: res.message || '加载失败', icon: 'none' });
       }
     }).catch(() => {
+      if (isLoadMore) {
+        this.setData({ orderLoadingMore: false });
+      }
       wx.showToast({ title: '网络错误', icon: 'none' });
     });
+  },
+
+  // 加载更多订单（分页）
+  loadMoreOrders() {
+    if (this.data.orderLoadingMore || !this.data.orderHasMore) return;
+    this.setData({ orderLoadingMore: true, orderPage: (this.data.orderPage || 1) + 1 });
+    this.loadOrders();
   },
 
   renderOrders() {
@@ -652,7 +686,7 @@ Page({
     const token = wx.getStorageSync('admin_token');
     try {
       const res = await this._request({
-        url: '/api/admin/orders?status=' + this.data.orderFilter,
+        url: '/api/admin/orders?status=' + this.data.orderFilter + '&pageSize=50',
         header: { Authorization: 'Bearer ' + token }
       });
 
@@ -662,11 +696,12 @@ Page({
         return;
       }
 
-      const orderIds = res.data.map(o => o.id);
+      const list = res.data.list || res.data;
+      const orderIds = list.map(o => o.id);
       const newIds = orderIds.filter(id => !this._lastOrderIds.includes(id));
 
       // 始终更新订单数据（状态可能变化）
-      this.ordersRaw = res.data;
+      this.ordersRaw = list;
       this.renderOrders();
       this._lastOrderIds = orderIds;
 

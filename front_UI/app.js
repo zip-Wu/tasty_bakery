@@ -28,7 +28,12 @@ App({
     }).then(data => {
       this.globalData.userId = userId;
       this.globalData.userInfo = data;
-    }).catch(err => { console.error('[autoLogin] 恢复登录失败:', err); });
+    }).catch(err => {
+      console.error('[autoLogin] 恢复登录失败:', err);
+      // 缓存失效，清除旧 userId，下次需要身份时自动触发 login
+      wx.removeStorageSync('userId');
+      this.globalData.userId = null;
+    });
   },
 
   // 静默登录（首次或缓存被清后触发，无需用户任何操作）

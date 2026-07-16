@@ -7,9 +7,12 @@ const { pool, mysqlNow } = require('../database');
 
 const router = express.Router();
 
-// ========== 获取全部订单 ==========
+// ========== 获取全部订单（支持分页） ==========
 router.get('/admin/orders', async (req, res) => {
-  const { status } = req.query;
+  const { status, page = '1', pageSize = '50' } = req.query;
+  const pageNum = Math.max(1, parseInt(page) || 1);
+  const size = Math.min(100, Math.max(1, parseInt(pageSize) || 50));
+  const offset = (pageNum - 1) * size;
 
   let sql = `
     SELECT o.*, u.nickname as user_nickname
@@ -23,7 +26,14 @@ router.get('/admin/orders', async (req, res) => {
     params.push(status);
   }
 
-  sql += ' ORDER BY o.created_at DESC LIMIT 100';
+  // 先查总数
+  const [[{ total }]] = await pool.execute(
+    `SELECT COUNT(*) as total FROM orders o` + (status && status !== 'all' ? ' WHERE o.status = ?' : ''),
+    status && status !== 'all' ? [status] : []
+  );
+
+  sql += ' ORDER BY o.created_at DESC LIMIT ? OFFSET ?';
+  params.push(size, offset);
 
   const [orders] = await pool.execute(sql, params);
 
@@ -44,7 +54,16 @@ router.get('/admin/orders', async (req, res) => {
     completedAt: row.completed_at,
   }));
 
-  res.json({ success: true, data: result });
+  res.json({
+    success: true,
+    data: {
+      list: result,
+      total,
+      page: pageNum,
+      pageSize: size,
+      hasMore: offset + size < total,
+    }
+  });
 });
 
 // ========== 标记制作完成 ==========

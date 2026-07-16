@@ -373,3 +373,13 @@
 .qs-submit-btn[disabled] { background: #ccc !important; }
 
 .empty { text-align: center; padding: 80rpx 0; color: #999; font-size: 28rpx; }
+
+.load-more {
+  text-align: center;
+  padding: 24rpx;
+  color: #576b95;
+  font-size: 28rpx;
+  background: #f5f5f5;
+  border-radius: 8rpx;
+  margin: 16rpx 24rpx;
+}
