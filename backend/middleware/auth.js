@@ -20,8 +20,9 @@ const TOKEN_EXPIRES = '12h';
 
 // 启动时校验
 if (!ADMIN_PASSWORD || !JWT_SECRET) {
-  console.warn('[auth] ⚠  ADMIN_PASSWORD 或 JWT_SECRET 未设置，认证功能不可用。');
-  console.warn('[auth]    请在云托管环境变量中配置后重新部署。');
+  console.error('[auth] 致命错误: ADMIN_PASSWORD 或 JWT_SECRET 未设置');
+  console.error('[auth] 请在云托管环境变量中配置后重新部署');
+  process.exit(1);
 }
 
 /**

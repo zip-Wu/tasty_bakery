@@ -28,9 +28,39 @@ const pool = mysql.createPool({
   timezone: '+08:00',
 });
 
+// ========== 数据库连接重试（MySQL 启动慢于 Node 容器时自动等待） ==========
+async function connectWithRetry(config, maxRetries = 10) {
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      const conn = await mysql.createConnection(config);
+      await conn.end();
+      if (i > 0) console.log('[db] MySQL 连接成功 (第' + (i + 1) + '次尝试)');
+      return;
+    } catch (err) {
+      if (i < maxRetries - 1) {
+        const delay = Math.min(1000 * Math.pow(2, i), 30000);
+        console.warn('[db] 连接失败 (' + (i + 1) + '/' + maxRetries + '): ' + err.message + ' — ' + (delay / 1000) + '秒后重试');
+        await new Promise(r => setTimeout(r, delay));
+      } else {
+        throw err;
+      }
+    }
+  }
+}
+
+// ========== 连接池异常监听 ==========
+pool.on('error', (err) => {
+  if (err.code === 'PROTOCOL_CONNECTION_LOST') {
+    console.error('[db] 数据库连接丢失，可能 MySQL 服务器已重启');
+  } else {
+    console.error('[db] 连接池异常:', err.message);
+  }
+});
+
 // ========== 初始化（创建库 → 建表 → 列迁移 → 种子数据） ==========
 const ready = (async () => {
-  // 1. 创建数据库
+  // 1. 创建数据库（带重试：MySQL 容器可能尚未就绪）
+  await connectWithRetry({ host: DB_HOST, port: DB_PORT, user: DB_USER, password: DB_PASS });
   const conn = await mysql.createConnection({ host: DB_HOST, port: DB_PORT, user: DB_USER, password: DB_PASS });
   await conn.execute(`CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`);
   await conn.end();

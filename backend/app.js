@@ -18,6 +18,7 @@
  *   routes/store.js  — 门店
  *   routes/admin.js  — 商家管理
  */
+require('express-async-errors');
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
@@ -30,9 +31,13 @@ process.on('unhandledRejection', (reason) => {
 
 const app = express();
 const PORT = process.env.PORT || 80;
+const { pool, ready } = require('./database');
 
 // ========== 中间件 ==========
-app.use(cors());
+app.use(cors({
+  origin: 'https://servicewechat.com',
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+}));
 
 // 微信支付回调需要原始请求体（必须在 express.json 之前）
 // express.raw 设置 req._body=true，后续 express.json 会自动跳过
@@ -50,7 +55,14 @@ app.get('/admin', (req, res) => {
 });
 
 // 健康检查（云托管负载均衡用）
-app.get('/health', (req, res) => res.status(200).send('ok'));
+app.get('/health', async (req, res) => {
+  try {
+    await pool.execute('SELECT 1');
+    res.status(200).send('ok');
+  } catch {
+    res.status(503).send('db unavailable');
+  }
+});
 app.get('/', (req, res) => res.redirect('/admin'));
 
 // ========== 路由挂载 ==========
@@ -82,10 +94,8 @@ app.use((err, req, res, next) => {
 });
 
 // ========== 启动 ==========
-const { ready } = require('./database');
-
 ready.then(() => {
-  app.listen(PORT, () => {
+  const server = app.listen(PORT, () => {
     console.log('');
     console.log('  大力馒头 后端服务已启动');
     console.log(`  小程序 API: http://localhost:${PORT}`);
@@ -109,6 +119,26 @@ ready.then(() => {
     console.log('    POST /api/orders/:id/complete — 完成订单');
     console.log('    POST /api/admin/quick-sale   — 商家快速录单');
     console.log('');
+  });
+
+  // 优雅关闭 — 云托管缩容或重新部署时会发送 SIGTERM
+  process.on('SIGTERM', () => {
+    console.log('[shutdown] 收到停止信号，开始优雅关闭...');
+    server.close(async () => {
+      console.log('[shutdown] HTTP 已停止接收新连接');
+      try {
+        await pool.end();
+        console.log('[shutdown] 数据库连接池已释放');
+      } catch (e) {
+        console.error('[shutdown] 关闭连接池失败:', e.message);
+      }
+      process.exit(0);
+    });
+    // 25 秒超时兜底 — 防止连接池关闭卡住
+    setTimeout(() => {
+      console.error('[shutdown] 超时未完成，强制退出');
+      process.exit(1);
+    }, 25000).unref();
   });
 }).catch(err => {
   console.error('[启动失败] 数据库初始化错误:', err.message);
