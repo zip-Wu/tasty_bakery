@@ -3,16 +3,11 @@ Page({
     selectedStoreId: null,
     stores: [],
     markers: [],
-    loading: true,
-    navLoading: false
+    loading: true
   },
 
   onLoad() {
     this.loadStores();
-  },
-
-  onShow() {
-    this.setData({ navLoading: false });
   },
 
   // 获取用户位置 → 请求门店列表（含真实距离）
@@ -71,21 +66,17 @@ Page({
     wx.switchTab({ url: '/pages/index/index' });
   },
 
-  // 跳转第三方地图导航
+  // 跳转小程序内地图页
   openNavigation(e) {
     const id = e.currentTarget.dataset.id;
     const store = this.data.stores.find(s => s.id === id);
     if (!store) return;
-    this.setData({ navLoading: true });
-    setTimeout(() => {
-      wx.openLocation({
-        latitude: store.latitude,
-        longitude: store.longitude,
-        name: store.name,
-        address: store.address,
-        scale: 18
-      });
-    }, 200);
+    wx.navigateTo({
+      url: '/pages/store-map/store-map?lat=' + store.latitude +
+        '&lng=' + store.longitude +
+        '&name=' + encodeURIComponent(store.name) +
+        '&address=' + encodeURIComponent(store.address)
+    });
   }
 });
 

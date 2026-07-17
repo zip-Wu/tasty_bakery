@@ -2,7 +2,6 @@
 
 Page({
   data: {
-    navLoading: false,
     // 分类数据（从后端动态加载，初始仅「全部」）
     categories: ['全部'],
     currentCategory: '全部',
@@ -81,7 +80,7 @@ Page({
     });
   },
 
-  // 点击门店名称 → 打开地图导航
+  // 点击门店名称 → 打开小程序内地图页
   navigateToStore() {
     const app = getApp();
     const store = app.globalData.selectedStore || this.data.store;
@@ -89,17 +88,12 @@ Page({
       wx.showToast({ title: '暂无门店位置信息', icon: 'none' });
       return;
     }
-    // 页面内自定义遮罩（比 wx.showLoading 更可靠，不会在切原生页时消失）
-    this.setData({ navLoading: true });
-    setTimeout(() => {
-      wx.openLocation({
-        latitude: store.latitude,
-        longitude: store.longitude,
-        name: store.name || '大力馒头',
-        address: store.address || '',
-        scale: 18
-      });
-    }, 200);
+    wx.navigateTo({
+      url: '/pages/store-map/store-map?lat=' + store.latitude +
+        '&lng=' + store.longitude +
+        '&name=' + encodeURIComponent(store.name || '大力馒头') +
+        '&address=' + encodeURIComponent(store.address || '')
+    });
   },
 
   // 加载分类（从后端拉取，非硬编码）
@@ -136,7 +130,7 @@ Page({
 
   onShow() {
     const app = getApp();
-    this.setData({ userId: app.globalData.userId, navLoading: false });
+    this.setData({ userId: app.globalData.userId });
 
     // 下单成功后清空购物车
     if (app.globalData.clearCartOnReturn) {
