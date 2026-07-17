@@ -7,8 +7,10 @@ Component({
       const data = e.currentTarget.dataset;
       const index = data.index;
       const path = data.path;
-      // 已在当前 tab，不做任何操作（避免 wx.switchTab 触发组件重建导致 selected 错乱）
-      if (this.data.selected === index) return;
+      // 通过当前页面路由判断是否已在目标页（比 this.data.selected 更可靠）
+      const pages = getCurrentPages();
+      const cur = pages.length > 0 ? '/' + pages[pages.length - 1].route : '';
+      if (cur === path) return;
       this.setData({ selected: index });
       wx.switchTab({ url: path });
     }
