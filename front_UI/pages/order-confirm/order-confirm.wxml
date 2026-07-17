@@ -11,11 +11,17 @@
     <view class="order-item" wx:for="{{order.items}}" wx:key="id">
       <image class="item-img" src="{{item.image}}" mode="aspectFill"></image>
       <view class="item-info">
-        <text class="item-name">{{item.name}}</text>
+        <text class="item-name">{{item.name}}<text wx:if="{{item.temperature}}" class="item-temp temp-{{item.temperature === '加热' ? 'hot' : 'cold'}}">{{item.temperature}}</text></text>
         <text class="item-price">¥{{item.price}}</text>
       </view>
       <view class="item-qty">x{{item.quantity}}</view>
     </view>
+  </view>
+
+  <!-- 备注 -->
+  <view class="remark-card">
+    <view class="remark-header">备注</view>
+    <textarea class="remark-textarea" placeholder="可在此输入特殊需求..." value="{{remark}}" bindinput="onRemarkInput" bindblur="saveRemark" maxlength="50" auto-height />
   </view>
 
   <!-- 订单金额 -->

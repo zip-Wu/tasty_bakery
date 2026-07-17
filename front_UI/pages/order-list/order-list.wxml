@@ -14,9 +14,11 @@
     </view>
   </view>
 
-  <!-- 订单列表 -->
-  <scroll-view scroll-y class="order-scroll" bindrefresherrefresh="refreshOrders" refresher-enabled="{{true}}" refresher-triggered="{{refreshing}}">
-    <view class="order-list">
+  <!-- 滑动内容区 -->
+  <swiper class="order-swiper" current="{{tabIndex}}" bindchange="onSwiperChange" duration="300">
+    <swiper-item wx:for="{{tabs}}" wx:key="key">
+      <scroll-view scroll-y class="order-scroll" bindrefresherrefresh="refreshOrders" refresher-enabled="{{true}}" refresher-triggered="{{refreshing}}">
+        <view class="order-list">
       <!-- 空状态 -->
       <view class="empty-state" wx:if="{{orders.length === 0}}">
         <image class="empty-icon" src="/images/svg/clipboard.svg" mode="aspectFit"></image>
@@ -32,15 +34,16 @@
           </view>
           <view class="order-status status-{{item.status}}">
             {{item.statusText}}
+            <text class="deadline-tip" wx:if="{{item.deadline}}">{{item.deadline}}</text>
           </view>
         </view>
 
         <!-- 取餐码 -->
-        <text class="pickup-code-text" wx:if="{{item.status === 'ready' && item.pickupCode}}">取餐码：{{item.pickupCode}}</text>
+        <text class="pickup-code-text" wx:if="{{(item.status === 'ready' || item.status === 'preparing') && item.pickupCode}}">取餐码：{{item.pickupCode}}</text>
 
         <view class="order-goods">
           <view class="goods-item" wx:for="{{item.items}}" wx:key="id" wx:for-item="goods">
-            <text class="goods-name">{{goods.name}}</text>
+            <text class="goods-name">{{goods.name}}<text class="goods-temp temp-{{goods.temperature === '加热' ? 'hot' : 'cold'}}" wx:if="{{goods.temperature}}">{{goods.temperature}}</text></text>
             <text class="goods-qty">x{{goods.quantity}}</text>
           </view>
           <view class="goods-more" wx:if="{{item.items.length > 3}}">
@@ -76,6 +79,8 @@
       </view>
     </view>
   </scroll-view>
+  </swiper-item>
+</swiper>
 
   <!-- 自定义悬浮TabBar -->
   <custom-tab-bar></custom-tab-bar>

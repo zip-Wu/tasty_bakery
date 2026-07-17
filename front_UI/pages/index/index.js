@@ -15,6 +15,7 @@ Page({
     // 如果用全局状态，需在多个页面生命周期中手动同步清空时机，更容易遗漏
     // 代价：返回点单页时购物车已清空（对用户来说是预期行为——已下单的商品不应还在车里）
     cart: {},
+    cartTemp: {},  // { [productId]: '常温' | '加热' }
     cartCount: 0,
     cartTotal: 0,
 
@@ -118,7 +119,7 @@ Page({
     // 下单成功后清空购物车
     if (app.globalData.clearCartOnReturn) {
       app.globalData.clearCartOnReturn = false;
-      this.setData({ cart: {}, cartCount: 0, cartTotal: 0 });
+      this.setData({ cart: {}, cartTemp: {}, cartCount: 0, cartTotal: 0 });
     }
 
     // 更新TabBar选中状态
@@ -166,34 +167,43 @@ Page({
   // 加入购物车
   addToCart(e) {
     const id = e.currentTarget.dataset.id;
-    
     const cart = { ...this.data.cart };
+    const cartTemp = { ...this.data.cartTemp };
     if (cart[id]) {
       cart[id]++;
     } else {
       cart[id] = 1;
+      cartTemp[id] = '常温';
     }
-    this.updateCart(cart);
+    this.updateCart(cart, cartTemp);
   },
 
   // 减少购物车数量
   minusFromCart(e) {
     const id = e.currentTarget.dataset.id;
-    
     const cart = { ...this.data.cart };
+    const cartTemp = { ...this.data.cartTemp };
     if (cart[id] > 1) {
       cart[id]--;
     } else {
       delete cart[id];
+      delete cartTemp[id];
     }
-    this.updateCart(cart);
+    this.updateCart(cart, cartTemp);
+  },
+
+  // 切换温度
+  toggleTemp(e) {
+    const id = e.currentTarget.dataset.id;
+    const cartTemp = { ...this.data.cartTemp };
+    cartTemp[id] = cartTemp[id] === '加热' ? '常温' : '加热';
+    this.setData({ cartTemp });
   },
 
   // 更新购物车
-  updateCart(cart) {
+  updateCart(cart, cartTemp) {
     let count = 0;
     let total = 0;
-
     for (const id in cart) {
       const bread = this.data.breadList.find(item => item.id == id);
       if (bread) {
@@ -201,11 +211,10 @@ Page({
         total += bread.price * cart[id];
       }
     }
-
-    this.setData({ cart, cartCount: count, cartTotal: parseFloat(total.toFixed(2)) });
+    this.setData({ cart, cartTemp: cartTemp || this.data.cartTemp, cartCount: count, cartTotal: parseFloat(total.toFixed(2)) });
   },
 
-  // 去结算
+  // 去结算（缓存购物车数据，确认支付时才创建订单）
   goToCheckout() {
     if (this.data.cartCount === 0) {
       wx.showToast({ title: '请先选择商品', icon: 'none' });
@@ -213,41 +222,16 @@ Page({
     }
 
     const app = getApp();
-    if (!app.globalData.userId) {
-      app.login(() => {
-        this.createOrder();
-      });
-    } else {
-      this.createOrder();
-    }
-  },
-
-  // 创建订单
-  createOrder() {
-    const app = getApp();
-    const { cart, cartTotal, store } = this.data;
-    const userId = app.globalData.userId;
-
-    if (!userId) {
-      wx.showToast({ title: '用户未登录', icon: 'none' });
-      return;
-    }
-
-    if (Object.keys(cart).length === 0) {
-      wx.showToast({ title: '购物车为空', icon: 'none' });
-      return;
-    }
+    const { cart, cartTemp, cartTotal, store } = this.data;
 
     const items = [];
     for (const id in cart) {
       const bread = this.data.breadList.find(item => item.id == id);
       if (bread) {
         items.push({
-          id: bread.id,
-          name: bread.name,
-          price: bread.price,
-          quantity: cart[id],
-          image: bread.image
+          id: bread.id, name: bread.name, price: bread.price,
+          quantity: cart[id], image: bread.image,
+          temperature: cartTemp[id] || '常温'
         });
       }
     }
@@ -257,32 +241,20 @@ Page({
       return;
     }
 
-    wx.showLoading({ title: '创建订单...' });
-
-    const requestData = {
-      userId: userId,
-      items: items,
-      totalPrice: cartTotal,
-      storeId: store.id || 1,
-      storeName: store.name,
-      address: store.address || '珠海市高新区唐家湾镇香山路88号2栋1层101-10室'
+    // 缓存到全局，确认支付时才真正创建订单
+    app.globalData.tempOrder = {
+      items, totalPrice: cartTotal,
+      storeId: store.id || 1, storeName: store.name,
+      address: store.address || '珠海市高新区唐家湾镇香山路88号2栋1层101-10室',
     };
+    app.globalData.clearCartOnReturn = true;
 
-    app.request({
-      url: '/api/orders',
-      method: 'POST',
-      data: requestData,
-    }).then(data => {
-      wx.hideLoading();
-      // 标记：下次回到点单页时清空购物车（在下单成功后触发，而非立即清空）
-      app.globalData.clearCartOnReturn = true;
-      wx.navigateTo({
-        url: '/pages/order-confirm/order-confirm?orderId=' + data.id
+    if (!app.globalData.userId) {
+      app.login(() => {
+        wx.navigateTo({ url: '/pages/order-confirm/order-confirm' });
       });
-    }).catch((err) => {
-      console.error('创建订单失败:', err);
-      wx.hideLoading();
-      wx.showToast({ title: '网络错误', icon: 'none' });
-    });
-  }
+    } else {
+      wx.navigateTo({ url: '/pages/order-confirm/order-confirm' });
+    }
+  },
 });

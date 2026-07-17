@@ -34,6 +34,12 @@
           <view class="goods-info">
             <text class="goods-name">{{item.name}}</text>
             <text class="goods-desc">{{item.desc || ''}}</text>
+            <view class="temp-tag" wx:if="{{cart[item.id] > 0}}" catchtap="toggleTemp" data-id="{{item.id}}">
+              <view class="temp-tag-inner">
+                <text class="temp-option temp-cold {{cartTemp[item.id] === '常温' ? 'active' : ''}}">常温</text>
+                <text class="temp-option temp-hot {{cartTemp[item.id] === '加热' ? 'active' : ''}}">加热</text>
+              </view>
+            </view>
             <view class="goods-bottom">
               <text class="goods-price">¥{{item.price}}</text>
               <view class="goods-action">

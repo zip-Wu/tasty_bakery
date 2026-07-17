@@ -203,6 +203,34 @@ page {
   text-align: center;
 }
 
+.temp-tag {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 8rpx;
+}
+.temp-tag-inner {
+  display: inline-flex;
+  border-radius: 20rpx;
+  overflow: hidden;
+  border: 2rpx solid #e0e0e0;
+}
+.temp-option {
+  font-size: 20rpx;
+  padding: 4rpx 16rpx;
+  color: #999;
+  background: #f5f5f5;
+}
+.temp-option.temp-cold.active {
+  color: #fff;
+  background: #4fc3f7;
+  font-weight: bold;
+}
+.temp-option.temp-hot.active {
+  color: #fff;
+  background: #ff8a65;
+  font-weight: bold;
+}
+
 /* 空状态 */
 .empty-goods {
   display: flex;

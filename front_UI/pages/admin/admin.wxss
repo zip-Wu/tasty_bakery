@@ -123,6 +123,7 @@
 
 /* 订单卡片 */
 .order-list { margin-top: 16rpx; }
+.admin-swiper { height: calc(100vh - 200rpx); overflow: hidden; }
 .order-card {
   background: #fff;
   border-radius: 12rpx;
@@ -138,8 +139,20 @@
 .status-completed { background: #e2e3e5; color: #383d41; }
 .order-body text { display: block; }
 .order-items { font-size: 28rpx; color: #333; font-weight: bold; }
+.order-items-row { font-size: 28rpx; color: #333; font-weight: bold; display: block; }
+.order-item-name { display: inline-block !important; font-size: 28rpx; color: #333; font-weight: bold; margin-right: 8rpx; }
+.admin-temp {
+  font-size: 20rpx;
+  border-radius: 6rpx;
+  padding: 1rpx 6rpx;
+  margin-left: 4rpx;
+  display: inline-block !important;
+}
+.temp-cold { color: #1976d2; background: #e3f2fd; }
+.temp-hot  { color: #bf360c; background: #fff3e0; }
 .order-info { font-size: 24rpx; color: #666; margin-top: 6rpx; }
 .order-pickup { font-size: 26rpx; color: #e53935; font-weight: bold; margin-top: 4rpx; }
+.order-remark { font-size: 24rpx; color: #ff9800; margin-top: 2rpx; }
 .order-time { font-size: 22rpx; color: #999; margin-top: 4rpx; }
 .order-actions { margin-top: 16rpx; }
 .action-btn { font-size: 22rpx !important; }

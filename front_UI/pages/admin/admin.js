@@ -10,6 +10,7 @@ Page({
 
     // 当前标签页
     currentTab: 'orders',   // orders | quick-sale | products | dashboard
+    tabIndex: 0,
 
     // 订单
     orderFilter: 'preparing',
@@ -151,13 +152,29 @@ Page({
   switchTab(e) {
     this._stopPolling();
     const tab = e.currentTarget.dataset.tab;
-    this.setData({ currentTab: tab });
+    const tabMap = { orders: 0, products: 1, 'quick-sale': 2, dashboard: 3 };
+    this.setData({ currentTab: tab, tabIndex: tabMap[tab] });
     if (tab === 'orders') {
       this.loadOrders();
       this._startPolling();
     } else if (tab === 'quick-sale') this.loadQuickSale();
     else if (tab === 'products') { this.loadProducts(); this.loadCategoryOrder(); }
     else if (tab === 'dashboard') this.loadDashboard();
+  },
+
+  // 主 Tab 滑动切换
+  onTabSwipe(e) {
+    const idx = e.detail.current;
+    const tabs = ['orders', 'products', 'quick-sale', 'dashboard'];
+    const tab = tabs[idx];
+    if (tab !== this.data.currentTab) {
+      this._stopPolling();
+      this.setData({ currentTab: tab, tabIndex: idx });
+      if (tab === 'orders') { this.loadOrders(); this._startPolling(); }
+      else if (tab === 'quick-sale') this.loadQuickSale();
+      else if (tab === 'products') { this.loadProducts(); this.loadCategoryOrder(); }
+      else if (tab === 'dashboard') this.loadDashboard();
+    }
   },
 
   // ========== 订单管理 ==========
@@ -221,7 +238,7 @@ Page({
     const orders = (this.ordersRaw || []).map(order => {
       order.statusText = this.data.statusMap[order.status] || order.status;
       order.totalQuantity = (order.items || []).reduce((sum, item) => sum + (item.quantity || 0), 0);
-      order.itemNames = (order.items || []).map(i => i.name + ' x' + i.quantity).join(', ');
+      order.itemNames = (order.items || []).map(i => i.name + (i.temperature ? '(' + i.temperature + ')' : '') + ' x' + i.quantity).join(', ');
       if (order.createdAt) {
         const d = new Date(order.createdAt);
         order.timeDisplay = (d.getMonth() + 1) + '/' + d.getDate() + ' ' +

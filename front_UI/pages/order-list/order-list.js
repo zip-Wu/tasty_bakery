@@ -1,6 +1,7 @@
 Page({
   data: {
     currentTab: 'all',
+    tabIndex: 0,
     refreshing: false,
     tabs: [
       { key: 'all', name: '全部', count: 0 },
@@ -32,20 +33,33 @@ Page({
     if (typeof this.getTabBar === 'function' && this.getTabBar()) {
       this.getTabBar().setData({ selected: 2 });
     }
-    // 读取从"我的"页面传入的 tab 筛选参数
     if (app.globalData.orderTab) {
       this.setData({ currentTab: app.globalData.orderTab });
-      app.globalData.orderTab = null; // 用完即清
+      app.globalData.orderTab = null;
     }
+    // 同步 swiper 位置
+    const tabIndex = this.data.tabs.findIndex(t => t.key === this.data.currentTab);
+    this.setData({ tabIndex });
     this.loadOrders();
   },
 
   // 切换标签
   switchTab(e) {
     const tab = e.currentTarget.dataset.tab;
-    this.setData({ currentTab: tab }, () => {
+    const tabIndex = this.data.tabs.findIndex(t => t.key === tab);
+    this.setData({ currentTab: tab, tabIndex }, () => {
       this.loadOrders();
     });
+  },
+
+  // 滑动切换
+  onSwiperChange(e) {
+    const tabIndex = e.detail.current;
+    const tab = this.data.tabs[tabIndex];
+    if (tab && tab.key !== this.data.currentTab) {
+      this.setData({ currentTab: tab.key, tabIndex });
+      this.loadOrders();
+    }
   },
 
   // 加载订单列表
@@ -72,6 +86,14 @@ Page({
         // 时间显示
         const d = new Date(order.createdAt);
         order.timeDisplay = `${d.getMonth() + 1}/${d.getDate()} ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+        // 待支付倒计时
+        if (order.status === 'pending') {
+          const elapsed = Math.floor((Date.now() - d.getTime()) / 60000);
+          const remain = Math.max(0, 30 - elapsed);
+          order.deadline = remain > 0 ? `剩余 ${remain} 分钟` : '即将过期';
+        } else {
+          order.deadline = '';
+        }
         return order;
       });
 

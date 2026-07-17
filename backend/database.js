@@ -139,6 +139,7 @@ const ready = (async () => {
         status       VARCHAR(16) DEFAULT 'pending',
         source       VARCHAR(16) DEFAULT 'customer',
         pickup_code  INT,
+        remark       VARCHAR(256) DEFAULT '',
         pickup_time  DATETIME,
         created_at   DATETIME DEFAULT CURRENT_TIMESTAMP,
         paid_at      DATETIME,

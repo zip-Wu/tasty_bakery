@@ -49,6 +49,7 @@ router.get('/admin/orders', async (req, res) => {
     source: row.source || 'customer',
     pickupCode: row.pickup_code != null ? String(row.pickup_code).padStart(3, '0') : '',
     pickupTime: row.pickup_time,
+    remark: row.remark || '',
     createdAt: row.created_at,
     paidAt: row.paid_at,
     acceptedAt: row.accepted_at,

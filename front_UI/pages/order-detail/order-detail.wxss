@@ -31,9 +31,14 @@ page {
 .pickup-code-big {
   font-size: 72rpx;
   font-weight: bold;
-  color: #333;
+  color: #1a1a1a;
   letter-spacing: 20rpx;
   margin-top: 8rpx;
+  border: 4rpx solid rgba(0,0,0,0.12);
+  border-radius: 16rpx;
+  padding: 8rpx 32rpx 8rpx 48rpx;
+  display: inline-block;
+  background: rgba(255,255,255,0.35);
 }
 
 /* ========== 时间线 ========== */
@@ -153,6 +158,15 @@ page {
   display: block;
   margin-bottom: 6rpx;
 }
+
+.item-temp {
+  font-size: 20rpx;
+  border-radius: 8rpx;
+  padding: 1rpx 8rpx;
+  margin-left: 6rpx;
+}
+.temp-cold { color: #1976d2; background: #e3f2fd; }
+.temp-hot  { color: #bf360c; background: #fff3e0; }
 
 .goods-price {
   font-size: 26rpx;

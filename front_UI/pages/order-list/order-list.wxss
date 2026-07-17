@@ -54,7 +54,7 @@ page {
 }
 
 /* ========== 订单滚动区 ========== */
-.order-scroll {
+.order-swiper {
   height: calc(100vh - 100rpx);
 }
 
@@ -120,6 +120,17 @@ page {
 .order-status.status-ready { color: #26de81; }
 .order-status.status-completed { color: #999; }
 
+.deadline-tip {
+  font-size: 22rpx;
+  color: #e53935;
+  display: inline-block;
+  font-weight: normal;
+  margin-top: 4rpx;
+  background: #ffebee;
+  border-radius: 8rpx;
+  padding: 2rpx 10rpx;
+}
+
 .pickup-code-text {
   display: block;
   font-size: 26rpx;
@@ -146,6 +157,15 @@ page {
   color: #666;
   flex: 1;
 }
+
+.goods-temp {
+  font-size: 20rpx;
+  border-radius: 6rpx;
+  padding: 1rpx 6rpx;
+  margin-left: 6rpx;
+}
+.temp-cold { color: #1976d2; background: #e3f2fd; }
+.temp-hot  { color: #bf360c; background: #fff3e0; }
 
 .goods-qty {
   font-size: 26rpx;

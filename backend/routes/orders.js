@@ -27,7 +27,7 @@ function generateId() {
 router.post('/orders', async (req, res) => {
   try {
     const userId = req.user.id;
-    const { items, totalPrice, storeId, storeName, pickupTime } = req.body;
+    const { items, totalPrice, storeId, storeName, pickupTime, remark } = req.body;
 
     // 验证 items 结构
     if (!items || !Array.isArray(items) || !items.length) {
@@ -76,13 +76,14 @@ router.post('/orders', async (req, res) => {
       totalPrice: serverTotal,
       status: 'pending',
       pickupCode,
+      remark: (remark || '').slice(0, 256),
       pickupTime: pickupTime || null,
     };
 
     await pool.execute(
-      `INSERT INTO orders (id, order_no, user_id, store_id, store_name, items, total_price, status, pickup_code, pickup_time)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [order.id, order.orderNo, order.userId, order.storeId, order.storeName, order.items, order.totalPrice, order.status, order.pickupCode, order.pickupTime]
+      `INSERT INTO orders (id, order_no, user_id, store_id, store_name, items, total_price, status, pickup_code, remark, pickup_time)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [order.id, order.orderNo, order.userId, order.storeId, order.storeName, order.items, order.totalPrice, order.status, order.pickupCode, order.remark, order.pickupTime]
     );
 
     order.items = items;
@@ -396,6 +397,20 @@ router.post('/pay/notify', async (req, res) => {
   }
 });
 
+// ========== 更新订单备注 ==========
+router.put('/orders/:id/remark', async (req, res) => {
+  const { remark } = req.body;
+  if (typeof remark !== 'string') return res.json({ success: false, message: '备注格式错误' });
+  if (remark.length > 256) return res.json({ success: false, message: '备注不能超过256个字符' });
+
+  const [rows] = await pool.execute('SELECT * FROM orders WHERE id = ?', [req.params.id]);
+  if (!rows[0]) return res.json({ success: false, message: '订单不存在' });
+  if (rows[0].user_id !== req.user.id) return res.status(403).json({ success: false, message: '无权操作他人订单' });
+
+  await pool.execute('UPDATE orders SET remark = ? WHERE id = ?', [remark, req.params.id]);
+  res.json({ success: true });
+});
+
 // ========== 完成订单（用户确认取餐） ==========
 // WHY 安全：仅允许 ready 状态的订单完成，防止跳过支付和制作流程
 router.post('/orders/:id/complete', async (req, res) => {
@@ -443,6 +458,7 @@ function formatOrder(row) {
     totalPrice: row.total_price,
     status: row.status,
     pickupCode: row.pickup_code != null ? String(row.pickup_code).padStart(3, '0') : '',
+    remark: row.remark || '',
     pickupTime: row.pickup_time,
     createdAt: row.created_at,
     paidAt: row.paid_at,
@@ -466,5 +482,19 @@ setInterval(async () => {
     }
   } catch (err) {
     console.error('[auto-complete] 定时器异常:', err.message);
+  }
+}, 60000);
+
+// ========== 自动清理定时器：待支付超过 30 分钟的订单自动删除 ==========
+setInterval(async () => {
+  try {
+    const [result] = await pool.execute(
+      `DELETE FROM orders WHERE status = 'pending' AND created_at < DATE_SUB(NOW(), INTERVAL 30 MINUTE)`
+    );
+    if (result.affectedRows > 0) {
+      console.log(`[auto-delete] ${result.affectedRows} 笔过期订单已清理`);
+    }
+  } catch (err) {
+    console.error('[auto-delete] 定时器异常:', err.message);
   }
 }, 60000);
