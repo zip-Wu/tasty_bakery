@@ -17,6 +17,7 @@
 }
 
 .tab-item {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -24,12 +25,27 @@
   height: 100%;
 }
 
-.tab-image {
+.tab-img {
   width: 95rpx;
   height: 87rpx;
   display: block;
+  position: absolute;
+  transition: opacity 0.15s ease;
 }
 
-.tab-item.active .tab-image {
+/* 未选中：灰色图可见，黄色图隐藏 */
+.tab-img-off {
+  opacity: 1;
+}
+.tab-img-on {
+  opacity: 0;
+}
+
+/* 选中：灰色图隐藏，黄色图可见 */
+.tab-item.active .tab-img-off {
+  opacity: 0;
+}
+.tab-item.active .tab-img-on {
+  opacity: 1;
   transform: scale(1.05);
 }

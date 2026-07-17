@@ -7,6 +7,7 @@
     data-index="{{index}}"
     data-path="{{item.pagePath}}"
   >
-    <image class="tab-image" src="{{selected === index ? item.selectedIcon : item.icon}}"></image>
+    <image class="tab-img tab-img-off" src="{{item.icon}}"></image>
+    <image class="tab-img tab-img-on" src="{{item.selectedIcon}}"></image>
   </view>
 </view>
