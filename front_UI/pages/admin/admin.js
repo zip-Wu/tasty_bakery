@@ -27,6 +27,7 @@ Page({
 
     // 商品
     products: [],
+    categoryOrder: [],
     editingId: null,
     editName: '',
     editPrice: '',
@@ -155,7 +156,7 @@ Page({
       this.loadOrders();
       this._startPolling();
     } else if (tab === 'quick-sale') this.loadQuickSale();
-    else if (tab === 'products') this.loadProducts();
+    else if (tab === 'products') { this.loadProducts(); this.loadCategoryOrder(); }
     else if (tab === 'dashboard') this.loadDashboard();
   },
 
@@ -295,6 +296,82 @@ Page({
       }
     }).catch(() => {
       wx.showToast({ title: '加载失败', icon: 'none' });
+    });
+  },
+
+  // 商品上移
+  moveProductUp(e) {
+    const id = parseInt(e.currentTarget.dataset.id);
+    const idx = this.data.products.findIndex(p => p.id === id);
+    if (idx <= 0) return;
+    this._swapProducts(id, this.data.products[idx - 1].id);
+  },
+
+  // 商品下移
+  moveProductDown(e) {
+    const id = parseInt(e.currentTarget.dataset.id);
+    const idx = this.data.products.findIndex(p => p.id === id);
+    if (idx < 0 || idx >= this.data.products.length - 1) return;
+    this._swapProducts(id, this.data.products[idx + 1].id);
+  },
+
+  _swapProducts(id1, id2) {
+    const token = wx.getStorageSync('admin_token');
+    this._request({
+      url: '/api/admin/products/' + id1 + '/swap',
+      method: 'PUT',
+      data: { targetId: id2 },
+      header: { Authorization: 'Bearer ' + token }
+    }).then(res => {
+      if (res.success) this.loadProducts();
+      else wx.showToast({ title: res.message || '排序失败', icon: 'none' });
+    });
+  },
+
+  // 加载标签排序
+  loadCategoryOrder() {
+    const token = wx.getStorageSync('admin_token');
+    this._request({
+      url: '/api/admin/category-order',
+      header: { Authorization: 'Bearer ' + token }
+    }).then(res => {
+      if (res.success) this.setData({ categoryOrder: res.data });
+    });
+  },
+
+  // 标签上移
+  moveCategoryUp(e) {
+    const cat = e.currentTarget.dataset.cat;
+    const idx = this.data.categoryOrder.indexOf(cat);
+    if (idx <= 0) return;
+    const arr = [...this.data.categoryOrder];
+    [arr[idx - 1], arr[idx]] = [arr[idx], arr[idx - 1]];
+    this._saveCategoryOrder(arr);
+  },
+
+  // 标签下移
+  moveCategoryDown(e) {
+    const cat = e.currentTarget.dataset.cat;
+    const idx = this.data.categoryOrder.indexOf(cat);
+    if (idx < 0 || idx >= this.data.categoryOrder.length - 1) return;
+    const arr = [...this.data.categoryOrder];
+    [arr[idx], arr[idx + 1]] = [arr[idx + 1], arr[idx]];
+    this._saveCategoryOrder(arr);
+  },
+
+  _saveCategoryOrder(categories) {
+    const token = wx.getStorageSync('admin_token');
+    this._request({
+      url: '/api/admin/category-order',
+      method: 'PUT',
+      data: { categories },
+      header: { Authorization: 'Bearer ' + token }
+    }).then(res => {
+      if (res.success) {
+        this.setData({ categoryOrder: categories });
+      } else {
+        wx.showToast({ title: '保存失败', icon: 'none' });
+      }
     });
   },
 

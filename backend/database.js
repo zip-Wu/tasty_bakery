@@ -101,6 +101,7 @@ const ready = (async () => {
         category     VARCHAR(64) DEFAULT '',
         sales        INT DEFAULT 0,
         stock        INT DEFAULT 0,
+        sort_order   INT DEFAULT 0,
         is_available TINYINT DEFAULT 1,
         created_at   DATETIME DEFAULT CURRENT_TIMESTAMP
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
@@ -116,6 +117,13 @@ const ready = (async () => {
         latitude  DOUBLE DEFAULT 0,
         longitude DOUBLE DEFAULT 0,
         is_open   TINYINT DEFAULT 1
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
+
+    await c.query(`
+      CREATE TABLE IF NOT EXISTS settings (
+        kkey       VARCHAR(64) PRIMARY KEY,
+        value      TEXT
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
     `);
 

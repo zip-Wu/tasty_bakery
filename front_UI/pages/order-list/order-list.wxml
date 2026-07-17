@@ -35,6 +35,9 @@
           </view>
         </view>
 
+        <!-- 取餐码 -->
+        <text class="pickup-code-text" wx:if="{{item.status === 'ready' && item.pickupCode}}">取餐码：{{item.pickupCode}}</text>
+
         <view class="order-goods">
           <view class="goods-item" wx:for="{{item.items}}" wx:key="id" wx:for-item="goods">
             <text class="goods-name">{{goods.name}}</text>

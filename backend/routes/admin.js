@@ -120,9 +120,63 @@ router.post('/admin/orders/:id/complete', async (req, res) => {
 // ========== 获取全部商品 ==========
 router.get('/admin/products', async (req, res) => {
   const [products] = await pool.execute(
-    'SELECT id, name, price, image, category, sales, stock, is_available FROM products ORDER BY id'
+    'SELECT id, name, price, image, category, sales, stock, is_available, sort_order FROM products ORDER BY sort_order ASC, id ASC'
   );
   res.json({ success: true, data: products });
+});
+
+// ========== 交换两个商品的排序位置 ==========
+router.put('/admin/products/:id/swap', async (req, res) => {
+  const { targetId } = req.body;
+  if (!targetId) return res.json({ success: false, message: '缺少目标商品ID' });
+
+  const [rows] = await pool.execute('SELECT id, sort_order FROM products WHERE id IN (?, ?)', [req.params.id, targetId]);
+  if (rows.length !== 2) return res.json({ success: false, message: '商品不存在' });
+
+  const a = rows.find(r => r.id == req.params.id);
+  const b = rows.find(r => r.id == targetId);
+  const sa = a.sort_order || 0;
+  const sb = b.sort_order || 0;
+
+  if (sa === sb) {
+    // 值相同无法区分：一次性给所有商品按当前顺序重新编号
+    const [all] = await pool.execute('SELECT id FROM products ORDER BY sort_order ASC, id ASC');
+    for (let i = 0; i < all.length; i++) {
+      await pool.execute('UPDATE products SET sort_order = ? WHERE id = ?', [i + 1, all[i].id]);
+    }
+  } else {
+    // 三步交换
+    const [max] = await pool.execute('SELECT COALESCE(MAX(sort_order), 0) + 1 AS tmp FROM products');
+    const tmp = max[0].tmp;
+    await pool.execute('UPDATE products SET sort_order = ? WHERE id = ?', [tmp, b.id]);
+    await pool.execute('UPDATE products SET sort_order = ? WHERE id = ?', [sb, a.id]);
+    await pool.execute('UPDATE products SET sort_order = ? WHERE id = ?', [sa, b.id]);
+  }
+
+  res.json({ success: true });
+});
+
+// ========== 获取/更新标签排序 ==========
+router.get('/admin/category-order', async (req, res) => {
+  const [rows] = await pool.execute("SELECT value FROM settings WHERE kkey = 'category_order'");
+  let order = [];
+  if (rows.length > 0 && rows[0].value) {
+    try { order = JSON.parse(rows[0].value); } catch (_) {}
+  }
+  // 补全：从 products 提取所有存在的标签
+  const [cats] = await pool.execute("SELECT DISTINCT category FROM products WHERE category != ''");
+  const existing = cats.map(r => r.category);
+  // 未配置的追加到末尾
+  const result = [...order.filter(c => existing.includes(c)), ...existing.filter(c => !order.includes(c))];
+  res.json({ success: true, data: result });
+});
+
+router.put('/admin/category-order', async (req, res) => {
+  const { categories } = req.body;
+  if (!Array.isArray(categories)) return res.json({ success: false, message: '数据格式错误' });
+  await pool.execute("INSERT INTO settings (kkey, value) VALUES ('category_order', ?) ON DUPLICATE KEY UPDATE value = ?",
+    [JSON.stringify(categories), JSON.stringify(categories)]);
+  res.json({ success: true });
 });
 
 // ========== 新增商品 ==========

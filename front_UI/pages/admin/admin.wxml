@@ -126,9 +126,17 @@
         <view class="product-info">
           <!-- 正常显示 -->
           <block wx:if="{{editingId !== item.id}}">
-            <text class="product-name">{{item.name}}</text>
-            <text class="product-cat">{{item.category}}</text>
-            <text class="product-stock">库存：{{item.stock || 0}}</text>
+            <view class="product-info-top">
+              <view class="product-info-text">
+                <text class="product-name">{{item.name}}</text>
+                <text class="product-cat">{{item.category}}</text>
+                <text class="product-stock">库存：{{item.stock || 0}}</text>
+              </view>
+              <view class="sort-handle">
+                <view class="sort-arrow" catchtap="moveProductUp" data-id="{{item.id}}">▲</view>
+                <view class="sort-arrow" catchtap="moveProductDown" data-id="{{item.id}}">▼</view>
+              </view>
+            </view>
             <view class="product-price-row">
               <text class="product-price">¥{{item.price}}</text>
               <text class="product-sales">售{{item.sales || 0}}</text>
@@ -177,6 +185,20 @@
           </button>
           <button class="p-action-btn delete" size="mini"
             bindtap="deleteProduct" data-id="{{item.id}}" data-name="{{item.name}}">删除</button>
+        </view>
+      </view>
+    </view>
+
+    <!-- 标签排序 -->
+    <view class="section-header" style="margin-top: 40rpx;">
+      <text class="section-title">标签排序（{{categoryOrder.length}}）</text>
+    </view>
+    <view class="category-order-list">
+      <view class="cat-order-item" wx:for="{{categoryOrder}}" wx:key="*this">
+        <text class="cat-order-name">{{item}}</text>
+        <view class="cat-order-btns">
+          <button class="p-action-btn sort-btn" size="mini" bindtap="moveCategoryUp" data-cat="{{item}}">↑</button>
+          <button class="p-action-btn sort-btn" size="mini" bindtap="moveCategoryDown" data-cat="{{item}}">↓</button>
         </view>
       </view>
     </view>
