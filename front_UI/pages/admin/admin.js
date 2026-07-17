@@ -801,6 +801,8 @@ Page({
 
       if (newIds.length > 0) {
         wx.vibrateLong();
+        // 播放新订单提示音
+        this._playAlertSound();
         this.setData({ newOrderAlert: true, newOrderCount: newIds.length });
         setTimeout(() => {
           this.setData({ newOrderAlert: false, newOrderCount: 0 });
@@ -838,6 +840,33 @@ Page({
       clearTimeout(this._pollTimer);
       this._pollTimer = null;
     }
+    // 清理提示音播放器
+    if (this._alertAudio) {
+      this._alertAudio.destroy();
+      this._alertAudio = null;
+    }
+  },
+
+  // 播放新订单提示音
+  _playAlertSound() {
+    // 先销毁上一个实例避免重复播放堆积
+    if (this._alertAudio) {
+      this._alertAudio.destroy();
+    }
+    const audio = wx.createInnerAudioContext();
+    audio.src = '/sounds/new-order.mp3';
+    // obeyMuteSwitch: false 确保手机静音模式下商家也能听到
+    audio.obeyMuteSwitch = false;
+    audio.play();
+    audio.onEnded(() => {
+      audio.destroy();
+      if (this._alertAudio === audio) this._alertAudio = null;
+    });
+    audio.onError(() => {
+      audio.destroy();
+      if (this._alertAudio === audio) this._alertAudio = null;
+    });
+    this._alertAudio = audio;
   },
 
   dismissNewAlert() {

@@ -10,7 +10,12 @@ Page({
       { key: 'ready', name: '待取餐', count: 0 },
       { key: 'completed', name: '已完成', count: 0 }
     ],
-    orders: [],
+    // 为每个 tab 维护独立数据源，避免 swiper 滑动时共享数据重渲染导致闪屏
+    ordersAll: [],
+    ordersPending: [],
+    ordersPreparing: [],
+    ordersReady: [],
+    ordersCompleted: [],
     statusMap: {
       pending: '待支付',
       preparing: '制作中',
@@ -43,26 +48,23 @@ Page({
     this.loadOrders();
   },
 
-  // 切换标签
+  // 切换标签（数据已在 onShow 中预加载到各 tab 独立数组，切换不触发请求）
   switchTab(e) {
     const tab = e.currentTarget.dataset.tab;
     const tabIndex = this.data.tabs.findIndex(t => t.key === tab);
-    this.setData({ currentTab: tab, tabIndex }, () => {
-      this.loadOrders();
-    });
+    this.setData({ currentTab: tab, tabIndex });
   },
 
-  // 滑动切换
+  // 滑动切换（同上，仅更新选中态，不请求）
   onSwiperChange(e) {
     const tabIndex = e.detail.current;
     const tab = this.data.tabs[tabIndex];
     if (tab && tab.key !== this.data.currentTab) {
       this.setData({ currentTab: tab.key, tabIndex });
-      this.loadOrders();
     }
   },
 
-  // 加载订单列表
+  // 加载订单列表（一次性拉取全部，分发到各 tab 独立数组）
   loadOrders() {
     const app = getApp();
     if (!app.globalData.userId) return;
@@ -70,23 +72,12 @@ Page({
     app.request({
       url: '/api/orders/user/' + app.globalData.userId,
     }).then(allOrders => {
-      let orders = allOrders;
-
-      // 过滤
-      if (this.data.currentTab !== 'all') {
-        orders = orders.filter(o => o.status === this.data.currentTab);
-      }
-
-      // 格式化数据
-      orders = orders.map(order => {
-        // 状态文字
+      // 格式化全部订单
+      const formatted = allOrders.map(order => {
         order.statusText = this.data.statusMap[order.status] || order.status;
-        // 商品总数
         order.totalQuantity = (order.items || []).reduce((sum, item) => sum + (item.quantity || 0), 0);
-        // 时间显示
         const d = new Date(order.createdAt);
         order.timeDisplay = `${d.getMonth() + 1}/${d.getDate()} ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
-        // 待支付倒计时
         if (order.status === 'pending') {
           const elapsed = Math.floor((Date.now() - d.getTime()) / 60000);
           const remain = Math.max(0, 30 - elapsed);
@@ -97,9 +88,15 @@ Page({
         return order;
       });
 
-      this.setData({ orders });
+      // 按状态拆分到独立数组，每个 swiper-item 绑定各自的数组，避免共享数据重渲染闪屏
+      this.setData({
+        ordersAll: formatted,
+        ordersPending: formatted.filter(o => o.status === 'pending'),
+        ordersPreparing: formatted.filter(o => o.status === 'preparing'),
+        ordersReady: formatted.filter(o => o.status === 'ready'),
+        ordersCompleted: formatted.filter(o => o.status === 'completed'),
+      });
 
-      // 更新标签数量
       this.updateTabCounts(allOrders);
     }).catch(err => { console.error('[order-list] 加载订单失败:', err); });
   },
@@ -136,14 +133,20 @@ Page({
     wx.navigateTo({ url: '/pages/order-detail/order-detail?id=' + id });
   },
 
-  // 再来一单：跳转回点单页（当前版本不自动还原购物车，仅导航）
+  // 再来一单：跳转回点单页
   reorder(e) {
     const id = e.currentTarget.dataset.id;
-    const app = getApp();
-    const order = this.data.orders.find(o => o.id === id);
+    // 从所有 tab 数据中查找订单
+    const allOrders = [
+      ...this.data.ordersAll,
+      ...this.data.ordersPending,
+      ...this.data.ordersPreparing,
+      ...this.data.ordersReady,
+      ...this.data.ordersCompleted
+    ];
+    const order = allOrders.find(o => o.id === id);
     if (order) {
       wx.showToast({ title: '正在跳转点单页...', icon: 'none' });
-      // 延迟 1 秒跳转：留给 toast 足够的展示时间，避免 switchTab 立即打断
       setTimeout(() => {
         wx.switchTab({ url: '/pages/index/index' });
       }, 1000);
