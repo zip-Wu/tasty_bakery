@@ -12,7 +12,7 @@ Page({
     currentTab: 'orders',   // orders | quick-sale | products | dashboard
 
     // 订单
-    orderFilter: 'all',
+    orderFilter: 'preparing',
     orderFilters: [
       { key: 'all', label: '全部' },
       { key: 'pending', label: '待支付' },

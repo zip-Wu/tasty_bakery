@@ -47,6 +47,7 @@ router.get('/admin/orders', async (req, res) => {
     totalPrice: row.total_price,
     status: row.status,
     source: row.source || 'customer',
+    pickupCode: row.pickup_code != null ? String(row.pickup_code).padStart(3, '0') : '',
     pickupTime: row.pickup_time,
     createdAt: row.created_at,
     paidAt: row.paid_at,

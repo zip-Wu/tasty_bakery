@@ -60,6 +60,12 @@ router.post('/orders', async (req, res) => {
       return res.json({ success: false, message: '价格异常，请刷新后重试' });
     }
 
+    // 生成取餐码（顺序编号 001~999，回绕）
+    const [seq] = await pool.execute('SELECT COALESCE(MAX(pickup_code), 0) AS last_code FROM orders');
+    let nextCode = seq[0].last_code + 1;
+    if (nextCode > 999) nextCode = 1;
+    const pickupCode = nextCode;
+
     const order = {
       id: generateId(),
       orderNo: 'ORD' + Date.now().toString(36) + crypto.randomBytes(3).toString('hex').toUpperCase(),
@@ -69,13 +75,14 @@ router.post('/orders', async (req, res) => {
       items: JSON.stringify(items),
       totalPrice: serverTotal,
       status: 'pending',
+      pickupCode,
       pickupTime: pickupTime || null,
     };
 
     await pool.execute(
-      `INSERT INTO orders (id, order_no, user_id, store_id, store_name, items, total_price, status, pickup_time)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [order.id, order.orderNo, order.userId, order.storeId, order.storeName, order.items, order.totalPrice, order.status, order.pickupTime]
+      `INSERT INTO orders (id, order_no, user_id, store_id, store_name, items, total_price, status, pickup_code, pickup_time)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [order.id, order.orderNo, order.userId, order.storeId, order.storeName, order.items, order.totalPrice, order.status, order.pickupCode, order.pickupTime]
     );
 
     order.items = items;
@@ -435,6 +442,7 @@ function formatOrder(row) {
     items: typeof row.items === 'string' ? JSON.parse(row.items) : row.items,
     totalPrice: row.total_price,
     status: row.status,
+    pickupCode: row.pickup_code != null ? String(row.pickup_code).padStart(3, '0') : '',
     pickupTime: row.pickup_time,
     createdAt: row.created_at,
     paidAt: row.paid_at,

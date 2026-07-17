@@ -1,6 +1,7 @@
 Page({
   data: {
     currentTab: 'all',
+    refreshing: false,
     tabs: [
       { key: 'all', name: '全部', count: 0 },
       { key: 'pending', name: '待支付', count: 0 },
@@ -90,7 +91,7 @@ Page({
 
     const tabs = this.data.tabs.map(t => ({
       ...t,
-      count: counts[t.key] || 0
+      count: (t.key === 'completed' || t.key === 'all') ? 0 : (counts[t.key] || 0)
     }));
     this.setData({ tabs });
   },
@@ -132,9 +133,11 @@ Page({
 
   // 下拉刷新
   refreshOrders() {
+    this.setData({ refreshing: true });
     this.loadOrders();
+    // 订单加载完成后关闭刷新动画
     setTimeout(() => {
-      wx.stopPullDownRefresh();
-    }, 500);
+      this.setData({ refreshing: false });
+    }, 800);
   }
 });

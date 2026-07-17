@@ -28,6 +28,14 @@ page {
   color: #333;
 }
 
+.pickup-code-big {
+  font-size: 72rpx;
+  font-weight: bold;
+  color: #333;
+  letter-spacing: 20rpx;
+  margin-top: 8rpx;
+}
+
 /* ========== 时间线 ========== */
 .timeline {
   background: rgba(0, 0, 0, 0.06);

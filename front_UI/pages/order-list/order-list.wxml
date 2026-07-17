@@ -15,7 +15,7 @@
   </view>
 
   <!-- 订单列表 -->
-  <scroll-view scroll-y class="order-scroll" bindrefresherrefresh="refreshOrders" refresher-enabled="{{true}}">
+  <scroll-view scroll-y class="order-scroll" bindrefresherrefresh="refreshOrders" refresher-enabled="{{true}}" refresher-triggered="{{refreshing}}">
     <view class="order-list">
       <!-- 空状态 -->
       <view class="empty-state" wx:if="{{orders.length === 0}}">

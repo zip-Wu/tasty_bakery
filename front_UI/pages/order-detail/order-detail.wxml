@@ -1,10 +1,11 @@
 <!-- 订单详情页 -->
 <view class="order-detail-page">
-  <!-- 订单状态追踪 -->
   <view class="status-tracker">
     <view class="status-bg">
       <image class="status-icon" src="{{statusIcon}}" mode="aspectFit"></image>
-      <view class="status-text">{{order.statusText}}</view>
+      <view class="status-text" wx:if="{{order.status === 'ready'}}">取餐码</view>
+      <view class="status-text" wx:else>{{order.statusText}}</view>
+      <view class="pickup-code-big" wx:if="{{order.status === 'ready' && order.pickupCode}}">{{order.pickupCode}}</view>
     </view>
 
     <!-- 时间线进度 -->

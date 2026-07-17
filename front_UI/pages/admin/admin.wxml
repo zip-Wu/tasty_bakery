@@ -61,6 +61,7 @@
         <view class="order-body">
           <text class="order-items">{{item.itemNames}}</text>
           <text class="order-info">{{item.userNickname || '顾客'}} · {{item.totalQuantity}}件 · ¥{{item.totalPrice}}</text>
+          <text class="order-pickup" wx:if="{{item.status === 'ready'}}">取餐码：{{item.pickupCode}}</text>
           <text class="order-time">{{item.timeDisplay}}</text>
         </view>
         <view class="order-actions" wx:if="{{item.status === 'preparing'}}">

@@ -139,6 +139,7 @@
 .order-body text { display: block; }
 .order-items { font-size: 28rpx; color: #333; font-weight: bold; }
 .order-info { font-size: 24rpx; color: #666; margin-top: 6rpx; }
+.order-pickup { font-size: 26rpx; color: #e53935; font-weight: bold; margin-top: 4rpx; }
 .order-time { font-size: 22rpx; color: #999; margin-top: 4rpx; }
 .order-actions { margin-top: 16rpx; }
 .action-btn { font-size: 22rpx !important; }
