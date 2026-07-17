@@ -1,4 +1,9 @@
 <view class="container">
+  <!-- 导航遮罩层 -->
+  <view class="nav-overlay" wx:if="{{navLoading}}" catchtap="">
+    <view class="nav-overlay-text">正在打开地图...</view>
+  </view>
+
   <!-- 地图区域 -->
   <view class="map-wrap">
     <map

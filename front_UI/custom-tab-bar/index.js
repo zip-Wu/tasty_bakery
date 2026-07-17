@@ -1,6 +1,6 @@
 Component({
   data: {
-    selected: 0
+    selected: -1
   },
   methods: {
     switchTab(e) {

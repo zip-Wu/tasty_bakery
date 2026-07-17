@@ -2,6 +2,7 @@
 
 Page({
   data: {
+    navLoading: false,
     // 分类数据（从后端动态加载，初始仅「全部」）
     categories: ['全部'],
     currentCategory: '全部',
@@ -88,10 +89,9 @@ Page({
       wx.showToast({ title: '暂无门店位置信息', icon: 'none' });
       return;
     }
-    // 用 loading 遮罩平滑过渡，避免切原生地图时的闪白
-    wx.showLoading({ title: '打开地图...', mask: true });
+    // 页面内自定义遮罩（比 wx.showLoading 更可靠，不会在切原生页时消失）
+    this.setData({ navLoading: true });
     setTimeout(() => {
-      wx.hideLoading();
       wx.openLocation({
         latitude: store.latitude,
         longitude: store.longitude,
@@ -136,7 +136,7 @@ Page({
 
   onShow() {
     const app = getApp();
-    this.setData({ userId: app.globalData.userId });
+    this.setData({ userId: app.globalData.userId, navLoading: false });
 
     // 下单成功后清空购物车
     if (app.globalData.clearCartOnReturn) {
