@@ -82,20 +82,11 @@ Page({
 
   // 点击门店名称 → 打开地图导航
   navigateToStore() {
-    const store = this.data.store;
+    const app = getApp();
+    const store = app.globalData.selectedStore || this.data.store;
     if (!store.latitude || !store.longitude) {
-      // 如果经纬度缺失（兜底数据），尝试从 globalData 获取
-      const app = getApp();
-      const gs = app.globalData.selectedStore;
-      if (gs && gs.latitude && gs.longitude) {
-        this.setData({ store: gs });
-        store.latitude = gs.latitude;
-        store.longitude = gs.longitude;
-        store.address = gs.address || store.address;
-      } else {
-        wx.showToast({ title: '暂无门店位置信息', icon: 'none' });
-        return;
-      }
+      wx.showToast({ title: '暂无门店位置信息', icon: 'none' });
+      return;
     }
     wx.openLocation({
       latitude: store.latitude,
