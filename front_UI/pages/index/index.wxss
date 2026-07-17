@@ -29,6 +29,9 @@ page {
   box-sizing: border-box;
   z-index: 100;
 }
+.store-bar-press {
+  background: #f5f5f5;
+}
 
 .store-info {
   display: flex;

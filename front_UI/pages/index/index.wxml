@@ -1,11 +1,11 @@
 <view class="container tab-bar-page">
   <!-- 顶部门店栏 -->
-  <view class="store-bar">
+  <view class="store-bar" bindtap="navigateToStore" hover-class="store-bar-press">
     <view class="store-info">
       <text class="store-name">{{store.name}} ></text>
       <view class="distance-row">
         <text class="store-distance">{{store.distance}}</text>
-        <view class="locate-btn" wx:if="{{store.distance === '未知距离'}}" bindtap="tryCalcDistance">获取距离</view>
+        <view class="locate-btn" wx:if="{{store.distance === '未知距离'}}" catchtap="tryCalcDistance">获取距离</view>
       </view>
     </view>
   </view>
