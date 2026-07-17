@@ -161,9 +161,6 @@
   flex: 1;
   min-width: 0;
 }
-.order-bottom-left text {
-  display: block;
-}
 .order-info { font-size: 24rpx; color: #666; }
 .order-remark { font-size: 24rpx; color: #ff9800; margin-top: 2rpx; word-break: break-all; }
 .order-time { font-size: 22rpx; color: #999; margin-top: 2rpx; }
@@ -173,9 +170,10 @@
   color: #e53935;
   font-weight: bold;
   white-space: nowrap;
-  background: #fafafa;
+  background: rgba(229, 57, 53, 0.1);
   border-radius: 6rpx;
-  padding: 2rpx 10rpx;
+  padding: 4rpx 12rpx;
+  align-self: flex-start;
 }
 .order-actions { margin-top: 16rpx; }
 .action-btn { font-size: 22rpx !important; }
