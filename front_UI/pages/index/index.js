@@ -141,7 +141,8 @@ Page({
 
     // 更新TabBar选中状态
     if (typeof this.getTabBar === 'function' && this.getTabBar()) {
-      this.getTabBar().setData({ selected: 1 });
+      const tabBar = this.getTabBar();
+      if (tabBar.data.selected !== 1) tabBar.setData({ selected: 1 });
     }
 
     // 更新门店信息（从 store-select 选完后会切到 index，此时 onLoad 不触发，需在 onShow 更新）

@@ -36,7 +36,8 @@ Page({
     const app = getApp();
 
     if (typeof this.getTabBar === 'function' && this.getTabBar()) {
-      this.getTabBar().setData({ selected: 2 });
+      const tabBar = this.getTabBar();
+      if (tabBar.data.selected !== 2) tabBar.setData({ selected: 2 });
     }
     if (app.globalData.orderTab) {
       this.setData({ currentTab: app.globalData.orderTab });
