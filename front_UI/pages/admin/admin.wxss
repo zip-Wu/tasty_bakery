@@ -137,8 +137,6 @@
 .status-preparing { background: #cce5ff; color: #004085; }
 .status-ready { background: #d4edda; color: #155724; }
 .status-completed { background: #e2e3e5; color: #383d41; }
-.order-body text { display: block; }
-.order-items { font-size: 28rpx; color: #333; font-weight: bold; }
 .order-items-row { font-size: 28rpx; color: #333; font-weight: bold; display: block; }
 .order-item-name { display: inline-block !important; font-size: 28rpx; color: #333; font-weight: bold; margin-right: 8rpx; }
 .admin-temp {
@@ -150,10 +148,35 @@
 }
 .temp-cold { color: #1976d2; background: #e3f2fd; }
 .temp-hot  { color: #bf360c; background: #fff3e0; }
-.order-info { font-size: 24rpx; color: #666; margin-top: 6rpx; }
-.order-pickup { font-size: 26rpx; color: #e53935; font-weight: bold; margin-top: 4rpx; }
-.order-remark { font-size: 24rpx; color: #ff9800; margin-top: 2rpx; }
-.order-time { font-size: 22rpx; color: #999; margin-top: 4rpx; }
+
+/* 订单底部：左侧信息 + 右侧取餐码 */
+.order-bottom {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-top: 8rpx;
+  gap: 16rpx;
+}
+.order-bottom-left {
+  flex: 1;
+  min-width: 0;
+}
+.order-bottom-left text {
+  display: block;
+}
+.order-info { font-size: 24rpx; color: #666; }
+.order-remark { font-size: 24rpx; color: #ff9800; margin-top: 2rpx; word-break: break-all; }
+.order-time { font-size: 22rpx; color: #999; margin-top: 2rpx; }
+.order-pickup {
+  flex-shrink: 0;
+  font-size: 26rpx;
+  color: #e53935;
+  font-weight: bold;
+  white-space: nowrap;
+  background: #fafafa;
+  border-radius: 6rpx;
+  padding: 2rpx 10rpx;
+}
 .order-actions { margin-top: 16rpx; }
 .action-btn { font-size: 22rpx !important; }
 .ready-btn { background: #27ae60 !important; color: #fff !important; }

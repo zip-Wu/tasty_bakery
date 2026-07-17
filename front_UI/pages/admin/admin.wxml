@@ -64,10 +64,14 @@
           <view class="order-items-row" wx:for="{{item.items}}" wx:key="id" wx:for-item="oi">
             <text class="order-item-name">{{oi.name}}<text class="admin-temp temp-{{oi.temperature === '加热' ? 'hot' : 'cold'}}" wx:if="{{oi.temperature}}">{{oi.temperature}}</text> x{{oi.quantity}}</text>
           </view>
-          <text class="order-info">{{item.userNickname || '顾客'}} · {{item.totalQuantity}}件 · ¥{{item.totalPrice}}</text>
-          <text class="order-pickup" wx:if="{{item.status === 'ready' || item.status === 'preparing'}}">取餐码：{{item.pickupCode}}</text>
-          <text class="order-remark" wx:if="{{item.remark}}">备注：{{item.remark}}</text>
-          <text class="order-time">{{item.timeDisplay}}</text>
+          <view class="order-bottom">
+            <view class="order-bottom-left">
+              <text class="order-info">{{item.userNickname || '顾客'}} · {{item.totalQuantity}}件 · ¥{{item.totalPrice}}</text>
+              <text class="order-remark" wx:if="{{item.remark}}">备注：{{item.remark}}</text>
+              <text class="order-time">{{item.timeDisplay}}</text>
+            </view>
+            <view class="order-pickup" wx:if="{{item.status === 'ready' || item.status === 'preparing'}}">取餐码：{{item.pickupCode}}</view>
+          </view>
         </view>
         <view class="order-actions" wx:if="{{item.status === 'preparing'}}">
           <button class="action-btn ready-btn" size="mini"
