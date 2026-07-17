@@ -88,13 +88,18 @@ Page({
       wx.showToast({ title: '暂无门店位置信息', icon: 'none' });
       return;
     }
-    wx.openLocation({
-      latitude: store.latitude,
-      longitude: store.longitude,
-      name: store.name || '大力馒头',
-      address: store.address || '',
-      scale: 18
-    });
+    // 用 loading 遮罩平滑过渡，避免切原生地图时的闪白
+    wx.showLoading({ title: '打开地图...', mask: true });
+    setTimeout(() => {
+      wx.hideLoading();
+      wx.openLocation({
+        latitude: store.latitude,
+        longitude: store.longitude,
+        name: store.name || '大力馒头',
+        address: store.address || '',
+        scale: 18
+      });
+    }, 200);
   },
 
   // 加载分类（从后端拉取，非硬编码）
