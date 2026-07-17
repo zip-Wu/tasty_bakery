@@ -66,16 +66,17 @@ Page({
     wx.switchTab({ url: '/pages/index/index' });
   },
 
-  // 跳转小程序内地图页
+  // 跳转第三方地图导航
   openNavigation(e) {
     const id = e.currentTarget.dataset.id;
     const store = this.data.stores.find(s => s.id === id);
     if (!store) return;
-    wx.navigateTo({
-      url: '/pages/store-map/store-map?lat=' + store.latitude +
-        '&lng=' + store.longitude +
-        '&name=' + encodeURIComponent(store.name) +
-        '&address=' + encodeURIComponent(store.address)
+    wx.openLocation({
+      latitude: store.latitude,
+      longitude: store.longitude,
+      name: store.name,
+      address: store.address,
+      scale: 18
     });
   }
 });

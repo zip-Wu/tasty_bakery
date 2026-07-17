@@ -80,20 +80,9 @@ Page({
     });
   },
 
-  // 点击门店名称 → 打开小程序内地图页
+  // 点击门店名称 → 跳转门店地址页
   navigateToStore() {
-    const app = getApp();
-    const store = app.globalData.selectedStore || this.data.store;
-    if (!store.latitude || !store.longitude) {
-      wx.showToast({ title: '暂无门店位置信息', icon: 'none' });
-      return;
-    }
-    wx.navigateTo({
-      url: '/pages/store-map/store-map?lat=' + store.latitude +
-        '&lng=' + store.longitude +
-        '&name=' + encodeURIComponent(store.name || '大力馒头') +
-        '&address=' + encodeURIComponent(store.address || '')
-    });
+    wx.navigateTo({ url: '/pages/store-select/store-select' });
   },
 
   // 加载分类（从后端拉取，非硬编码）

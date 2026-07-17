@@ -6,7 +6,6 @@
     "pages/order-confirm/order-confirm",
     "pages/order-list/order-list",
     "pages/order-detail/order-detail",
-    "pages/store-map/store-map",
     "pages/logs/logs",
     "pages/admin/admin",
     "pages/auth/auth"
