@@ -8,8 +8,7 @@ const { requireUser } = require('../middleware/auth');
 
 const router = express.Router();
 
-// WHY 安全：路由级 requireUser 中间件，确保所有订单操作都绑定到真实用户身份
-// /pay/notify 是微信服务器回调，不适用用户认证，故跳过
+// 路由级 requireUser，/pay/notify 是微信服务器回调，跳过用户认证
 router.use((req, res, next) => {
   if (req.path === '/pay/notify') return next();
   requireUser(req, res, next);
@@ -37,7 +36,7 @@ router.post('/orders', async (req, res) => {
       return res.json({ success: false, message: '商品数据格式错误' });
     }
 
-    // WHY 安全：服务端根据数据库真实价格重算总额，不信任客户端传入的 totalPrice
+    // 服务端按 DB 价格重算总额，不信任客户端传的 totalPrice
     const ids = items.map(i => i.id);
     const placeholders = ids.map(() => '?').join(',');
     const [dbProducts] = await pool.execute(
@@ -100,7 +99,7 @@ router.post('/orders', async (req, res) => {
 
 // ========== 用户订单列表 ==========
 router.get('/orders/user/:userId', async (req, res) => {
-  // WHY 安全：验证 URL 中的 userId 与当前登录用户一致，禁止查看他人订单
+  // 验证 URL 中的 userId 与当前登录用户一致
   if (req.params.userId !== req.user.id) {
     return res.status(403).json({ success: false, message: '无权查看他人订单' });
   }
@@ -122,7 +121,7 @@ router.get('/orders/:id', async (req, res) => {
     return res.json({ success: false, message: '订单不存在' });
   }
 
-  // WHY 安全：验证订单归属，禁止查看他人订单详情
+  // 验证订单归属
   if (rows[0].user_id !== req.user.id) {
     return res.status(403).json({ success: false, message: '无权查看他人订单' });
   }
@@ -131,7 +130,7 @@ router.get('/orders/:id', async (req, res) => {
 });
 
 // ========== 更新订单状态（通用） ==========
-// WHY 安全：状态必须属于 ALLOWED_STATUSES 白名单，且不能在任意状态间跳转
+// 状态机白名单：只能按 pending→preparing→ready→completed 单向前进
 const ALLOWED_STATUSES = ['pending', 'preparing', 'ready', 'completed'];
 const TRANSITIONS = {
   pending:   ['preparing'],
@@ -196,7 +195,7 @@ router.post('/pay/:orderId', async (req, res) => {
       return res.json({ success: false, message: '订单不存在' });
     }
 
-    // WHY 安全：验证订单归属，禁止支付他人订单
+    // 验证订单归属
     if (rows[0].user_id !== req.user.id) {
       return res.status(403).json({ success: false, message: '无权支付他人订单' });
     }
@@ -245,7 +244,7 @@ router.post('/pay/:orderId', async (req, res) => {
 });
 
 // 模拟支付：直接完成付款（商户号就绪后自动失效）
-// WHY 安全：使用事务 + 行锁（FOR UPDATE）防止库存超卖
+// 事务 + 行锁（FOR UPDATE）防库存超卖
 async function processMockPayment(order, res) {
   const conn = await pool.getConnection();
   try {
@@ -305,8 +304,7 @@ router.post('/pay/notify', async (req, res) => {
   const rawBody = req.rawBody; // 由 app.js 中的 express.raw 提供
   let notifyData;
 
-  // WHY 安全：验证微信支付回调签名，确保回调确实来自微信支付服务器（非伪造）
-  // 此前 verifyNotifySign 从未被任何路由调用——回调实际是零验签状态
+  // 验证微信支付回调签名，确保回调来自微信支付服务器
   if (!verifyNotifySign(req.headers, rawBody)) {
     console.error('[pay-notify] 签名验证失败，拒绝回调');
     return res.status(401).json({ code: 'FAIL', message: 'signature verification failed' });
@@ -348,7 +346,7 @@ router.post('/pay/notify', async (req, res) => {
       return res.status(200).json({ code: 'SUCCESS' });
     }
 
-    // WHY 安全：使用事务保证订单更新与库存扣减的原子性
+    // 事务：订单更新 + 库存扣减，保证原子性
     const conn = await pool.getConnection();
     try {
       await conn.beginTransaction();
@@ -412,7 +410,7 @@ router.put('/orders/:id/remark', async (req, res) => {
 });
 
 // ========== 完成订单（用户确认取餐） ==========
-// WHY 安全：仅允许 ready 状态的订单完成，防止跳过支付和制作流程
+// 仅允许 ready 状态完成，防止跳过支付和制作
 router.post('/orders/:id/complete', async (req, res) => {
   const [rows] = await pool.execute('SELECT * FROM orders WHERE id = ?', [req.params.id]);
 

@@ -76,7 +76,7 @@ router.post('/admin/orders/:id/ready', async (req, res) => {
     return res.json({ success: false, message: '订单不存在' });
   }
 
-  // WHY 安全：仅允许 preparing 状态的订单标记为待取餐
+  // 仅允许 preparing 状态的订单标记为待取餐
   if (rows[0].status !== 'preparing') {
     return res.json({ success: false, message: `当前状态"${rows[0].status}"不支持标记为待取餐` });
   }
@@ -93,7 +93,7 @@ router.post('/admin/orders/:id/complete', async (req, res) => {
     return res.json({ success: false, message: '订单不存在' });
   }
 
-  // WHY 安全：仅允许 ready 状态的订单完成
+  // 仅允许 ready 状态的订单完成
   if (rows[0].status === 'completed') {
     return res.json({ success: false, message: '订单已完成，无需重复操作' });
   }

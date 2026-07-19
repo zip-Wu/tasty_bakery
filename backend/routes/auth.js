@@ -11,8 +11,8 @@ const { requireUser } = require('../middleware/auth');
 
 const router = express.Router();
 
-// WHY 安全：/login 是用户登录入口，尚未获取用户身份，不需要 requireUser
-// /user/:id 等数据操作需要在路由内验证归属
+// /login 是登录入口，尚未获取用户身份，不需要 requireUser
+// /user/:id 等数据操作在路由内验证归属
 router.use((req, res, next) => {
   if (req.path === '/login') return next();
   requireUser(req, res, next);
@@ -172,7 +172,7 @@ router.post('/login', async (req, res) => {
 
 // ========== 获取用户信息 ==========
 router.get('/user/:id', async (req, res) => {
-  // WHY 安全：验证只能读取自己的用户信息，消除 IDOR（此前任何人均可通过 URL 中的 id 读取任意用户数据）
+  // 只能读取自己的用户信息
   if (req.params.id !== req.user.id) {
     return res.status(403).json({ success: false, message: '无权查看他人信息' });
   }
@@ -182,7 +182,7 @@ router.get('/user/:id', async (req, res) => {
 
 // ========== 更新用户信息 ==========
 router.post('/user/:id', async (req, res) => {
-  // WHY 安全：验证只能更新自己的用户信息，消除 IDOR
+  // 只能更新自己的用户信息
   if (req.params.id !== req.user.id) {
     return res.status(403).json({ success: false, message: '无权修改他人信息' });
   }

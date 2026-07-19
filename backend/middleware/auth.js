@@ -61,15 +61,10 @@ function requireAdmin(req, res, next) {
 // ===================== 顾客端认证中间件 =====================
 
 /**
- * Express 中间件：从微信网关注入的 X-WX-OPENID 解析当前用户
+ * 顾客端鉴权中间件
  *
- * WHY 安全：此前顾客端 API 信任客户端传入的 userId，攻击者可冒用任意用户身份下单/查数据（IDOR）。
- *          微信云托管的 callContainer 通道会在网关层做设备级 HMAC 签名验证，
- *          验证通过后才会注入 X-WX-OPENID 头并转发到容器。
- *          攻击者公网直连容器时无法伪造此头（密钥在微信客户端本地），会被直接拒绝。
- *          因此该头由微信网关保证可信，后端仅做解析即可。
- *
- * 依赖：前端使用 wx.cloud.callContainer() 调用后端（app.js 已确认）。
+ * 微信云托管 callContainer 在网关层验证请求签名后，把 openid 注入 X-WX-OPENID 头。
+ * 后端直接读这个头查 DB，网关已验过签，不需要自己再做签名校验。
  */
 async function requireUser(req, res, next) {
   const openid = req.headers['x-wx-openid'];

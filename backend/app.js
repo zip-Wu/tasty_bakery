@@ -73,7 +73,7 @@ app.use('/api', require('./routes/store'));
 // 顾客端身份相关 — login 路由无需用户身份，user/:id 路由内部已加 requireUser 保护
 app.use('/api', require('./routes/auth'));
 
-// 顾客端订单 — requireUser 中间件通过 X-WX-OPENID 注入 req.user，所有端点用 req.user.id 替代客户端传入的 userId，防 IDOR 越权
+// 顾客端订单 — requireUser 通过 X-WX-OPENID 注入 req.user，所有端点用 req.user.id 替代客户端传入的 userId
 app.use('/api', require('./routes/orders'));
 
 // 管理员登录（无需管理员认证）— 登录本身就是获取 JWT 的过程

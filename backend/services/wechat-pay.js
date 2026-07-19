@@ -19,7 +19,7 @@ const https = require('https');
 const WXPAY_HOST = 'api.mch.weixin.qq.com';
 
 const config = {
-  // WHY 兼容：auth.js 使用 WX_APP_ID，本模块使用 WX_APPID；两者都支持可减少配置冲突
+  // 兼容 auth.js 的 WX_APP_ID 命名，优先读 WX_APPID，没有则回退
   appid:         process.env.WX_APPID || process.env.WX_APP_ID,
   mchid:         process.env.WX_PAY_MCHID,
   serial_no:     process.env.WX_PAY_SERIAL_NO,
@@ -183,20 +183,11 @@ function generatePrepaySign(prepayId) {
 /**
  * 验证支付回调签名（微信支付 API v3）
  *
- * WHY 安全：此前仅 return !!signature（验签为空壳），攻击者知道回调 URL 即可伪造支付成功。
- *          改为真正用微信支付平台证书对 wechatpay-signature 做 RSA-SHA256 验签。
+ * 用平台证书公钥对 wechatpay-signature 做 RSA-SHA256 验签。
+ * 签名串：timestamp + "\n" + nonce + "\n" + rawBody + "\n"
  *
- * 签名串格式（微信支付 API v3 规范）：
- *   待签名字符串 = timestamp + "\n" + nonce + "\n" + rawBody + "\n"
- *   使用平台证书公钥验证 base64 编码的 RSA-SHA256 签名
- *
- * 环境变量：
- *   WX_PAY_PLATFORM_CERT — 微信支付平台证书 PEM（可从微信支付商户平台下载或通过 API /v3/certificates 获取）
- *                         不配置时降级为仅检查字段存在（开发/测试模式），生产环境必须配置
- *
- * @param {Object} headers  请求头（wechatpay-* 字段）
- * @param {string} rawBody  原始请求体（JSON 字符串）
- * @returns {boolean}
+ * WX_PAY_PLATFORM_CERT — 平台证书 PEM，可从商户平台下载或通过 /v3/certificates 获取。
+ *   不配时仅检查字段存在（开发/测试），生产环境必须配。
  */
 function verifyNotifySign(headers, rawBody) {
   const {
@@ -210,8 +201,7 @@ function verifyNotifySign(headers, rawBody) {
     return false;
   }
 
-  // WHY 降级：支付未启用（isRealPay=false）时不会收到真实回调，允许仅检查字段存在。
-  //          支付启用后必须配置 WX_PAY_PLATFORM_CERT，否则 RSA 验签无法执行。
+  // 支付未启用（isRealPay=false）时不会收到真实回调，仅检查字段存在即可
   const platformCert = (process.env.WX_PAY_PLATFORM_CERT || '').replace(/\\n/g, '\n');
   if (!platformCert) {
     // 真实支付模式下缺少平台证书 = 致命错误，拒绝回调
