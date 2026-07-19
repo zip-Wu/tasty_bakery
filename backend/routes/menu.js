@@ -26,25 +26,23 @@ router.get('/products', async (req, res) => {
 
 // ========== 获取分类（按 settings 中配置的顺序） ==========
 router.get('/categories', async (req, res) => {
-  // 读取标签排序配置
-  const [cfgRows] = await pool.execute("SELECT value FROM settings WHERE kkey = 'category_order'");
-  let ordered = [];
-  if (cfgRows.length > 0 && cfgRows[0].value) {
-    try { ordered = JSON.parse(cfgRows[0].value); } catch (_) {}
-  }
+  // 读取管理员设定的分类排序（JSON 数组，如 ["面包","蛋糕","饮品"]）
+  const [cfgRows] = await pool.execute(
+    "SELECT value FROM settings WHERE kkey = 'category_order'"
+  );
+  const categoryOrder = JSON.parse(cfgRows?.[0]?.value || '[]');
 
-  // 从商品中提取实际存在的标签
+  // 读取在售商品的实际分类
   const [rows] = await pool.execute(
     "SELECT DISTINCT category FROM products WHERE category IS NOT NULL AND category != '' AND is_available = 1 AND stock > 0"
   );
-  const existing = new Set(rows.map(r => r.category));
+  const realCategories = rows.map(r => r.category);
 
-  // 按配置顺序排列，未配置的排末尾（字母序）
-  const sorted = ordered.filter(c => existing.has(c));
-  const remaining = [...existing].filter(c => !sorted.includes(c)).sort();
-  const names = ['全部', ...sorted, ...remaining];
+  // 排序：管理员配过的排前面，未配置的按字母序排后面；"全部"永远第一位
+  const configured = categoryOrder.filter(c => realCategories.includes(c));
+  const unconfigured = realCategories.filter(c => !categoryOrder.includes(c)).sort();
 
-  res.json({ success: true, data: names });
+  res.json({ success: true, data: ['全部', ...configured, ...unconfigured] });
 });
 
 module.exports = router;
