@@ -1,14 +1,5 @@
 /**app.wxss**/
 
-/* 页面切换淡入 */
-page {
-  animation: pageFadeIn 0.2s ease both;
-}
-@keyframes pageFadeIn {
-  from { opacity: 0.6; }
-  to   { opacity: 1; }
-}
-
 .container {
   height: 100%;
   display: flex;
