@@ -1,14 +1,14 @@
 <view class="custom-tab-bar">
-  <view class="tab-item {{selected === 0 ? 'active' : ''}}" bindtap="switchTab" data-index="0" data-path="/pages/home/home">
+  <view class="tab-item" bindtap="switchTab" data-index="0" data-path="/pages/home/home">
     <image class="tab-img" src="{{selected === 0 ? '/images/png/Tab_01_selected.png' : '/images/png/Tab_01_unselected 4.png'}}"></image>
   </view>
-  <view class="tab-item {{selected === 1 ? 'active' : ''}}" bindtap="switchTab" data-index="1" data-path="/pages/index/index">
+  <view class="tab-item" bindtap="switchTab" data-index="1" data-path="/pages/index/index">
     <image class="tab-img" src="{{selected === 1 ? '/images/png/Tab_02_selected.png' : '/images/png/Tab_01_unselected 3.png'}}"></image>
   </view>
-  <view class="tab-item {{selected === 2 ? 'active' : ''}}" bindtap="switchTab" data-index="2" data-path="/pages/order-list/order-list">
+  <view class="tab-item" bindtap="switchTab" data-index="2" data-path="/pages/order-list/order-list">
     <image class="tab-img" src="{{selected === 2 ? '/images/png/Tab_03_selected.png' : '/images/png/Tab_01_unselected 2.png'}}"></image>
   </view>
-  <view class="tab-item {{selected === 3 ? 'active' : ''}}" bindtap="switchTab" data-index="3" data-path="/pages/logs/logs">
+  <view class="tab-item" bindtap="switchTab" data-index="3" data-path="/pages/logs/logs">
     <image class="tab-img" src="{{selected === 3 ? '/images/png/Tab_04_selected.png' : '/images/png/Tab_01_unselected.png'}}"></image>
   </view>
 </view>
