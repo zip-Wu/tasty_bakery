@@ -47,7 +47,6 @@ Page({
     app.request({ url: '/api/stores' }).then(stores => {
       if (stores.length > 0) {
         const store = stores[0];
-        store.distance = '未知距离';
         app.globalData.selectedStore = store;
         this.setData({ store });
         this.tryCalcDistance();
