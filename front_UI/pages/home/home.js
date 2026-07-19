@@ -10,17 +10,13 @@ Page({
       { id: 5, image: '/images/png/products.png' },
       { id: 6, image: '/images/png/products.png' }
     ],
-    _adminTapCount: 0,
-    _adminTapTimer: null
   },
 
   onLoad() {
     // 精确计算两个 spacer 高度，让 service-row↔activity↔tab 视觉等距
     // 100vh 的 rpx 值因手机而异，必须用 JS 算
     try {
-      const sys = wx.getSystemInfoSync();
-      const winH = sys.windowHeight;     // 屏高 px
-      const winW = sys.windowWidth;       // 屏宽 px
+      const { windowHeight: winH, windowWidth: winW } = wx.getWindowInfo();
       // 固定元素 rpx 高度（与 wxss 中元素实际高度一致）
       const fixedRpx = 560 + 80 + 200 + 240;  // banner + margin + card-height + activity
       // 100vh 转 rpx
