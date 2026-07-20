@@ -19,8 +19,10 @@
 .login-input {
   border: 1px solid #ddd;
   border-radius: 8rpx;
-  padding: 16rpx 20rpx;
+  padding: 0 20rpx;
   font-size: 28rpx;
+  line-height: 80rpx;
+  height: 80rpx;
   width: 100%;
   box-sizing: border-box;
 }
