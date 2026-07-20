@@ -21,6 +21,7 @@ App({
     userId: null,
     userInfo: null,
     selectedStore: null,
+    clearCartOnReturn: false,
   },
 
   // 恢复登录（从本地缓存）
