@@ -7,8 +7,7 @@
     "pages/order-list/order-list",
     "pages/order-detail/order-detail",
     "pages/logs/logs",
-    "pages/admin/admin",
-    "pages/auth/auth"
+    "pages/admin/admin"
   ],
   "window": {
     "navigationBarTextStyle": "black",
