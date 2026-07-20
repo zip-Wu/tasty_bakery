@@ -205,7 +205,3 @@ page {
 .bottom-spacer {
   height: 40rpx;
 }
-
-.bottom-section {
-  margin-bottom: 40rpx;
-}

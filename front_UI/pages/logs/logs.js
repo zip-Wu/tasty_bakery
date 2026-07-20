@@ -8,12 +8,10 @@ Page({
     orderCount: {
       pending: 0, preparing: 0, ready: 0, completed: 0, refund: 0
     },
-    cacheSize: '0KB',
     userId: null
   },
 
   onLoad() {
-    this.calcCacheSize();
     this.initUser();
   },
 
@@ -22,7 +20,6 @@ Page({
       const tabBar = this.getTabBar();
       if (tabBar.data.selected !== 3) tabBar.setData({ selected: 3 });
     }
-    this.calcCacheSize();
 
     const app = getApp();
     if (app.globalData.userId) {
@@ -62,17 +59,6 @@ Page({
     }).catch(err => { console.error('[logs] 加载订单数失败:', err); });
   },
 
-  calcCacheSize() {
-    try {
-      const res = wx.getStorageInfoSync();
-      const size = res.currentSize;
-      let display = '0KB';
-      if (size < 1024) display = size + 'KB';
-      else display = (size / 1024).toFixed(1) + 'MB';
-      this.setData({ cacheSize: display });
-    } catch (e) {}
-  },
-
   goAllOrders() {
     wx.switchTab({ url: '/pages/order-list/order-list' });
   },
@@ -84,9 +70,6 @@ Page({
     wx.switchTab({ url: '/pages/order-list/order-list' });
   },
 
-  // TODO: 以下功能待后续版本实现
-  goFavorites() { wx.showToast({ title: '收藏功能开发中', icon: 'none' }); },
-  goAddress() { wx.showToast({ title: '地址管理开发中', icon: 'none' }); },
   goSettings() { wx.showToast({ title: '设置功能开发中', icon: 'none' }); },
 
   goContact() {
@@ -102,24 +85,6 @@ Page({
       title: '关于我们',
       content: '大力馒头·信息港店\n\n用心烘焙每一份美味\n\n版本：v1.0.0',
       showCancel: false, confirmText: '知道了'
-    });
-  },
-
-  clearCache() {
-    wx.showModal({
-      title: '提示',
-      content: '确定要清除本地缓存吗？',
-      success: (res) => {
-        if (res.confirm) {
-          try {
-            wx.clearStorageSync();
-            this.calcCacheSize();
-            wx.showToast({ title: '缓存已清除', icon: 'success' });
-          } catch (e) {
-            wx.showToast({ title: '清除失败', icon: 'none' });
-          }
-        }
-      }
     });
   }
 });
