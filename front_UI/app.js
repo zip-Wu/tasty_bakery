@@ -8,10 +8,12 @@ App({
   onLaunch() {
     wx.cloud.init({ env: CLOUD_ENV });
 
-    // 恢复登录状态
+    // 确保每位访客都有身份（转化率 / 访客统计需要完整分母）
     const userId = wx.getStorageSync('userId');
     if (userId) {
       this.autoLogin(userId);
+    } else {
+      this.login();
     }
   },
 
@@ -30,9 +32,10 @@ App({
       this.globalData.userInfo = data;
     }).catch(err => {
       console.error('[autoLogin] 恢复登录失败:', err);
-      // 缓存失效，清除旧 userId，下次需要身份时自动触发 login
+      // 缓存失效，重新静默登录
       wx.removeStorageSync('userId');
       this.globalData.userId = null;
+      this.login();
     });
   },
 

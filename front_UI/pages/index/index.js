@@ -114,7 +114,6 @@ Page({
 
   onShow() {
     const app = getApp();
-    this.setData({ userId: app.globalData.userId });
 
     // 下单成功后清空购物车
     if (app.globalData.clearCartOnReturn) {
@@ -250,12 +249,6 @@ Page({
     };
     app.globalData.clearCartOnReturn = true;
 
-    if (!app.globalData.userId) {
-      app.login(() => {
-        wx.navigateTo({ url: '/pages/order-confirm/order-confirm' });
-      });
-    } else {
-      wx.navigateTo({ url: '/pages/order-confirm/order-confirm' });
-    }
+    wx.navigateTo({ url: '/pages/order-confirm/order-confirm' });
   },
 });

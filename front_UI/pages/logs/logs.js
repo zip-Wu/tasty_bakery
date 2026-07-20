@@ -32,16 +32,8 @@ Page({
   },
 
   initUser() {
-    const app = getApp();
-    if (!app.globalData.userId) {
-      app.login(() => {
-        this.loadUserInfo();
-        this.loadOrderCount();
-      });
-    } else {
-      this.loadUserInfo();
-      this.loadOrderCount();
-    }
+    this.loadUserInfo();
+    this.loadOrderCount();
   },
 
   loadUserInfo() {
