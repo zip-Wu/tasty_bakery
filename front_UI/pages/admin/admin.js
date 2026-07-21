@@ -618,12 +618,18 @@ Page({
         this._request({
           url: '/api/admin/products/reset',
           method: 'POST',
+          // 后端保护：必须传约定确认码才允许清空，防止误调用
+          data: { confirm: 'DELETE_ALL_PRODUCTS' },
           header: { Authorization: 'Bearer ' + token }
         }).then(res => {
           if (res.success) {
             wx.showToast({ title: res.message, icon: 'success' });
             this.loadProducts();
+          } else {
+            wx.showToast({ title: res.message || '清空失败', icon: 'none' });
           }
+        }).catch(err => {
+          wx.showToast({ title: err?.data?.message || '网络错误', icon: 'none' });
         });
       }
     });

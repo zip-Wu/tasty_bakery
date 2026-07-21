@@ -208,6 +208,12 @@
   margin-bottom: 16rpx;
   width: 100%;
   box-sizing: border-box;
+  /* 显式 height + line-height：
+     小程序原生 input 没有显式高度时会按内容撑开，padding+font 算下来高度不够，
+     导致 placeholder/输入文字垂直居中并被上下截断。强制给一个安全高度。 */
+  height: 80rpx;
+  min-height: 80rpx;
+  line-height: 56rpx;
 }
 .form-row { display: flex; align-items: center; margin-bottom: 16rpx; }
 .form-label { font-size: 26rpx; color: #666; }
@@ -291,6 +297,12 @@
   padding: 8rpx 12rpx;
   font-size: 26rpx;
   box-sizing: border-box;
+  /* 关键：edit-row-flex 是 flex+align-items:center，input 在 flex 容器里
+     会被压缩到与 label 同高，没有足够空间放文字，导致文字上下截断。
+     给一个不被 flex 压缩的 min-height + 明确 line-height 即可。 */
+  height: 56rpx;
+  min-height: 56rpx;
+  line-height: 40rpx;
 }
 .edit-btns { display: flex; gap: 16rpx; margin-top: 14rpx; justify-content: flex-end; }
 .edit-confirm { font-size: 24rpx !important; background: #27ae60 !important; color: #fff !important; }
