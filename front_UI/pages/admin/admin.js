@@ -34,9 +34,11 @@ Page({
     editPrice: '',
     editCategory: '',
     editStock: '',
+    editDescription: '',
+    editGallery: [],  // cloud fileID 数组
     editImage: '', // 新上传的 cloud fileID
     showAddForm: false,
-    newProduct: { name: '', price: '', category: '', image: '', stock: '' },
+    newProduct: { name: '', price: '', category: '', image: '', stock: '', description: '', gallery: [] },
     // 分类无需硬编码，管理页手动输入，顾客页自动提取
 
     // 营收
@@ -407,13 +409,28 @@ Page({
   },
 
   startEdit(e) {
-    const { id, name, price, category, stock } = e.currentTarget.dataset;
+    const { id } = e.currentTarget.dataset;
+    const product = this.data.products.find(p => p.id === id);
+    if (!product) return;
+
+    // 解析 gallery：DB 回来是 JSON 字符串或已解析数组
+    let gallery = [];
+    if (product.gallery) {
+      if (Array.isArray(product.gallery)) {
+        gallery = product.gallery;
+      } else if (typeof product.gallery === 'string' && product.gallery.startsWith('[')) {
+        try { gallery = JSON.parse(product.gallery); } catch (_) {}
+      }
+    }
+
     this.setData({
       editingId: id,
-      editName: name || '',
-      editPrice: String(price || ''),
-      editCategory: category || '',
-      editStock: String(stock || 0),
+      editName: product.name || '',
+      editPrice: String(product.price || ''),
+      editCategory: product.category || '',
+      editStock: String(product.stock || 0),
+      editDescription: product.description || '',
+      editGallery: gallery,
       editImage: ''
     });
   },
@@ -422,6 +439,7 @@ Page({
   onEditPrice(e) { this.setData({ editPrice: e.detail.value }); },
   onEditCategory(e) { this.setData({ editCategory: e.detail.value }); },
   onEditStock(e) { this.setData({ editStock: e.detail.value }); },
+  onEditDesc(e) { this.setData({ editDescription: e.detail.value }); },
 
   // 编辑模式下更换图片
   chooseEditImage() {
@@ -464,9 +482,90 @@ Page({
       }
     });
   },
+  // 编辑模式：多图上传（gallery）
+  chooseGalleryForEdit() {
+    const that = this;
+    const current = this.data.editGallery || [];
+    wx.chooseMedia({
+      count: 9 - current.length,
+      mediaType: ['image'],
+      sourceType: ['album', 'camera'],
+      success(res) {
+        that._uploadGalleryBatch(res.tempFiles, 'edit');
+      }
+    });
+  },
+  // 编辑模式：删除 gallery 中某张
+  deleteEditGalleryItem(e) {
+    const idx = e.currentTarget.dataset.idx;
+    const gallery = [...this.data.editGallery];
+    gallery.splice(idx, 1);
+    this.setData({ editGallery: gallery });
+  },
+  // 新增模式：多图上传
+  chooseGalleryForNew() {
+    const that = this;
+    const current = this.data.newProduct.gallery || [];
+    wx.chooseMedia({
+      count: 9 - current.length,
+      mediaType: ['image'],
+      sourceType: ['album', 'camera'],
+      success(res) {
+        that._uploadGalleryBatch(res.tempFiles, 'new');
+      }
+    });
+  },
+  // 新增模式：删除 gallery 中某张
+  deleteNewGalleryItem(e) {
+    const idx = e.currentTarget.dataset.idx;
+    const gallery = [...this.data.newProduct.gallery];
+    gallery.splice(idx, 1);
+    this.setData({ 'newProduct.gallery': gallery });
+  },
+  // 批量上传图片到云存储
+  _uploadGalleryBatch(tempFiles, mode) {
+    const that = this;
+    wx.showLoading({ title: '上传中...' });
+    const uploaded = [];
+    function uploadNext(i) {
+      if (i >= tempFiles.length) {
+        wx.hideLoading();
+        if (mode === 'edit') {
+          const current = that.data.editGallery || [];
+          that.setData({ editGallery: [...current, ...uploaded] });
+        } else {
+          const current = that.data.newProduct.gallery || [];
+          that.setData({ 'newProduct.gallery': [...current, ...uploaded] });
+        }
+        wx.showToast({ title: '已上传 ' + uploaded.length + ' 张', icon: 'success' });
+        return;
+      }
+      const file = tempFiles[i];
+      wx.compressImage({
+        src: file.tempFilePath, quality: 80,
+        success(compressRes) {
+          wx.cloud.uploadFile({
+            cloudPath: 'products/' + Date.now() + '_' + Math.random().toString(36).slice(2, 8) + '.jpg',
+            filePath: compressRes.tempFilePath,
+            success(uploadRes) { uploaded.push(uploadRes.fileID); uploadNext(i + 1); },
+            fail() { uploadNext(i + 1); }
+          });
+        },
+        fail() {
+          wx.cloud.uploadFile({
+            cloudPath: 'products/' + Date.now() + '_' + Math.random().toString(36).slice(2, 8) + '.jpg',
+            filePath: file.tempFilePath,
+            success(uploadRes) { uploaded.push(uploadRes.fileID); uploadNext(i + 1); },
+            fail() { uploadNext(i + 1); }
+          });
+        }
+      });
+    }
+    uploadNext(0);
+  },
 
   saveEdit() {
-    const { editingId, editName, editPrice, editCategory, editStock, editImage } = this.data;
+    const { editingId, editName, editPrice, editCategory, editStock, editImage, editDescription, editGallery } = this.data;
     if (!editingId) return;
     const token = wx.getStorageSync('admin_token');
 
@@ -474,7 +573,9 @@ Page({
       name: editName,
       price: parseFloat(editPrice),
       category: editCategory,
-      stock: parseInt(editStock) || 0
+      stock: parseInt(editStock) || 0,
+      description: editDescription,
+      gallery: editGallery,
     };
     if (editImage) data.image = editImage;
 
@@ -485,7 +586,10 @@ Page({
       header: { Authorization: 'Bearer ' + token }
     }).then(res => {
       if (res.success) {
-        this.setData({ editingId: null, editName: '', editPrice: '', editCategory: '', editStock: '', editImage: '' });
+        this.setData({
+          editingId: null, editName: '', editPrice: '', editCategory: '',
+          editStock: '', editImage: '', editDescription: '', editGallery: []
+        });
         this.loadProducts();
         wx.showToast({ title: '已更新', icon: 'success' });
       } else {
@@ -495,7 +599,10 @@ Page({
   },
 
   cancelEdit() {
-    this.setData({ editingId: null, editName: '', editPrice: '', editCategory: '', editStock: '', editImage: '' });
+    this.setData({
+      editingId: null, editName: '', editPrice: '', editCategory: '',
+      editStock: '', editImage: '', editDescription: '', editGallery: []
+    });
   },
 
   toggleAddForm() {
@@ -506,6 +613,7 @@ Page({
   onNewPrice(e) { this.setData({ 'newProduct.price': e.detail.value }); },
   onNewCategory(e) { this.setData({ 'newProduct.category': e.detail.value }); },
   onNewStock(e) { this.setData({ 'newProduct.stock': e.detail.value }); },
+  onNewDesc(e) { this.setData({ 'newProduct.description': e.detail.value }); },
 
   // 从手机相册/相机选择商品图片 → 直接上传云存储
   chooseImage() {
@@ -573,7 +681,7 @@ Page({
         wx.showToast({ title: '新增成功', icon: 'success' });
         this.setData({
           showAddForm: false,
-          newProduct: { name: '', price: '', category: '', image: '', stock: '' }
+          newProduct: { name: '', price: '', category: '', image: '', stock: '', description: '', gallery: [] }
         });
         this.loadProducts();
       } else {

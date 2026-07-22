@@ -18,7 +18,7 @@ Page({
       this.setData({ orderId: options.orderId, isNewOrder: false });
       this.loadOrder(options.orderId);
     } else {
-      // 新订单（从点单页来）
+      // 新订单（从点单页来）：默认全部常温
       const app = getApp();
       const data = app.globalData.tempOrder;
       if (!data) { wx.navigateBack(); return; }
@@ -26,7 +26,11 @@ Page({
         order: {
           storeName: data.storeName,
           address: data.address,
-          items: data.items,
+          items: (data.items || []).map(item => ({
+            ...item,
+            coldQty: item.quantity,  // 默认全常温
+            hotQty: 0,
+          })),
           totalPrice: data.totalPrice
         }
       });
@@ -53,6 +57,38 @@ Page({
     this.setData({ remark: e.detail.value });
   },
 
+  // 温度分派：只开放加热的 +/-，常温自动 = total - hot
+  changeTemp(e) {
+    const idx = parseInt(e.currentTarget.dataset.idx);
+    const delta = parseInt(e.currentTarget.dataset.delta);
+    const items = [...this.data.order.items];
+    const item = items[idx];
+    if (!item) return;
+
+    const hot = item.hotQty || 0;
+    const total = item.quantity;
+    const newHot = hot + delta;
+
+    if (newHot < 0 || newHot > total) return;
+    item.hotQty = newHot;
+    item.coldQty = total - newHot;
+
+    this.setData({ 'order.items': items });
+  },
+
+  onHotQtyInput(e) {
+    const idx = parseInt(e.currentTarget.dataset.idx);
+    let val = parseInt(e.detail.value);
+    if (isNaN(val) || val < 0) val = 0;
+    const items = [...this.data.order.items];
+    const item = items[idx];
+    if (!item) return;
+    if (val > item.quantity) val = item.quantity;
+    item.hotQty = val;
+    item.coldQty = item.quantity - val;
+    this.setData({ 'order.items': items });
+  },
+
   saveRemark() {
     if (!this.data.orderId) return;
     const app = getApp();
@@ -72,14 +108,21 @@ Page({
     const that = this;
 
     if (this.data.isNewOrder) {
-      // 新订单：先创建订单，再支付
+      // 新订单：先按温度拆分 items，再创建订单
       const { order, remark } = this.data;
+      const splitItems = [];
+      for (const item of order.items) {
+        const cold = item.coldQty || 0;
+        const hot = item.hotQty || 0;
+        if (cold > 0) splitItems.push({ ...item, quantity: cold, temperature: '常温' });
+        if (hot > 0) splitItems.push({ ...item, quantity: hot, temperature: '加热' });
+      }
       const userId = app.globalData.userId;
       app.request({
         url: '/api/orders',
         method: 'POST',
         data: {
-          userId, items: order.items, totalPrice: order.totalPrice,
+          userId, items: splitItems, totalPrice: order.totalPrice,
           storeId: (app.globalData.tempOrder || {}).storeId || 1,
           storeName: order.storeName, address: order.address,
           remark
@@ -105,6 +148,7 @@ Page({
       method: 'POST',
     }).then(data => {
       if (data.mock) {
+        app.globalData.clearCartOnReturn = true;
         wx.showModal({
           title: '支付成功（测试）',
           content: '订单已创建，商家正在准备中',
@@ -119,6 +163,7 @@ Page({
         timeStamp: payParams.timeStamp, nonceStr: payParams.nonceStr,
         package: payParams.package, signType: payParams.signType, paySign: payParams.paySign,
         success() {
+          app.globalData.clearCartOnReturn = true;
           wx.showModal({
             title: '支付成功', content: '订单已创建，商家正在准备中',
             showCancel: false,

@@ -1,0 +1,195 @@
+/* 商品详情页 */
+
+/* ====== 整体布局 ====== */
+.page-detail {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: #f5f5f5;
+}
+
+/* ====== 顶部轮播图 ====== */
+.gallery-wrap {
+  width: 100vw;
+  height: 100vw;
+  min-height: 100vw;
+  flex-shrink: 0;  /* 简介再长也不压缩图区 */
+  background: #f0f0f0;
+  position: relative;
+}
+
+.gallery-swiper {
+  width: 100%;
+  height: 100%;
+}
+
+.gallery-img {
+  width: 100%;
+  height: 100%;
+}
+
+.single-img {
+  width: 100%;
+  height: 100%;
+  background: #f0f0f0;
+}
+
+/* ====== 商品信息 ====== */
+.info-body {
+  flex: 1;
+  padding: 24rpx;
+  padding-bottom: 200rpx;  /* 留出底部 fixed 栏 + 额外呼吸空间 */
+  box-sizing: border-box;
+}
+
+.info-section {
+  background: #fff;
+  border-radius: 16rpx;
+  padding: 32rpx 24rpx;
+}
+
+.p-name {
+  font-size: 36rpx;
+  font-weight: bold;
+  color: #222;
+  display: block;
+}
+
+.p-price {
+  font-size: 40rpx;
+  font-weight: bold;
+  color: #e53935;
+  display: block;
+  margin-top: 16rpx;
+}
+
+.p-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+  margin-top: 12rpx;
+}
+
+.p-sales {
+  font-size: 24rpx;
+  color: #999;
+}
+
+.p-category {
+  font-size: 22rpx;
+  color: #8B6914;
+  background: #FFFDEB;
+  border-radius: 8rpx;
+  padding: 4rpx 12rpx;
+}
+
+/* 商品描述 */
+.p-desc {
+  margin-top: 32rpx;
+  padding-top: 28rpx;
+  border-top: 2rpx solid #f0f0f0;
+}
+
+.p-desc-label {
+  font-size: 26rpx;
+  color: #999;
+  display: block;
+  margin-bottom: 12rpx;
+}
+
+.p-desc-text {
+  font-size: 28rpx;
+  color: #666;
+  line-height: 1.6;
+  display: block;
+}
+
+/* ====== 底部操作栏 ====== */
+.bottom-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20rpx 24rpx;
+  padding-bottom: calc(20rpx + env(safe-area-inset-bottom));
+  background: #fff;
+  border-top: 2rpx solid #f0f0f0;
+  box-sizing: border-box;
+  z-index: 100;
+}
+
+/* 温度选择（详情页底部） */
+.b-temp-wrap {
+  display: flex;
+  flex-direction: column;
+  border-radius: 12rpx;
+  overflow: hidden;
+  border: 2rpx solid #e0e0e0;
+  flex-shrink: 0;
+  margin-right: 12rpx;
+}
+.b-temp-opt {
+  font-size: 18rpx;
+  padding: 4rpx 14rpx;
+  color: #999;
+  background: #f5f5f5;
+  text-align: center;
+}
+.b-temp-opt.active {
+  color: #fff;
+  font-weight: bold;
+}
+.b-temp-cold.active { background: #4fc3f7; }
+.b-temp-hot.active  { background: #ff8a65; }
+
+.b-quantity {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+}
+
+.b-qty-btn {
+  width: 56rpx;
+  height: 56rpx;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 36rpx;
+  font-weight: bold;
+  background: #f0f0f0;
+  color: #666;
+}
+
+.b-qty-btn.plus {
+  background: #F3D624;
+  color: #333;
+}
+
+.b-qty-btn.disabled {
+  opacity: 0.4;
+}
+
+.b-qty-num {
+  font-size: 36rpx;
+  font-weight: bold;
+  min-width: 48rpx;
+  text-align: center;
+}
+
+.b-cart-btn {
+  background: #ccc;
+  color: #999;
+  font-size: 30rpx;
+  font-weight: bold;
+  border-radius: 50rpx;
+  padding: 20rpx 48rpx;
+}
+
+.b-cart-btn.active {
+  background: #F3D624;
+  color: #333;
+}

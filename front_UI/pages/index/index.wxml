@@ -30,22 +30,27 @@
       <!-- 商品列表 -->
       <block wx:for="{{filteredBreadList}}" wx:key="id">
         <view class="goods-item">
-          <image class="goods-img" src="{{item.image}}" mode="aspectFill"></image>
-          <view class="goods-info">
-            <text class="goods-name">{{item.name}}</text>
-            <text class="goods-desc">{{item.desc || ''}}</text>
-            <view class="temp-tag" wx:if="{{cart[item.id] > 0}}" catchtap="toggleTemp" data-id="{{item.id}}">
-              <view class="temp-tag-inner">
-                <text class="temp-option temp-cold {{cartTemp[item.id] === '常温' ? 'active' : ''}}">常温</text>
-                <text class="temp-option temp-hot {{cartTemp[item.id] === '加热' ? 'active' : ''}}">加热</text>
-              </view>
+          <!-- 图片单独一格：可点进详情 -->
+          <image class="goods-img" src="{{item.image}}" mode="aspectFill"
+            bindtap="navigateToProductDetail" data-id="{{item.id}}"></image>
+          <!-- 右侧区域：上方名称简介（可点详情），下方销售/温度/价格/操作（不可点） -->
+          <view class="goods-right">
+            <view class="goods-click-area" bindtap="navigateToProductDetail" data-id="{{item.id}}">
+              <text class="goods-name">{{item.name}}</text>
+              <text class="goods-desc" wx:if="{{item.description}}">{{item.description}}</text>
             </view>
-            <view class="goods-bottom">
-              <text class="goods-price">¥{{item.price}}</text>
-              <view class="goods-action">
-                <view class="count-btn minus" wx:if="{{cart[item.id] > 0}}" bindtap="minusFromCart" data-id="{{item.id}}">-</view>
-                <text class="goods-count" wx:if="{{cart[item.id] > 0}}">{{cart[item.id]}}</text>
-                <view class="count-btn plus" bindtap="addToCart" data-id="{{item.id}}">+</view>
+            <!-- 底部组：月销 + 价格/操作 -->
+            <view class="goods-info">
+              <view class="goods-bottom">
+                <view class="goods-bottom-left">
+                  <text class="goods-price">¥{{item.price}}</text>
+                  <text class="goods-sales">月销: {{item.monthlySales || 0}}</text>
+                </view>
+                <view class="goods-action">
+                  <view class="count-btn minus" wx:if="{{cart[item.id] > 0}}" catchtap="minusFromCart" data-id="{{item.id}}"><text>−</text></view>
+                  <text class="goods-count" wx:if="{{cart[item.id] > 0}}">{{cart[item.id]}}</text>
+                  <view class="count-btn plus" catchtap="addToCart" data-id="{{item.id}}"><text>+</text></view>
+                </view>
               </view>
             </view>
           </view>

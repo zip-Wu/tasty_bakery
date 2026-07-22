@@ -140,24 +140,45 @@ page {
   flex-shrink: 0;
 }
 
-.goods-info {
+/* 右侧区域：上方名称简介（可点详情），下方销售/温度/价格/操作（不可点） */
+.goods-right {
   flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  min-width: 0;
+  /* 默认 stretch 到 180rpx（与图片同高） */
+}
+.goods-click-area {
+  /* 名称 + 简介，可点进详情页 */
+}
+
+.goods-info {
+  display: flex;
+  flex-direction: column;
+  margin-top: auto;  /* 温度 + 价格/操作推到底 */
 }
 
 .goods-name {
-  font-size: 30rpx;
+  font-size: 28rpx;
   font-weight: bold;
   color: #222;
 }
 
 .goods-desc {
-  font-size: 24rpx;
-  color: #888;
+  font-size: 20rpx;
+  color: #999;
   line-height: 1.4;
+  margin-top: 4rpx;
+  /* 最多 2 行，超出显示 ... */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  word-break: break-all;
+}
+.goods-sales {
+  font-size: 18rpx;
+  color: #aaa;
 }
 
 .goods-bottom {
@@ -165,9 +186,16 @@ page {
   justify-content: space-between;
   align-items: center;
 }
+.goods-bottom-left {
+  display: flex;
+  align-items: baseline;
+  gap: 8rpx;
+  min-width: 0;
+  flex-shrink: 1;
+}
 
 .goods-price {
-  font-size: 34rpx;
+  font-size: 28rpx;
   font-weight: bold;
   color: #e53935;
 }
@@ -175,18 +203,21 @@ page {
 .goods-action {
   display: flex;
   align-items: center;
-  gap: 12rpx;
+  gap: 10rpx;
+  flex-shrink: 0;
+  margin-right: 8rpx;
 }
 
 .count-btn {
-  width: 48rpx;
-  height: 48rpx;
+  width: 44rpx;
+  height: 44rpx;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 28rpx;
   font-weight: bold;
+  flex-shrink: 0;
 }
 
 .count-btn.minus {
@@ -200,16 +231,17 @@ page {
 }
 
 .goods-count {
-  font-size: 28rpx;
+  font-size: 26rpx;
   color: #333;
-  min-width: 40rpx;
+  min-width: 32rpx;
   text-align: center;
 }
 
 .temp-tag {
   display: flex;
   justify-content: flex-end;
-  margin-bottom: 8rpx;
+  margin-bottom: 4rpx;
+  flex-shrink: 0;
 }
 .temp-tag-inner {
   display: inline-flex;
@@ -218,8 +250,8 @@ page {
   border: 2rpx solid #e0e0e0;
 }
 .temp-option {
-  font-size: 20rpx;
-  padding: 4rpx 16rpx;
+  font-size: 18rpx;
+  padding: 3rpx 12rpx;
   color: #999;
   background: #f5f5f5;
 }

@@ -99,6 +99,8 @@ const ready = (async () => {
         price        DECIMAL(10,2) NOT NULL,
         image        TEXT,
         category     VARCHAR(64) DEFAULT '',
+        description  TEXT,
+        gallery      TEXT,
         sales        INT DEFAULT 0,
         stock        INT DEFAULT 0,
         sort_order   INT DEFAULT 0,

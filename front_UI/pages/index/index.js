@@ -15,7 +15,6 @@ Page({
     // 如果用全局状态，需在多个页面生命周期中手动同步清空时机，更容易遗漏
     // 代价：返回点单页时购物车已清空（对用户来说是预期行为——已下单的商品不应还在车里）
     cart: {},
-    cartTemp: {},  // { [productId]: '常温' | '加热' }
     cartCount: 0,
     cartTotal: 0,
 
@@ -102,9 +101,8 @@ Page({
       url: '/api/products',
       method: 'GET',
     }).then(data => {
-      this.setData({
-        breadList: data,
-        filteredBreadList: data
+      this.setData({ breadList: data }, () => {
+        this.filterBreadList();
       });
     }).catch((err) => {
       console.error('[loadProducts] 商品加载失败:', err);
@@ -118,7 +116,7 @@ Page({
     // 下单成功后清空购物车
     if (app.globalData.clearCartOnReturn) {
       app.globalData.clearCartOnReturn = false;
-      this.setData({ cart: {}, cartTemp: {}, cartCount: 0, cartTotal: 0 });
+      this.setData({ cart: {}, cartCount: 0, cartTotal: 0 });
     }
 
     // 更新TabBar选中状态
@@ -168,40 +166,24 @@ Page({
   addToCart(e) {
     const id = e.currentTarget.dataset.id;
     const cart = { ...this.data.cart };
-    const cartTemp = { ...this.data.cartTemp };
-    if (cart[id]) {
-      cart[id]++;
-    } else {
-      cart[id] = 1;
-      cartTemp[id] = '常温';
-    }
-    this.updateCart(cart, cartTemp);
+    cart[id] = (cart[id] || 0) + 1;
+    this.updateCart(cart);
   },
 
   // 减少购物车数量
   minusFromCart(e) {
     const id = e.currentTarget.dataset.id;
     const cart = { ...this.data.cart };
-    const cartTemp = { ...this.data.cartTemp };
     if (cart[id] > 1) {
       cart[id]--;
     } else {
       delete cart[id];
-      delete cartTemp[id];
     }
-    this.updateCart(cart, cartTemp);
-  },
-
-  // 切换温度
-  toggleTemp(e) {
-    const id = e.currentTarget.dataset.id;
-    const cartTemp = { ...this.data.cartTemp };
-    cartTemp[id] = cartTemp[id] === '加热' ? '常温' : '加热';
-    this.setData({ cartTemp });
+    this.updateCart(cart);
   },
 
   // 更新购物车
-  updateCart(cart, cartTemp) {
+  updateCart(cart) {
     let count = 0;
     let total = 0;
     for (const id in cart) {
@@ -211,7 +193,20 @@ Page({
         total += bread.price * cart[id];
       }
     }
-    this.setData({ cart, cartTemp: cartTemp || this.data.cartTemp, cartCount: count, cartTotal: parseFloat(total.toFixed(2)) });
+    this.setData({ cart, cartCount: count, cartTotal: parseFloat(total.toFixed(2)) });
+  },
+
+  // 供商品详情页调用的批量加购（跨页面共享购物车）
+  addProductToCart(productId, quantity) {
+    const cart = { ...this.data.cart };
+    cart[productId] = (cart[productId] || 0) + quantity;
+    this.updateCart(cart);
+  },
+
+  // 跳转商品详情页
+  navigateToProductDetail(e) {
+    const id = e.currentTarget.dataset.id;
+    wx.navigateTo({ url: '/pages/product-detail/product-detail?id=' + id });
   },
 
   // 去结算（缓存购物车数据，确认支付时才创建订单）
@@ -222,7 +217,7 @@ Page({
     }
 
     const app = getApp();
-    const { cart, cartTemp, cartTotal, store } = this.data;
+    const { cart, cartTotal, store } = this.data;
 
     const items = [];
     for (const id in cart) {
@@ -231,7 +226,6 @@ Page({
         items.push({
           id: bread.id, name: bread.name, price: bread.price,
           quantity: cart[id], image: bread.image,
-          temperature: cartTemp[id] || '常温'
         });
       }
     }
@@ -247,7 +241,7 @@ Page({
       storeId: store.id || 1, storeName: store.name,
       address: store.address || '珠海市高新区唐家湾镇香山路88号2栋1层101-10室',
     };
-    app.globalData.clearCartOnReturn = true;
+    // 注意：不在这里设 clearCartOnReturn，等支付成功后再清空
 
     wx.navigateTo({ url: '/pages/order-confirm/order-confirm' });
   },

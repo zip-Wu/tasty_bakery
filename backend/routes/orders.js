@@ -293,7 +293,8 @@ async function processMockPayment(order, res) {
   } catch (err) {
     await conn.rollback();
     console.error('[pay] 模拟支付失败:', err.message);
-    res.status(500).json({ success: false, message: '支付处理失败，请稍后重试' });
+    // 把具体原因（如库存不足）返回给前端，方便测试期排查
+    res.status(500).json({ success: false, message: err.message || '支付处理失败，请稍后重试' });
   } finally {
     conn.release();
   }

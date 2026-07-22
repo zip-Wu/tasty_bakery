@@ -1,0 +1,45 @@
+<!-- 商品详情页 -->
+<view class="page-detail">
+  <!-- ====== 顶部图片轮播 ====== -->
+  <view class="gallery-wrap">
+    <swiper class="gallery-swiper"
+      indicator-dots="{{gallery.length > 1}}"
+      indicator-color="rgba(255,255,255,0.4)"
+      indicator-active-color="#fff"
+      autoplay="{{true}}" circular="{{true}}" interval="3000" duration="300">
+      <swiper-item wx:for="{{gallery}}" wx:key="*this">
+        <image class="gallery-img" src="{{item}}" mode="aspectFill" />
+      </swiper-item>
+    </swiper>
+    <!-- 单图无轮播时显示 -->
+    <image wx:if="{{gallery.length === 0 && product.image}}" class="single-img" src="{{product.image}}" mode="aspectFill" />
+  </view>
+
+  <!-- ====== 商品信息 ====== -->
+  <scroll-view class="info-body" scroll-y="{{true}}">
+    <view class="info-section">
+      <text class="p-name">{{product.name}}</text>
+      <text class="p-price">¥{{product.price}}</text>
+      <view class="p-meta-row">
+        <text class="p-sales">月销: {{product.monthlySales || 0}}</text>
+        <text class="p-category" wx:if="{{product.category}}">{{product.category}}</text>
+      </view>
+      <view class="p-desc" wx:if="{{product.description}}">
+        <text class="p-desc-label">商品详情</text>
+        <text class="p-desc-text">{{product.description}}</text>
+      </view>
+    </view>
+  </scroll-view>
+
+  <!-- ====== 底部操作栏 ====== -->
+  <view class="bottom-bar">
+    <view class="b-quantity">
+      <view class="b-qty-btn {{qty > 0 ? '' : 'disabled'}}" bindtap="minusQty">−</view>
+      <text class="b-qty-num">{{qty}}</text>
+      <view class="b-qty-btn plus" bindtap="addQty">+</view>
+    </view>
+    <view class="b-cart-btn {{qty > 0 ? 'active' : ''}}" bindtap="addToCart">
+      加入购物车 {{qty > 0 ? '· ¥' + subtotal : ''}}
+    </view>
+  </view>
+</view>

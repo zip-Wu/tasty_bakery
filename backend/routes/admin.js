@@ -121,7 +121,7 @@ router.post('/admin/orders/:id/complete', async (req, res) => {
 // ========== 获取全部商品 ==========
 router.get('/admin/products', async (req, res) => {
   const [products] = await pool.execute(
-    'SELECT id, name, price, image, category, sales, stock, is_available, sort_order FROM products ORDER BY sort_order ASC, id ASC'
+    'SELECT id, name, price, image, category, description, gallery, sales, stock, is_available, sort_order FROM products ORDER BY sort_order ASC, id ASC'
   );
   res.json({ success: true, data: products });
 });
@@ -182,7 +182,7 @@ router.put('/admin/category-order', async (req, res) => {
 
 // ========== 新增商品 ==========
 router.post('/admin/products', async (req, res) => {
-  const { name, price, category, image, stock } = req.body;
+  const { name, price, category, image, stock, description, gallery } = req.body;
 
   if (!name || price === undefined) {
     return res.json({ success: false, message: '商品名称和价格不能为空' });
@@ -196,14 +196,17 @@ router.post('/admin/products', async (req, res) => {
     return res.json({ success: false, message: '商品名称不能超过128个字符' });
   }
 
-  const parsedStock = parseInt(stock) || 0;
+  const parsedStock = parseInt(stock) || 50;  // 未填默认 50，避免 0 库存导致无法下单
   if (parsedStock < 0) {
     return res.json({ success: false, message: '库存不能为负数' });
   }
 
+  // gallery 前端传来是数组，入库转为 JSON 字符串；已存为 JSON string 时也兼容
+  const galleryStr = Array.isArray(gallery) ? JSON.stringify(gallery) : (gallery || '');
+
   const [result] = await pool.execute(
-    'INSERT INTO products (name, price, image, category, stock) VALUES (?, ?, ?, ?, ?)',
-    [name, parsedPrice, image || '', category || '', parsedStock]
+    'INSERT INTO products (name, price, image, category, description, gallery, stock) VALUES (?, ?, ?, ?, ?, ?, ?)',
+    [name, parsedPrice, image || '', category || '', description || '', galleryStr, parsedStock]
   );
 
   const [rows] = await pool.execute('SELECT * FROM products WHERE id = ?', [result.insertId]);
@@ -214,7 +217,7 @@ router.post('/admin/products', async (req, res) => {
 // 仅更新传入的字段（动态拼接 UPDATE），未传入的字段保持原值不变
 // is_available 字段在前端是 boolean，存储时转为 0/1
 router.put('/admin/products/:id', async (req, res) => {
-  const { is_available, price, name, category, image, stock } = req.body;
+  const { is_available, price, name, category, image, stock, description, gallery } = req.body;
   const [rows] = await pool.execute('SELECT * FROM products WHERE id = ?', [req.params.id]);
 
   if (!rows[0]) {
@@ -255,6 +258,15 @@ router.put('/admin/products/:id', async (req, res) => {
       return res.json({ success: false, message: '库存不能为负数' });
     }
     params.push(s);
+  }
+  if (description !== undefined) {
+    updates.push('description = ?');
+    params.push(description);
+  }
+  if (gallery !== undefined) {
+    updates.push('gallery = ?');
+    // 前端传来数组转为 JSON 字符串；已是 string 时直接存
+    params.push(Array.isArray(gallery) ? JSON.stringify(gallery) : gallery);
   }
 
   if (updates.length > 0) {
