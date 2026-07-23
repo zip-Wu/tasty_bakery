@@ -8,7 +8,7 @@
 
   <!-- 订单商品 -->
   <view class="order-items">
-    <view class="order-item" wx:for="{{order.items}}" wx:key="id" wx:for-index="idx">
+    <view class="order-item" wx:for="{{order.items}}" wx:key="itemKey" wx:for-index="idx">
       <view class="order-item-row">
         <image class="item-img" src="{{item.image}}" mode="aspectFill"></image>
         <view class="item-info">

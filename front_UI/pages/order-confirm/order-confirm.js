@@ -117,6 +117,10 @@ Page({
         if (cold > 0) splitItems.push({ ...item, quantity: cold, temperature: '常温' });
         if (hot > 0) splitItems.push({ ...item, quantity: hot, temperature: '加热' });
       }
+      // 为拆分后的每个 item 注入唯一 key（同商品不同温度 id 相同）
+      splitItems.forEach((item, idx) => {
+        item.itemKey = `${item.id}_${item.temperature || 'x'}_${idx}`;
+      });
       const userId = app.globalData.userId;
       app.request({
         url: '/api/orders',

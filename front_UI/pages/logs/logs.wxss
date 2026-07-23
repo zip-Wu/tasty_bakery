@@ -205,3 +205,66 @@ page {
 .bottom-spacer {
   height: 40rpx;
 }
+
+/* ========== 联系门店弹窗 ========== */
+.modal-mask {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+}
+.modal-card {
+  width: 80%;
+  background: #fff;
+  border-radius: 16rpx;
+  overflow: hidden;
+  box-shadow: 0 8rpx 32rpx rgba(0,0,0,0.18);
+}
+.modal-title {
+  text-align: center;
+  font-size: 32rpx;
+  font-weight: bold;
+  padding: 32rpx 0 12rpx;
+  color: #333;
+}
+.modal-content {
+  padding: 0 40rpx 36rpx;
+}
+.modal-line {
+  font-size: 28rpx;
+  color: #333;
+  line-height: 1.6;
+  text-align: center;
+}
+.modal-store-name {
+  font-weight: bold;
+  margin-bottom: 4rpx;
+}
+.modal-store-phone {
+  color: #666;
+}
+.modal-actions {
+  display: flex;
+  border-top: 1rpx solid #eee;
+}
+.modal-btn {
+  flex: 1;
+  text-align: center;
+  padding: 24rpx 0;
+  font-size: 30rpx;
+  border-right: 1rpx solid #eee;
+  box-sizing: border-box;
+}
+.modal-btn:last-child {
+  border-right: none;
+}
+.modal-btn.cancel {
+  color: #666;
+}
+.modal-btn.confirm {
+  color: #576b95;
+  font-weight: bold;
+}

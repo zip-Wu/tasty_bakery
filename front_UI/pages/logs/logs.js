@@ -8,7 +8,8 @@ Page({
     orderCount: {
       pending: 0, preparing: 0, ready: 0, completed: 0, refund: 0
     },
-    userId: null
+    userId: null,
+    showCallModal: false      // 联系门店弹窗
   },
 
   onLoad() {
@@ -72,11 +73,19 @@ Page({
 
   goSettings() { wx.showToast({ title: '设置功能开发中', icon: 'none' }); },
 
+  // 联系客服（复用联系门店弹窗）
   goContact() {
-    wx.showModal({
-      title: '联系客服',
-      content: '客服电话：400-123-4567\n工作时间：09:00 - 21:00',
-      showCancel: false, confirmText: '知道了'
+    this.setData({ showCallModal: true });
+  },
+
+  closeCallModal() {
+    this.setData({ showCallModal: false });
+  },
+
+  doCallPhone() {
+    this.setData({ showCallModal: false });
+    wx.makePhoneCall({
+      phoneNumber: '18924273942'
     });
   },
 

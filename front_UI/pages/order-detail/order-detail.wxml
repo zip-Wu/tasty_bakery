@@ -9,7 +9,10 @@
     </view>
 
     <!-- 退款倒计时提示 -->
-    <view class="countdown-tip" wx:if="{{order.status === 'ready' && readyCountdown}}">{{readyCountdown}}</view>
+    <view class="countdown-tip" wx:if="{{order.status === 'ready' && readyCountdown}}">
+      <image class="countdown-icon" src="/images/svg/clock-alarm.svg" mode="aspectFit"></image>
+      <text class="countdown-text">{{readyCountdown}}</text>
+    </view>
 
     <!-- 时间线进度 -->
     <view class="timeline">
@@ -60,7 +63,7 @@
   <view class="info-card">
     <view class="card-title">订单商品</view>
     <view class="goods-list">
-      <view class="goods-item" wx:for="{{order.items}}" wx:key="id">
+      <view class="goods-item" wx:for="{{order.items}}" wx:key="itemKey">
         <image class="goods-img" src="{{item.image}}" mode="aspectFill"></image>
         <view class="goods-info">
           <text class="goods-name">{{item.name}}<text class="item-temp temp-{{item.temperature === '加热' ? 'hot' : 'cold'}}" wx:if="{{item.temperature}}">{{item.temperature}}</text></text>
@@ -101,5 +104,20 @@
     <view class="action-btn secondary" bindtap="callStore">联系门店</view>
     <view class="action-btn primary" wx:if="{{order.status === 'pending'}}" bindtap="goPay">立即支付</view>
     <view class="action-btn danger" wx:if="{{(order.status === 'preparing' || order.status === 'ready') && !isRefunding}}" bindtap="requestRefund">申请退款</view>
+  </view>
+
+  <!-- 联系门店弹窗 -->
+  <view class="modal-mask" wx:if="{{showCallModal}}" bindtap="closeCallModal">
+    <view class="modal-card" catchtap="">
+      <view class="modal-title">联系门店</view>
+      <view class="modal-content">
+        <view class="modal-line modal-store-name">大力馒头铺·信息港店</view>
+        <view class="modal-line modal-store-phone">电话：189-2427-3942</view>
+      </view>
+      <view class="modal-actions">
+        <view class="modal-btn cancel" bindtap="closeCallModal">取消</view>
+        <view class="modal-btn confirm" bindtap="doCallPhone">拨打</view>
+      </view>
+    </view>
   </view>
 </view>

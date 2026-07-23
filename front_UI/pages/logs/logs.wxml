@@ -82,4 +82,19 @@
 
   <!-- 自定义悬浮TabBar -->
   <custom-tab-bar></custom-tab-bar>
+
+  <!-- 联系门店弹窗（复用 order-detail 同款） -->
+  <view class="modal-mask" wx:if="{{showCallModal}}" bindtap="closeCallModal">
+    <view class="modal-card" catchtap="">
+      <view class="modal-title">联系门店</view>
+      <view class="modal-content">
+        <view class="modal-line modal-store-name">大力馒头铺·信息港店</view>
+        <view class="modal-line modal-store-phone">电话：189-2427-3942</view>
+      </view>
+      <view class="modal-actions">
+        <view class="modal-btn cancel" bindtap="closeCallModal">取消</view>
+        <view class="modal-btn confirm" bindtap="doCallPhone">拨打</view>
+      </view>
+    </view>
+  </view>
 </view>

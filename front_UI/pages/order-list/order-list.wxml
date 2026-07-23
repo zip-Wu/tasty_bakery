@@ -73,7 +73,7 @@
       <text class="pickup-code-text" wx:if="{{(item.status === 'ready' || item.status === 'preparing') && item.pickupCode}}">取餐码：{{item.pickupCode}}</text>
 
       <view class="order-goods">
-        <view class="goods-item" wx:for="{{item.items}}" wx:key="id" wx:for-item="goods">
+        <view class="goods-item" wx:for="{{item.items}}" wx:key="itemKey" wx:for-item="goods">
           <text class="goods-name">{{goods.name}}<text class="goods-temp temp-{{goods.temperature === '加热' ? 'hot' : 'cold'}}" wx:if="{{goods.temperature}}">{{goods.temperature}}</text></text>
           <text class="goods-qty">x{{goods.quantity}}</text>
         </view>

@@ -5,6 +5,7 @@ Page({
     statusIcon: '/images/svg/order-pending.svg',
     readyCountdown: '',        // ready 状态 24h 倒计时
     isRefunding: false,        // 退款中
+    showCallModal: false,      // 联系门店弹窗
     statusMap: {
       pending:   { icon: '/images/svg/order-pending.svg',   text: '待支付' },
       preparing: { icon: '/images/svg/order-preparing.svg', text: '制作中' },
@@ -108,6 +109,10 @@ Page({
     order.totalQuantity = order.items.reduce((sum, item) => sum + item.quantity, 0);
     order.address = order.address || '珠海市高新区唐家湾镇香山路88号2栋1层101-10室';
     order.statusText = statusInfo.text;
+    // 为每个 item 注入唯一 key（同商品不同温度 id 相同，wx:key="id" 会报重复）
+    order.items.forEach((item, idx) => {
+      item.itemKey = `${item.id}_${item.temperature || 'x'}_${idx}`;
+    });
 
     this.setData({
       order: order,
@@ -169,11 +174,19 @@ Page({
 
   // 联系门店
   callStore() {
-    wx.showModal({
-      title: '联系门店',
-      content: '大力馒头铺·信息港店\n电话：0756-1234567\n\n营业时间：08:00 - 21:00',
-      showCancel: false,
-      confirmText: '拨打'
+    this.setData({ showCallModal: true });
+  },
+
+  // 关闭联系门店弹窗
+  closeCallModal() {
+    this.setData({ showCallModal: false });
+  },
+
+  // 拨打电话
+  doCallPhone() {
+    this.setData({ showCallModal: false });
+    wx.makePhoneCall({
+      phoneNumber: '18924273942'
     });
   }
 });

@@ -1,6 +1,6 @@
 page {
   background: #f5f5f5;
-  padding-bottom: 140rpx;
+  padding-bottom: 156rpx;
 }
 
 /* ========== 状态追踪区 ========== */
@@ -222,12 +222,12 @@ page {
   bottom: 0;
   left: 0;
   right: 0;
-  height: 120rpx;
+  min-height: 120rpx;
   background: #fff;
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  padding: 0 30rpx;
+  padding: 0 30rpx 16rpx;
   box-shadow: 0 -4rpx 20rpx rgba(0,0,0,0.08);
   gap: 20rpx;
 }
@@ -256,12 +256,89 @@ page {
 
 /* ========== 倒计时提示 ========== */
 .countdown-tip {
-  text-align: center;
-  font-size: 24rpx;
-  color: #bf360c;
-  background: #fef5eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26rpx;
+  font-weight: bold;
+  color: #8B4513;
+  background: rgba(0, 0, 0, 0.12);
   padding: 16rpx 24rpx;
   margin: 0 24rpx 20rpx;
   border-radius: 12rpx;
-  border: 1rpx solid #f0dcc0;
+  border: 1rpx solid rgba(0, 0, 0, 0.08);
+}
+.countdown-icon {
+  width: 32rpx;
+  height: 32rpx;
+  margin-right: 10rpx;
+  flex-shrink: 0;
+}
+.countdown-text {
+  font-size: 26rpx;
+  font-weight: bold;
+  color: #8B4513;
+}
+
+/* ========== 联系门店弹窗 ========== */
+.modal-mask {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+}
+.modal-card {
+  width: 80%;
+  background: #fff;
+  border-radius: 16rpx;
+  overflow: hidden;
+  box-shadow: 0 8rpx 32rpx rgba(0,0,0,0.18);
+}
+.modal-title {
+  text-align: center;
+  font-size: 32rpx;
+  font-weight: bold;
+  padding: 32rpx 0 12rpx;
+  color: #333;
+}
+.modal-content {
+  padding: 0 40rpx 36rpx;
+}
+.modal-line {
+  font-size: 28rpx;
+  color: #333;
+  line-height: 1.6;
+  text-align: center;
+}
+.modal-store-name {
+  font-weight: bold;
+  margin-bottom: 4rpx;
+}
+.modal-store-phone {
+  color: #666;
+}
+.modal-actions {
+  display: flex;
+  border-top: 1rpx solid #eee;
+}
+.modal-btn {
+  flex: 1;
+  text-align: center;
+  padding: 24rpx 0;
+  font-size: 30rpx;
+  border-right: 1rpx solid #eee;
+  box-sizing: border-box;
+}
+.modal-btn:last-child {
+  border-right: none;
+}
+.modal-btn.cancel {
+  color: #666;
+}
+.modal-btn.confirm {
+  color: #576b95;
+  font-weight: bold;
 }
