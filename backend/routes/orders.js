@@ -236,7 +236,7 @@ router.post('/orders/:id/refund', async (req, res) => {
       refundDesc: '用户申请退款',
     });
 
-    res.json({ success: true, message: '退款申请已提交，将以原支付方式退回' });
+    res.json({ success: true, data: { success: true, message: '退款申请已提交，将以原支付方式退回' } });
   } catch (err) {
     console.error('[refund] 退款失败:', err.message);
     res.json({ success: false, message: err.message || '退款失败，请稍后重试' });

@@ -19,11 +19,11 @@ Page({
     orderFilter: 'preparing',
     orderFilters: [
       { key: 'all', label: '全部' },
-      { key: 'pending', label: '待支付' },
+      { key: 'refunded', label: '已退款' },
       { key: 'preparing', label: '制作中' },
       { key: 'ready', label: '待取餐' },
       { key: 'completed', label: '已完成' },
-      { key: 'refunded', label: '已退款' }
+      { key: 'pending', label: '待支付' }
     ],
     orders: [],
     statusMap: {
@@ -77,8 +77,10 @@ Page({
   },
 
   onShow() {
-    // 回到页面时恢复轮询
+    // 回到页面时立即刷新 + 恢复轮询
     if (this.data.loggedIn && this.data.currentTab === 'orders') {
+      this.loadOrders();
+      this.loadDashboard();
       this._startPolling();
     }
   },
