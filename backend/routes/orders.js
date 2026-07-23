@@ -8,9 +8,9 @@ const { requireUser } = require('../middleware/auth');
 
 const router = express.Router();
 
-// 路由级 requireUser，/pay/notify 是微信服务器回调，跳过用户认证
+// 路由级 requireUser，/pay/notify 和 /orders/refund/notify 是微信服务端回调，跳过用户认证
 router.use((req, res, next) => {
-  if (req.path === '/pay/notify') return next();
+  if (req.path === '/pay/notify' || req.path === '/orders/refund/notify') return next();
   requireUser(req, res, next);
 });
 
@@ -129,6 +129,114 @@ router.get('/orders/:id', async (req, res) => {
   res.json({ success: true, data: formatOrder(rows[0]) });
 });
 
+// ========== 退款回调通知（云托管封装方案） ==========
+// ⚠️ 必须在所有 /orders/:id/* 路由之前注册，防止 :id 通配符误匹配
+
+router.post('/orders/refund/notify', async (req, res) => {
+  const notifyBody = req.body;
+  if (!notifyBody) {
+    console.error('[refund-notify] req.body 为空');
+    return res.json({ errcode: -1, errmsg: 'empty_body' });
+  }
+
+  const { returnCode, outTradeNo, refundId, refundStatus } = notifyBody;
+
+  console.log(`[refund-notify] 收到退款回调: order_no=${outTradeNo} refund_id=${refundId} status=${refundStatus}`);
+
+  if (returnCode !== 'SUCCESS') {
+    return res.json({ errcode: 0, errmsg: 'ok' });
+  }
+  if (refundStatus !== 'SUCCESS') {
+    console.log(`[refund-notify] 退款非成功 (${refundStatus})，跳过`);
+    return res.json({ errcode: 0, errmsg: 'ok' });
+  }
+
+  try {
+    const [orders] = await pool.execute('SELECT * FROM orders WHERE order_no = ?', [outTradeNo]);
+    if (!orders[0]) {
+      console.warn(`[refund-notify] 订单不存在: ${outTradeNo}`);
+      return res.json({ errcode: 0, errmsg: 'ok' });
+    }
+    const order = orders[0];
+
+    if (order.status === 'refunded') {
+      console.log(`[refund-notify] 订单 ${outTradeNo} 已退款，跳过`);
+      return res.json({ errcode: 0, errmsg: 'ok' });
+    }
+
+    const conn = await pool.getConnection();
+    try {
+      await conn.beginTransaction();
+
+      await conn.execute(
+        'UPDATE orders SET status = ?, refund_id = ?, refunded_at = NOW() WHERE id = ?',
+        ['refunded', refundId, order.id]
+      );
+
+      // 恢复库存
+      const items = typeof order.items === 'string' ? JSON.parse(order.items) : order.items;
+      for (const item of items) {
+        await conn.execute(
+          'UPDATE products SET stock = stock + ?, is_available = 1 WHERE id = ?',
+          [item.quantity, item.id]
+        );
+      }
+
+      await conn.commit();
+      console.log(`[refund-notify] 订单 ${outTradeNo} 已退款, 库存已恢复`);
+
+      // 退回积分
+      const pts = Math.floor(parseFloat(order.total_price));
+      if (pts > 0) {
+        await pool.execute('UPDATE users SET points = GREATEST(points - ?, 0) WHERE id = ?', [pts, order.user_id]);
+        console.log(`[refund-notify] 用户 ${order.user_id} 积分 -${pts}`);
+      }
+    } catch (innerErr) {
+      await conn.rollback();
+      throw innerErr;
+    } finally {
+      conn.release();
+    }
+
+    res.json({ errcode: 0, errmsg: 'ok' });
+  } catch (err) {
+    console.error(`[refund-notify] 处理退款��调失败:`, err.message);
+    res.json({ errcode: -1, errmsg: 'process_error' });
+  }
+});
+
+// ========== 申请退款 ==========
+
+router.post('/orders/:id/refund', async (req, res) => {
+  try {
+    const [rows] = await pool.execute('SELECT * FROM orders WHERE id = ?', [req.params.id]);
+    if (!rows[0]) return res.json({ success: false, message: '订单不存在' });
+    if (rows[0].user_id !== req.user.id) return res.status(403).json({ success: false, message: '无权操作他人订单' });
+
+    const order = rows[0];
+
+    if (order.status !== 'preparing' && order.status !== 'ready') {
+      return res.json({ success: false, message: '当前状态不支持退款' });
+    }
+
+    const outRefundNo = 'R' + order.order_no;
+    const total = Math.round(parseFloat(order.total_price) * 100);
+
+    await refund({
+      outTradeNo: order.order_no,
+      outRefundNo: outRefundNo,
+      totalFee: total,
+      refundFee: total,
+      refundDesc: '用户申请退款',
+    });
+
+    res.json({ success: true, message: '退款申请已提交，将以原支付方式退回' });
+  } catch (err) {
+    console.error('[refund] 退款失败:', err.message);
+    res.json({ success: false, message: err.message || '退款失败，请稍后重试' });
+  }
+});
+
 // ========== 更新订单状态（通用） ==========
 // 状态机白名单：只能按 pending→preparing→ready→completed 单向前进
 const ALLOWED_STATUSES = ['pending', 'preparing', 'ready', 'completed'];
@@ -174,180 +282,56 @@ router.post('/orders/:id/status', async (req, res) => {
   res.json({ success: true, data: formatOrder(updated[0]) });
 });
 
-// ========== 微信支付 - 发起支付（智能降级：有凭证真支付，无凭证模拟） ==========
-const { createJsapiOrder, generatePrepaySign, decryptNotifyResource, verifyNotifySign, config: payConfig } = require('../services/wechat-pay');
+// ========== 微信支付 — 云托管封装方案（免证书、免签名、免公网回调） ==========
+const { createJsapiOrder, refund, config: payConfig } = require('../services/wechat-pay');
 
-const isRealPay = !!payConfig.mchid;
+const isRealPay = !!payConfig.sub_mch_id;
 
-// 启动时明确告知支付模式（方便排查）
-if (isRealPay) {
-  console.log('[pay] ✅ 真实支付模式 — 商户号 ' + payConfig.mchid);
-} else {
-  console.log('[pay] ⚠️  模拟支付模式 — 未配置微信支付商户号，所有支付将直接完成不扣款');
-  console.log('[pay]    开通商户号后，添加 WX_PAY_MCHID 等 6 个环境变量并重新部署即可启用真支付');
-}
+// ========== 微信支付回调通知（云托管封装方案） ==========
+//
+// ⚠️ 必须在 /pay/:orderId 之前注册，否则 /pay/:orderId 会贪婪匹配把 notify 当成 orderId
+//
+// 云托管封装方案的回调特点：
+//   1. POST Body 为明文 JSON，无需验签、无需解密（走微信内部私有信道）
+//   2. 字段使用小驼峰命名（如 outTradeNo, transactionId, totalFee），与 V2 API 不同
+//   3. 仅支付成功时会收到回调，未支付/支付失败需主动调用 queryOrder 查询
+//   4. 必须返回 { errcode: 0, errmsg: "ok" }，否则云托管会持续重试最多两天
+//   5. 回调可能重复发送，需保证幂等
 
-router.post('/pay/:orderId', async (req, res) => {
-  try {
-    const [rows] = await pool.execute('SELECT * FROM orders WHERE id = ?', [req.params.orderId]);
-
-    if (!rows[0]) {
-      return res.json({ success: false, message: '订单不存在' });
-    }
-
-    // 验证订单归属
-    if (rows[0].user_id !== req.user.id) {
-      return res.status(403).json({ success: false, message: '无权支付他人订单' });
-    }
-
-    const order = rows[0];
-    if (order.status !== 'pending') {
-      return res.json({ success: false, message: '订单状态不允许支付' });
-    }
-
-    // ========== 模拟支付模式（商户号未开通） ==========
-    if (!isRealPay) {
-      await processMockPayment(order, res);
-      return;
-    }
-
-    // ========== 真实微信支付 ==========
-    const openid = req.user.openid;
-    if (!openid) {
-      return res.json({ success: false, message: '用户未登录，请重新打开小程序' });
-    }
-
-    const items = typeof order.items === 'string' ? JSON.parse(order.items) : order.items;
-    const description = items.map(i => i.name).join('、').substring(0, 60);
-    const total = Math.round(order.total_price * 100);
-
-    const { prepay_id } = await createJsapiOrder({
-      outTradeNo: order.order_no,
-      total,
-      description,
-      openid: openid,
-    });
-
-    const payParams = generatePrepaySign(prepay_id);
-
-    res.json({
-      success: true,
-      data: { payParams, order: formatOrder(order) },
-    });
-  } catch (err) {
-    console.error('[pay] 微信支付下单失败:', err);
-    res.json({
-      success: false,
-      message: '支付发起失败，请稍后重试',
-    });
-  }
-});
-
-// 模拟支付：直接完成付款（商户号就绪后自动失效）
-// 事务 + 行锁（FOR UPDATE）防库存超卖
-async function processMockPayment(order, res) {
-  const conn = await pool.getConnection();
-  try {
-    await conn.beginTransaction();
-
-    // 更新订单状态
-    const now = mysqlNow();
-    await conn.execute(
-      'UPDATE orders SET status = ?, paid_at = ? WHERE id = ?',
-      ['preparing', now, order.id]
-    );
-
-    // 扣减库存（逐条获取行锁，防止并发超卖）
-    const items = typeof order.items === 'string' ? JSON.parse(order.items) : order.items;
-    for (const item of items) {
-      const [[row]] = await conn.execute(
-        'SELECT stock FROM products WHERE id = ? FOR UPDATE',
-        [item.id]
-      );
-      if (!row || row.stock < item.quantity) {
-        throw new Error(`商品库存不足 (id=${item.id}, 库存=${row ? row.stock : 0}, 需要=${item.quantity})`);
-      }
-      await conn.execute(
-        'UPDATE products SET stock = stock - ?, is_available = CASE WHEN stock - ? <= 0 THEN 0 ELSE is_available END WHERE id = ?',
-        [item.quantity, item.quantity, item.id]
-      );
-    }
-
-    await conn.commit();
-
-    // 积分：每支付 1 元累加 1 积分（向下取整），仅提供情绪价值
-    const earnedPoints = Math.floor(parseFloat(order.total_price));
-    if (earnedPoints > 0) {
-      await pool.execute('UPDATE users SET points = points + ? WHERE id = ?', [earnedPoints, order.user_id]);
-      console.log(`[pay-mock] 用户 ${order.user_id} 积分 +${earnedPoints}`);
-    }
-
-    res.json({
-      success: true,
-      data: {
-        mock: true,
-        mockResult: { success: true, tradeNo: 'MOCK' + Date.now(), timeEnd: now },
-        order: formatOrder({ ...order, status: 'preparing', paid_at: now }),
-      },
-    });
-  } catch (err) {
-    await conn.rollback();
-    console.error('[pay] 模拟支付失败:', err.message);
-    // 把具体原因（如库存不足）返回给前端，方便测试期排查
-    res.status(500).json({ success: false, message: err.message || '支付处理失败，请稍后重试' });
-  } finally {
-    conn.release();
-  }
-}
-
-// ========== 微信支付回调通知 ==========
 router.post('/pay/notify', async (req, res) => {
-  const rawBody = req.rawBody; // 由 app.js 中的 express.raw 提供
-  let notifyData;
+  const notifyBody = req.body;
+  if (!notifyBody) {
+    console.error('[pay-notify] req.body 为空');
+    return res.json({ errcode: -1, errmsg: 'empty_body' });
+  }
 
-  // 验证微信支付回调签名，确保回调来自微信支付服务器
-  if (!verifyNotifySign(req.headers, rawBody)) {
-    console.error('[pay-notify] 签名验证失败，拒绝回调');
-    return res.status(401).json({ code: 'FAIL', message: 'signature verification failed' });
+  // 官方回调字段（小驼峰）
+  const { returnCode, resultCode, outTradeNo, transactionId } = notifyBody;
+
+  console.log(`[pay-notify] 收到回调: order_no=${outTradeNo} trade_id=${transactionId}`);
+
+  // 通信标识或业务标识非成功 → 无需处理业务
+  if (returnCode !== 'SUCCESS' || resultCode !== 'SUCCESS') {
+    return res.json({ errcode: 0, errmsg: 'ok' });
   }
 
   try {
-    const bodyJson = JSON.parse(rawBody);
-
-    // 解密回调中的加密资源
-    if (bodyJson.resource) {
-      notifyData = decryptNotifyResource(bodyJson.resource);
-    } else {
-      notifyData = bodyJson;
-    }
-  } catch (err) {
-    console.error('[pay-notify] 解密回调失败:', err.message);
-    return res.status(200).json({ code: 'FAIL', message: 'decrypt failed' });
-  }
-
-  const { out_trade_no, transaction_id, trade_state } = notifyData;
-
-  console.log(`[pay-notify] 收到回调: order_no=${out_trade_no} trade_state=${trade_state}`);
-
-  if (trade_state !== 'SUCCESS') {
-    return res.status(200).json({ code: 'SUCCESS' }); // 非成功状态无需处理
-  }
-
-  try {
-    // 查询订单
-    const [orders] = await pool.execute('SELECT * FROM orders WHERE order_no = ?', [out_trade_no]);
+    // 查订单 — 用 order_no 匹配（outTradeNo 就是下单时传入的订单号）
+    const [orders] = await pool.execute('SELECT * FROM orders WHERE order_no = ?', [outTradeNo]);
     if (!orders[0]) {
-      console.warn(`[pay-notify] 订单不存在: ${out_trade_no}`);
-      return res.status(200).json({ code: 'SUCCESS' });
+      console.warn(`[pay-notify] 订单不存在: ${outTradeNo}`);
+      return res.json({ errcode: 0, errmsg: 'ok' });
     }
 
     const order = orders[0];
+
+    // 幂等：已处理过的订单不再重复处理
     if (order.status !== 'pending') {
-      console.log(`[pay-notify] 订单 ${out_trade_no} 已处理 (状态: ${order.status})，跳过`);
-      return res.status(200).json({ code: 'SUCCESS' });
+      console.log(`[pay-notify] 订单 ${outTradeNo} 已处理 (状态: ${order.status})，跳过`);
+      return res.json({ errcode: 0, errmsg: 'ok' });
     }
 
-    // 事务：订单更新 + 库存扣减，保证原子性
+    // 事务：订单状态更新 + 库存扣减（FOR UPDATE 行锁防超卖）
     const conn = await pool.getConnection();
     try {
       await conn.beginTransaction();
@@ -374,9 +358,9 @@ router.post('/pay/notify', async (req, res) => {
       }
 
       await conn.commit();
-      console.log(`[pay-notify] 订单 ${out_trade_no} 已更新为 preparing`);
+      console.log(`[pay-notify] 订单 ${outTradeNo} 已更新为 preparing, 支付流水: ${transactionId}`);
 
-      // 积分：每支付 1 元累加 1 积分（向下取整），仅提供情绪价值
+      // 积分：每支付 1 元累加 1 积分（向下取整）
       const earnedPoints = Math.floor(parseFloat(order.total_price));
       if (earnedPoints > 0) {
         await pool.execute('UPDATE users SET points = points + ? WHERE id = ?', [earnedPoints, order.user_id]);
@@ -389,10 +373,73 @@ router.post('/pay/notify', async (req, res) => {
       conn.release();
     }
 
-    res.status(200).json({ code: 'SUCCESS' });
+    // ✅ 必须返回此格式，否则云托管会重复推送
+    res.json({ errcode: 0, errmsg: 'ok' });
   } catch (err) {
-    console.error(`[pay-notify] 处理订单失败:`, err.message);
-    res.status(200).json({ code: 'FAIL', message: err.message });
+    console.error(`[pay-notify] 处理回调失败:`, err.message);
+    // ⚠️ 返回 errcode != 0 会触发云托管重试（最多两天），用于 DB 故障等临时性问题
+    res.json({ errcode: -1, errmsg: 'process_error' });
+  }
+});
+
+// ========== 微信支付 - 发起支付 ==========
+// 必须在 /pay/notify 之后注册（路由匹配按声明顺序）
+router.post('/pay/:orderId', async (req, res) => {
+  try {
+    // 检查支付是否已配置
+    if (!isRealPay) {
+      return res.json({
+        success: false,
+        message: '支付服务未配置（缺少 WX_PAY_SUB_MCHID），请先在云托管控制台绑定商户号',
+      });
+    }
+
+    const [rows] = await pool.execute('SELECT * FROM orders WHERE id = ?', [req.params.orderId]);
+
+    if (!rows[0]) {
+      return res.json({ success: false, message: '订单不存在' });
+    }
+
+    // 验证订单归属
+    if (rows[0].user_id !== req.user.id) {
+      return res.status(403).json({ success: false, message: '无权支付他人订单' });
+    }
+
+    const order = rows[0];
+    if (order.status !== 'pending') {
+      return res.json({ success: false, message: '订单状态不允许支付' });
+    }
+
+    const openid = req.user.openid;
+    if (!openid) {
+      return res.json({ success: false, message: '用户未登录，请重新打开小程序' });
+    }
+
+    const items = typeof order.items === 'string' ? JSON.parse(order.items) : order.items;
+    const description = items.map(i => i.name).join('、').substring(0, 60);
+    const total = Math.round(order.total_price * 100); // 元 → 分
+
+    // 统一下单后返回的 payment 对象可直接用于 wx.requestPayment（免另行签名）
+    const respdata = await createJsapiOrder({
+      outTradeNo: order.order_no,
+      total,
+      description,
+      openid: openid,
+    });
+
+    res.json({
+      success: true,
+      data: {
+        payParams: respdata.payment,
+        order: formatOrder(order),
+      },
+    });
+  } catch (err) {
+    console.error('[pay] 微信支付下单失败:', err.message);
+    res.json({
+      success: false,
+      message: err.message || '支付发起失败，请稍后重试',
+    });
   }
 });
 
@@ -464,6 +511,7 @@ function formatOrder(row) {
     readyAt: row.ready_at,
     acceptedAt: row.accepted_at,
     completedAt: row.completed_at,
+    refundedAt: row.refunded_at,
   };
 }
 

@@ -19,11 +19,12 @@ Page({
       { key: 'pending', label: '待支付' },
       { key: 'preparing', label: '制作中' },
       { key: 'ready', label: '待取餐' },
-      { key: 'completed', label: '已完成' }
+      { key: 'completed', label: '已完成' },
+      { key: 'refunded', label: '已退款' }
     ],
     orders: [],
     statusMap: {
-      pending: '待支付', preparing: '制作中', ready: '待取餐', completed: '已完成', refund: '退款'
+      pending: '待支付', preparing: '制作中', ready: '待取餐', completed: '已完成', refunded: '已退款'
     },
 
     // 商品
@@ -43,6 +44,8 @@ Page({
 
     // 营收
     dashboard: null,
+    orderCounts: {},       // 各状态角标数字（仅 preparing 不掉）
+    viewedStatuses: {},     // 已查看的状态（退款角标自动清）
 
     // 快速录单
     qsProducts: [],
@@ -109,6 +112,7 @@ Page({
         wx.setStorageSync('admin_token', res.data.token);
         this.setData({ loggedIn: true, loginError: '' });
         this.loadOrders();
+        this.loadDashboard();
         this._startPolling();
       } else {
         this.setData({ loginError: res.message || '密码错误' });
@@ -172,7 +176,7 @@ Page({
     if (tab !== this.data.currentTab) {
       this._stopPolling();
       this.setData({ currentTab: tab, tabIndex: idx });
-      if (tab === 'orders') { this.loadOrders(); this._startPolling(); }
+      if (tab === 'orders') { this.loadOrders(); this.loadDashboard(); this._startPolling(); }
       else if (tab === 'quick-sale') this.loadQuickSale();
       else if (tab === 'products') { this.loadProducts(); this.loadCategoryOrder(); }
       else if (tab === 'dashboard') this.loadDashboard();
@@ -182,8 +186,15 @@ Page({
   // ========== 订单管理 ==========
   filterOrders(e) {
     const filter = e.currentTarget.dataset.filter;
+    // 点击【已退款】tab 时清除角标
+    if (filter === 'refunded') {
+      const viewed = this.data.viewedStatuses;
+      viewed.refunded = true;
+      this.setData({ viewedStatuses: viewed });
+    }
     this.setData({ orderFilter: filter, orderPage: 1 });
     this.loadOrders();
+    this.loadDashboard();
   },
 
   loadOrders() {
@@ -746,17 +757,29 @@ Page({
   // ========== 营收看板 ==========
   loadDashboard() {
     const token = wx.getStorageSync('admin_token');
-
     this._request({
       url: '/api/admin/dashboard',
       header: { Authorization: 'Bearer ' + token }
     }).then(res => {
       if (res.success) {
-        this.setData({ dashboard: res.data });
+        const d = res.data;
+        this.setData({ dashboard: d });
+        // 更新角标（只显示 preparing，其它按查看状态决定）
+        const viewed = this.data.viewedStatuses;
+        const refundedCount = d.refunded || 0;
+        // 退款数增加了——重置查看状态，角标重新出现
+        if (refundedCount > (this.data.orderCounts.refunded || 0)) {
+          viewed.refunded = false;
+        }
+        this.setData({
+          orderCounts: {
+            preparing: d.preparing || 0,
+            refunded: viewed.refunded ? 0 : refundedCount,
+          },
+          viewedStatuses: viewed,
+        });
       }
-    }).catch(() => {
-      wx.showToast({ title: '加载失败', icon: 'none' });
-    });
+    }).catch(() => {});
   },
 
   // ========== 快速录单 ==========
@@ -925,6 +948,9 @@ Page({
     } catch (e) {
       // 网络波动静默跳过
     }
+
+    // 更新角标数
+    this.loadDashboard();
 
     this._updatePollTime();
     this._scheduleNextPoll();

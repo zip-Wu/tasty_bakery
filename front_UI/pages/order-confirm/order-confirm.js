@@ -147,28 +147,14 @@ Page({
       url: '/api/pay/' + orderId,
       method: 'POST',
     }).then(data => {
-      if (data.mock) {
-        app.globalData.clearCartOnReturn = true;
-        wx.showModal({
-          title: '支付成功（测试）',
-          content: '订单已创建，商家正在准备中',
-          showCancel: false,
-          success() { wx.switchTab({ url: '/pages/logs/logs' }); }
-        });
-        return;
-      }
-      // 真实微信支付
       const { payParams } = data;
       wx.requestPayment({
         timeStamp: payParams.timeStamp, nonceStr: payParams.nonceStr,
         package: payParams.package, signType: payParams.signType, paySign: payParams.paySign,
         success() {
           app.globalData.clearCartOnReturn = true;
-          wx.showModal({
-            title: '支付成功', content: '订单已创建，商家正在准备中',
-            showCancel: false,
-            success() { wx.switchTab({ url: '/pages/logs/logs' }); }
-          });
+          // 替换当前页，不回退到确认订单页
+          wx.redirectTo({ url: '/pages/order-detail/order-detail?id=' + orderId });
         },
         fail(err) {
           that.setData({ isPaying: false });

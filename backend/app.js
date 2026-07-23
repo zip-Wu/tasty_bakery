@@ -39,13 +39,6 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
 }));
 
-// 微信支付回调需要原始请求体（必须在 express.json 之前）
-// express.raw 设置 req._body=true，后续 express.json 会自动跳过
-app.use('/api/pay/notify', express.raw({ type: 'application/json' }), (req, res, next) => {
-  req.rawBody = req.body.toString('utf8');
-  next();
-});
-
 app.use(express.json());
 
 // ========== 静态文件 + 管理页面 ==========

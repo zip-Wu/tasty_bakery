@@ -83,7 +83,7 @@ Page({
   goAbout() {
     wx.showModal({
       title: '关于我们',
-      content: '大力馒头·信息港店\n\n用心烘焙每一份美味\n\n版本：v1.0.0',
+      content: '大力馒头铺·信息港店\n\n用心烘焙每一份美味\n\n版本：v1.0.0',
       showCancel: false, confirmText: '知道了'
     });
   }

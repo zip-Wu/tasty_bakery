@@ -62,14 +62,33 @@
 .filter-scroll { white-space: nowrap; padding: 16rpx 0; }
 .filter-item {
   display: inline-block;
-  padding: 10rpx 24rpx;
-  margin-right: 12rpx;
+  padding: 10rpx 32rpx 10rpx 24rpx;   /* 右侧多留点位置给角标 */
+  margin-right: 18rpx;
   background: #fff;
   border-radius: 24rpx;
   font-size: 24rpx;
   color: #666;
+  position: relative;
 }
 .filter-item.active { background: #333; color: #fff; }
+
+.filter-badge {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  right: 4rpx;
+  background: #e74c3c;
+  color: #fff;
+  font-size: 20rpx;
+  min-width: 28rpx;
+  height: 28rpx;
+  line-height: 28rpx;
+  text-align: center;
+  border-radius: 14rpx;
+  padding: 0 8rpx;
+  box-sizing: border-box;
+}
+/* 角标颜色不随 active 变化 — 制作中等核心关注订单保持红色 */
 
 /* 新订单提醒横幅 */
 .new-order-banner {
@@ -139,6 +158,7 @@
 .status-preparing { background: #cce5ff; color: #004085; }
 .status-ready { background: #d4edda; color: #155724; }
 .status-completed { background: #e2e3e5; color: #383d41; }
+.status-refunded  { background: #f8d7da; color: #721c24; }
 .order-items-row { font-size: 28rpx; color: #333; font-weight: bold; display: block; }
 .order-item-name { display: inline-block !important; font-size: 28rpx; color: #333; font-weight: bold; margin-right: 8rpx; }
 .admin-temp {
@@ -422,7 +442,7 @@
 .dash-label { font-size: 22rpx; color: #999; margin-top: 4rpx; display: block; }
 
 /* 快速录单 */
-.qs-content { padding-bottom: 160rpx; }
+.qs-content { padding-bottom: 160rpx; overflow-y: auto; }
 .qs-header { padding: 16rpx 0 24rpx; }
 .qs-header-title { font-size: 32rpx; font-weight: bold; display: block; }
 .qs-header-desc { font-size: 24rpx; color: #999; display: block; margin-top: 6rpx; }

@@ -147,7 +147,9 @@ const ready = (async () => {
         paid_at      DATETIME,
         ready_at     DATETIME,
         accepted_at  DATETIME,
-        completed_at DATETIME
+        completed_at DATETIME,
+        refund_id    VARCHAR(64),
+        refunded_at  DATETIME
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
     `);
 

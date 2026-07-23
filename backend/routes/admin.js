@@ -391,6 +391,7 @@ router.get('/admin/dashboard', async (req, res) => {
       SUM(CASE WHEN status = 'preparing' THEN 1 ELSE 0 END) as preparing,
       SUM(CASE WHEN status = 'ready' THEN 1 ELSE 0 END) as ready,
       SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed,
+      SUM(CASE WHEN status = 'refunded' THEN 1 ELSE 0 END) as refunded,
       SUM(CASE WHEN status IN ('preparing', 'ready', 'completed') THEN total_price ELSE 0 END) as revenue
     FROM orders
     WHERE DATE(created_at) = ?
@@ -405,6 +406,7 @@ router.get('/admin/dashboard', async (req, res) => {
       preparing: stats.preparing || 0,
       ready: stats.ready || 0,
       completed: stats.completed || 0,
+      refunded: stats.refunded || 0,
       revenue: stats.revenue || 0,
     },
   });

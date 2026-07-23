@@ -1,114 +1,92 @@
 /**
- * 微信支付 API v3 服务模块
+ * 微信云托管支付服务模块
  *
- * 需要配置的环境变量（全部必填）：
- *   WX_APPID 或 WX_APP_ID — 小程序 AppID（两者皆可，后者与 auth.js 保持一致）
- *   WX_PAY_MCHID     — 微信支付商户号
- *   WX_PAY_SERIAL_NO — 商户 API 证书序列号
- *   WX_PAY_PRIVATE_KEY — 商户 API 私钥（PEM 格式，\n 表示换行）
- *   WX_PAY_API_V3_KEY  — API v3 密钥（32 位，用于回调验签和 AES 解密）
- *   WX_PAY_NOTIFY_URL  — 支付结果回调地址，例如 https://your-domain.com/api/pay/notify
+ * 使用微信云托管封装的微信支付接口（V2 风格），云托管作为服务商，商户作为子商户接入。
+ * 与标准微信支付 V3 的关键区别：
+ *   - 免证书管理、免 RSA 签名、免公网回调地址
+ *   - 下单接口返回的 payment 对象可直接传给小程序端 wx.requestPayment
+ *   - 回调由云托管内部路由，无需验证签名和解密
  *
- * 使用方式：
- *   const { createJsapiOrder, onPaymentNotify } = require('../services/wechat-pay');
+ * 前置条件（在微信云托管控制台操作）：
+ *   1. 设置 → 其他设置 ��� 微信支付配置 → 绑定商户号
+ *   2. 开启「开放接口服务」
+ *
+ * 环境变量（全部必填）：
+ *   WX_PAY_SUB_MCHID  — 微信支付子商户号（即你的商户号）
+ *   CLOUD_ENV_ID      — 云托管环境 ID
+ *   CLOUD_SERVICE_NAME — 云托管服务名（用于接收支付回调）
+ *
+ * 官方文档：
+ *   统一下单：https://developers.weixin.qq.com/minigame/dev/wxcloudrun/src/development/pay/order/unified
+ *   查询订单：https://developers.weixin.qq.com/minigame/dev/wxcloudrun/src/development/pay/order/query
+ *   结果回调：https://developers.weixin.qq.com/minigame/dev/wxcloudrun/src/development/pay/callback/index
  */
-const crypto = require('crypto');
-const https = require('https');
 
-// ----- 配置 -----
-const WXPAY_HOST = 'api.mch.weixin.qq.com';
+const http = require('http');
+
+// ========== 配置 ==========
+
+// 云托管环境和容器名——固定值，来自 front_UI/config.js，非环境变量
+const CLOUD_ENV_ID = 'dali-backern-api-d0es660181ffbe4';
+const CLOUD_SERVICE_NAME = 'dali-bakery-api';
 
 const config = {
-  // 兼容 auth.js 的 WX_APP_ID 命名，优先读 WX_APPID，没有则回退
-  appid:         process.env.WX_APPID || process.env.WX_APP_ID,
-  mchid:         process.env.WX_PAY_MCHID,
-  serial_no:     process.env.WX_PAY_SERIAL_NO,
-  private_key:   (process.env.WX_PAY_PRIVATE_KEY || '').replace(/\\n/g, '\n'),
-  api_v3_key:    process.env.WX_PAY_API_V3_KEY,
-  notify_url:    process.env.WX_PAY_NOTIFY_URL,
+  sub_mch_id: process.env.WX_PAY_SUB_MCHID,
+  env_id: CLOUD_ENV_ID,
+  service_name: CLOUD_SERVICE_NAME,
 };
 
-// 启动时校验
-if (!config.appid || !config.mchid || !config.serial_no || !config.private_key || !config.api_v3_key || !config.notify_url) {
-  console.warn('[微信支付] ⚠ 缺少必要环境变量，支付功能不可用。需要设置: WX_APPID(或 WX_APP_ID), WX_PAY_MCHID, WX_PAY_SERIAL_NO, WX_PAY_PRIVATE_KEY, WX_PAY_API_V3_KEY, WX_PAY_NOTIFY_URL');
+const isConfigured = !!config.sub_mch_id;
+
+// ========== 启动检查 ==========
+
+if (!isConfigured) {
+  console.warn('[微信支付] ⚠ 缺少 WX_PAY_SUB_MCHID，支付功能不可用');
+  console.warn('[微信支付]   请在云托管控制台绑定商户号后，添加 WX_PAY_SUB_MCHID=1115646657 环境变量');
 } else {
-  console.log(`[微信支付] 已配置商户号 ${config.mchid}`);
+  console.log(`[微信支付] ✅ 子商户号 ${config.sub_mch_id}，使用云托管封装的微信支付接口`);
 }
 
-// ----- 工具函数 -----
+// 云托管内部 API 地址（HTTP，非公网）
+const PAY_API_HOST = 'api.weixin.qq.com';
 
-function generateNonceStr() {
-  return crypto.randomBytes(16).toString('hex');
-}
-
-function generateTimestamp() {
-  return Math.floor(Date.now() / 1000);
-}
+// ========== 工具函数 ==========
 
 /**
- * API v3 签名：base64(RSA-SHA256(method\nurl\ntimestamp\nnonce_str\nbody\n))
+ * 调用云托管微信支付开放接口
+ * 请求走微信内部网络，无需额外鉴权（云托管运行环境自动处理）
  */
-function sign(method, url, timestamp, nonceStr, body) {
-  const signStr = `${method}\n${url}\n${timestamp}\n${nonceStr}\n${body}\n`;
-  const signer = crypto.createSign('RSA-SHA256');
-  signer.update(signStr);
-  signer.end();
-  return signer.sign(config.private_key, 'base64');
-}
-
-/**
- * 生成请求头 Authorization Token
- */
-function authorization(method, url, body) {
-  const nonceStr = generateNonceStr();
-  const timestamp = generateTimestamp();
-  const signature = sign(method, url, timestamp, nonceStr, body);
-  return {
-    nonceStr,
-    timestamp,
-    Authorization: `WECHATPAY2-SHA256-RSA2048 mchid="${config.mchid}",nonce_str="${nonceStr}",timestamp="${timestamp}",serial_no="${config.serial_no}",signature="${signature}"`,
-  };
-}
-
-/**
- * 发起 WeChat Pay API v3 请求
- */
-function apiRequest(method, path, body) {
+function apiRequest(method, apiPath, body) {
   return new Promise((resolve, reject) => {
-    const bodyStr = body ? JSON.stringify(body) : '';
-    const auth = authorization(method, path, bodyStr);
+    const bodyStr = JSON.stringify(body);
 
     const options = {
-      hostname: WXPAY_HOST,
-      port: 443,
-      path,
+      hostname: PAY_API_HOST,
+      port: 80,
+      path: `/_/pay${apiPath}`,
       method,
       headers: {
         'Content-Type': 'application/json; charset=utf-8',
         'Accept': 'application/json',
-        'Authorization': auth.Authorization,
-        'User-Agent': 'DaliMantou/1.0',
+        'User-Agent': 'DaliMantou-CloudBase/1.0',
+        'Content-Length': Buffer.byteLength(bodyStr, 'utf8'),
       },
     };
 
-    const req = https.request(options, (res) => {
+    const req = http.request(options, (res) => {
       let data = '';
       res.on('data', chunk => data += chunk);
       res.on('end', () => {
         try {
           const json = JSON.parse(data);
-          if (res.statusCode >= 200 && res.statusCode < 300) {
-            resolve(json);
-          } else {
-            reject({ status: res.statusCode, ...json });
-          }
+          resolve(json);
         } catch (e) {
-          reject({ status: res.statusCode, message: data.substring(0, 500) });
+          reject({ message: `解析微信支付响应失败: ${data.substring(0, 200)}` });
         }
       });
     });
 
-    req.setTimeout(30000, () => {
+    req.setTimeout(15000, () => {
       req.destroy();
       reject({ message: '微信支付 API 请求超时' });
     });
@@ -119,137 +97,147 @@ function apiRequest(method, path, body) {
   });
 }
 
-// ----- 对外 API -----
+// ========== 对外 API ==========
 
 /**
- * JSAPI 下单 — 微信内小程序支付
+ * JSAPI 统一下单 — 生成预支付交易单
  *
  * @param {Object} params
- * @param {string} params.outTradeNo 商户订单号
- * @param {number} params.total       金额（分）
- * @param {string} params.description 商品描述
- * @param {string} params.openid      用户 openid
- * @returns {Object} { prepay_id, ... }
+ * @param {string} params.outTradeNo 商户订单号（6-32 字符，字母数字 + _-）
+ * @param {number} params.total      金额（分）
+ * @param {string} params.description 商品描述（≤127 字符）
+ * @param {string} params.openid     用户 openid
+ * @returns {Object} respdata，含 .payment 字段直接给 wx.requestPayment 使用
  */
 async function createJsapiOrder({ outTradeNo, total, description, openid }) {
   if (!Number.isInteger(total) || total <= 0) {
     throw new Error('支付金额无效');
   }
-  if (!outTradeNo || !/^[a-zA-Z0-9_-]{6,64}$/.test(outTradeNo)) {
+  if (!outTradeNo || !/^[a-zA-Z0-9_\-]{6,32}$/.test(outTradeNo)) {
     throw new Error('订单号格式无效');
   }
 
   const body = {
-    appid: config.appid,
-    mchid: config.mchid,
-    description: description.substring(0, 127),
+    body: description.substring(0, 127),
+    openid: openid,
     out_trade_no: outTradeNo,
-    notify_url: config.notify_url,
-    amount: { total, currency: 'CNY' },
-    payer: { openid },
+    sub_mch_id: config.sub_mch_id,
+    total_fee: total,
+    env_id: config.env_id,
+    callback_type: 2, // 云托管（非云函数）
+    spbill_create_ip: '127.0.0.1',
+    container: {
+      service: config.service_name,
+      path: '/api/pay/notify',
+    },
   };
 
-  const result = await apiRequest('POST', '/v3/pay/transactions/jsapi', body);
-  return result; // 包含 prepay_id
+  const result = await apiRequest('POST', '/unifiedOrder', body);
+
+  // 云托管封装层统一返回: { errcode: 0, errmsg: "ok", respdata: {...} }
+  if (result.errcode !== 0) {
+    throw new Error(`统一下单失败: ${result.errmsg || JSON.stringify(result)}`);
+  }
+
+  const respdata = result.respdata;
+  if (!respdata) {
+    throw new Error('统一下单失败: respdata 为空');
+  }
+
+  // 通信标识和业务标识分开检查（遵循微信支付 V2 约定）
+  if (respdata.return_code !== 'SUCCESS') {
+    throw new Error(`统一下单通信失败: ${respdata.return_msg || '未知'}`);
+  }
+  if (respdata.result_code !== 'SUCCESS') {
+    throw new Error(`统一下单业务失败: ${respdata.err_code_des || respdata.err_code || '未知'}`);
+  }
+
+  console.log(`[支付] 统一下单成功: order_no=${outTradeNo} prepay_id=${respdata.prepay_id}`);
+  return respdata;
 }
 
 /**
- * 生成前端 wx.requestPayment 需要的签名
+ * 查询订单状态
  *
- * @param {string} prepayId 预支付交易会话标识
- * @returns {{ timeStamp, nonceStr, package, signType, paySign }}
+ * @param {string} outTradeNo 商户订单号
+ * @returns {Object} respdata，含 trade_state 字段
  */
-function generatePrepaySign(prepayId) {
-  const appId = config.appid;
-  const timeStamp = String(generateTimestamp());
-  const nonceStr = generateNonceStr();
-  const pkg = `prepay_id=${prepayId}`;
-
-  const signStr = `${appId}\n${timeStamp}\n${nonceStr}\n${pkg}\n`;
-  const signer = crypto.createSign('RSA-SHA256');
-  signer.update(signStr);
-  signer.end();
-  const paySign = signer.sign(config.private_key, 'base64');
-
-  return {
-    timeStamp,
-    nonceStr,
-    package: pkg,
-    signType: 'RSA',
-    paySign,
+async function queryOrder(outTradeNo) {
+  const body = {
+    out_trade_no: outTradeNo,
+    sub_mch_id: config.sub_mch_id,
   };
+
+  const result = await apiRequest('POST', '/queryorder', body);
+
+  if (result.errcode !== 0) {
+    throw new Error(`查询订单失败: ${result.errmsg || JSON.stringify(result)}`);
+  }
+
+  const respdata = result.respdata;
+  if (!respdata) {
+    throw new Error('查询订单失败: respdata 为空');
+  }
+
+  return respdata;
 }
 
 /**
- * 验证支付回调签名（微信支付 API v3）
+ * 申请退款
  *
- * 用平台证书公钥对 wechatpay-signature 做 RSA-SHA256 验签。
- * 签名串：timestamp + "\n" + nonce + "\n" + rawBody + "\n"
- *
- * WX_PAY_PLATFORM_CERT — 平台证书 PEM，可从商户平台下载或通过 /v3/certificates 获取。
- *   不配时仅检查字段存在（开发/测试），生产环境必须配。
+ * @param {Object} params
+ * @param {string} params.outTradeNo   原支付商户订单号
+ * @param {string} params.outRefundNo  商户退款单号（唯一，建议 R + 前缀）
+ * @param {number} params.totalFee     原订单金额（分）
+ * @param {number} params.refundFee    退款金额（分），当前只支持全额退款
+ * @param {string} params.refundDesc   退款原因（≤80 字符）
+ * @returns {Object} respdata，含 refund_id 微信退款单号
  */
-function verifyNotifySign(headers, rawBody) {
-  const {
-    'wechatpay-timestamp': timestamp,
-    'wechatpay-nonce': nonce,
-    'wechatpay-signature': signature,
-  } = headers;
-
-  if (!timestamp || !nonce || !signature) {
-    console.error('[pay-notify] 验签失败：缺少必要的 wechatpay-* 头部字段');
-    return false;
+async function refund({ outTradeNo, outRefundNo, totalFee, refundFee, refundDesc }) {
+  if (!Number.isInteger(refundFee) || refundFee <= 0) {
+    throw new Error('退款金额无效');
   }
 
-  // 支付未启用（isRealPay=false）时不会收到真实回调，仅检查字段存在即可
-  const platformCert = (process.env.WX_PAY_PLATFORM_CERT || '').replace(/\\n/g, '\n');
-  if (!platformCert) {
-    // 真实支付模式下缺少平台证书 = 致命错误，拒绝回调
-    if (config.mchid) {
-      console.error('[pay-notify] 致命错误：真实支付模式下 WX_PAY_PLATFORM_CERT 未配置，拒绝回调');
-      return false;
-    }
-    // 模拟支付模式：微信不会真回调，静默拒绝
-    return false;
+  const body = {
+    out_trade_no: outTradeNo,
+    out_refund_no: outRefundNo,
+    sub_mch_id: config.sub_mch_id,
+    total_fee: totalFee,
+    refund_fee: refundFee,
+    refund_desc: (refundDesc || '用户申请退款').substring(0, 80),
+    env_id: config.env_id,
+    callback_type: 2,
+    container: {
+      service: config.service_name,
+      path: '/api/orders/refund/notify',
+    },
+  };
+
+  const result = await apiRequest('POST', '/refund', body);
+
+  if (result.errcode !== 0) {
+    throw new Error(`申请退款失败: ${result.errmsg || JSON.stringify(result)}`);
   }
 
-  const signStr = `${timestamp}\n${nonce}\n${rawBody}\n`;
-
-  try {
-    const verifier = crypto.createVerify('RSA-SHA256');
-    verifier.update(signStr, 'utf8');
-    verifier.end();
-    return verifier.verify(platformCert, signature, 'base64');
-  } catch (err) {
-    console.error('[pay-notify] RSA 验签异常:', err.message);
-    return false;
+  const respdata = result.respdata;
+  if (!respdata) {
+    throw new Error('申请退款失败: respdata 为空');
   }
-}
 
-/**
- * 解密回调中的加密数据
- * @param {Object} resource 回调中的 resource 字段
- * @returns {Object} 解密后的 JSON
- */
-function decryptNotifyResource(resource) {
-  const { nonce, ciphertext, associated_data } = resource;
-  const key = Buffer.from(config.api_v3_key, 'utf8');
-  const authTag = Buffer.from(ciphertext, 'base64').slice(-16);
-  const data = Buffer.from(ciphertext, 'base64').slice(0, -16);
+  if (respdata.return_code !== 'SUCCESS') {
+    throw new Error(`退款通信失败: ${respdata.return_msg || '未知'}`);
+  }
+  if (respdata.result_code !== 'SUCCESS') {
+    throw new Error(`退款业务失败: ${respdata.err_code_des || respdata.err_code || '未知'}`);
+  }
 
-  const decipher = crypto.createDecipheriv('aes-256-gcm', key, Buffer.from(nonce, 'utf8'));
-  decipher.setAuthTag(authTag);
-  decipher.setAAD(Buffer.from(associated_data || '', 'utf8'));
-
-  let decrypted = decipher.update(data, undefined, 'utf8');
-  decrypted += decipher.final('utf8');
-  return JSON.parse(decrypted);
+  console.log(`[退款] 申请成功: order_no=${outTradeNo} refund_id=${respdata.refund_id}`);
+  return respdata;
 }
 
 module.exports = {
   createJsapiOrder,
-  generatePrepaySign,
-  verifyNotifySign,
-  decryptNotifyResource,
-  config, // 暴露给调用方检查
+  queryOrder,
+  refund,
+  config,
 };

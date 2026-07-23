@@ -20,7 +20,7 @@ Page({
 
     // 门店信息（初始值作降级，onLoad/onShow 中会被 API 数据覆盖）
     store: {
-      name: '大力馒头·信息港店',
+      name: '大力馒头铺·信息港店',
       address: '珠海市高新区唐家湾镇香山路88号2栋1层101-10室',
       distance: ''
     },

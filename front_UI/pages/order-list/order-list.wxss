@@ -133,6 +133,7 @@ page {
 .order-status.status-preparing { color: #ffa502; }
 .order-status.status-ready { color: #26de81; }
 .order-status.status-completed { color: #999; }
+.order-status.status-refunded  { color: #e74c3c; }
 
 .deadline-tip {
   font-size: 22rpx;

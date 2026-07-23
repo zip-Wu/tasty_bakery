@@ -37,6 +37,7 @@
         wx:for="{{orderFilters}}" wx:key="key"
         bindtap="filterOrders" data-filter="{{item.key}}">
         {{item.label}}
+        <text class="filter-badge" wx:if="{{orderCounts[item.key] > 0}}">{{orderCounts[item.key]}}</text>
       </view>
     </scroll-view>
 
@@ -330,6 +331,10 @@
       <view class="dash-card">
         <text class="dash-num">{{dashboard.pending}}</text>
         <text class="dash-label">待支付</text>
+      </view>
+      <view class="dash-card">
+        <text class="dash-num" style="color:#e74c3c">{{dashboard.refunded}}</text>
+        <text class="dash-label">已退款</text>
       </view>
     </view>
     <view class="empty" wx:if="{{!dashboard}}">

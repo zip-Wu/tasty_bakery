@@ -3,11 +3,14 @@ Page({
     orderId: '',
     order: {},
     statusIcon: '/images/svg/order-pending.svg',
+    readyCountdown: '',        // ready 状态 24h 倒计时
+    isRefunding: false,        // 退款中
     statusMap: {
-      pending: { icon: '/images/svg/order-pending.svg', text: '待支付' },
+      pending:   { icon: '/images/svg/order-pending.svg',   text: '待支付' },
       preparing: { icon: '/images/svg/order-preparing.svg', text: '制作中' },
-      ready: { icon: '/images/svg/order-ready.svg', text: '待取餐' },
-      completed: { icon: '/images/svg/order-completed.svg', text: '已完成' }
+      ready:     { icon: '/images/svg/order-ready.svg',     text: '待取餐' },
+      completed: { icon: '/images/svg/order-completed.svg', text: '已完成' },
+      refunded:  { icon: '/images/svg/order-completed.svg', text: '已退款' }
     }
   },
 
@@ -21,27 +24,26 @@ Page({
   onShow() {
     if (this.data.orderId) {
       this.loadOrder(this.data.orderId);
-      this._startPolling();  // 回到前台时恢复轮询
+      this._startPolling();
     }
   },
 
   onHide() {
-    this._stopPolling();  // 切到后台时停止轮询，省电
+    this._stopPolling();
   },
 
   onUnload() {
     this._stopPolling();
+    this._stopCountdown();
   },
 
-  // 加载订单（含错误提示，不再静默吞错）
+  // 加载订单
   loadOrder(orderId) {
     const app = getApp();
-    app.request({
-      url: '/api/orders/' + orderId,
-    }).then(data => {
+    app.request({ url: '/api/orders/' + orderId }).then(data => {
       this.processOrder(data);
-      // 订单已终态时停止轮询
-      if (data.status === 'completed') {
+      // 终态停止轮询
+      if (data.status === 'completed' || data.status === 'refunded') {
         this._stopPolling();
       }
     }).catch(() => {
@@ -49,14 +51,14 @@ Page({
     });
   },
 
-  // 轮询订单状态（每 5 秒，订单进行中）
+  // 轮询（每 5 秒）
   _startPolling() {
     this._stopPolling();
     if (!this.data.orderId) return;
     this._pollTimer = setTimeout(() => {
       this.loadOrder(this.data.orderId);
-      // 非终态继续轮询
-      if (this.data.order.status !== 'completed') {
+      const st = this.data.order.status;
+      if (st !== 'completed' && st !== 'refunded') {
         this._startPolling();
       }
     }, 5000);
@@ -69,29 +71,87 @@ Page({
     }
   },
 
+  // ready 状态 1h 倒计时（退款窗口 + 自动确认）
+  _startCountdown(readyAt) {
+    this._stopCountdown();
+    const that = this;
+    const tick = () => {
+      const now = Date.now();
+      const deadline = new Date(readyAt).getTime() + 60 * 60 * 1000;
+      const left = deadline - now;
+      if (left <= 0) {
+        that.setData({ readyCountdown: '订单即将自动确认完成' });
+        return;
+      }
+      const m = Math.floor(left / 60000);
+      that.setData({ readyCountdown: `请在 ${m} 分钟内取餐，超时将自动确认完成` });
+    };
+    tick();
+    this._countdownTimer = setInterval(tick, 30000);
+  },
+
+  _stopCountdown() {
+    if (this._countdownTimer) {
+      clearInterval(this._countdownTimer);
+      this._countdownTimer = null;
+    }
+  },
+
   // 处理订单数据
   processOrder(order) {
-    // 状态图标和文字
     const statusInfo = this.data.statusMap[order.status] || { icon: '/images/svg/clipboard.svg', text: order.status };
-    
-    // 时间格式化
+
     order.createdAtDisplay = this.formatTime(order.createdAt);
     order.paidAtDisplay = order.paidAt ? this.formatTime(order.paidAt) : '';
     order.readyAtDisplay = order.readyAt ? this.formatTime(order.readyAt) : '';
     order.completedAtDisplay = order.completedAt ? this.formatTime(order.completedAt) : '';
-    
-    // 商品总数
     order.totalQuantity = order.items.reduce((sum, item) => sum + item.quantity, 0);
-    
-    // 门店地址
     order.address = order.address || '珠海市高新区唐家湾镇香山路88号2栋1层101-10室';
-    
-    // 状态文字
     order.statusText = statusInfo.text;
 
-    this.setData({ 
+    this.setData({
       order: order,
       statusIcon: statusInfo.icon
+    });
+
+    // ready 状态启动倒计时
+    if (order.status === 'ready' && order.readyAt) {
+      this._startCountdown(order.readyAt);
+    } else {
+      this._stopCountdown();
+    }
+  },
+
+  // 申请退款
+  requestRefund() {
+    const that = this;
+    wx.showModal({
+      title: '确认退款',
+      content: '退款金额将以原支付方式退回，确认后不可撤销',
+      confirmText: '确认退款',
+      confirmColor: '#e74c3c',
+      success(res) {
+        if (res.confirm) {
+          that.setData({ isRefunding: true });
+          const app = getApp();
+          app.request({
+            url: '/api/orders/' + that.data.orderId + '/refund',
+            method: 'POST'
+          }).then(data => {
+            if (data.success) {
+              wx.showToast({ title: '退款申请已提交', icon: 'success' });
+              // 刷新订单（等回调更新状态）
+              setTimeout(() => that.loadOrder(that.data.orderId), 2000);
+            } else {
+              wx.showToast({ title: data.message || '退款失败', icon: 'none' });
+            }
+          }).catch(() => {
+            wx.showToast({ title: '退款失败', icon: 'none' });
+          }).finally(() => {
+            that.setData({ isRefunding: false });
+          });
+        }
+      }
     });
   },
 
@@ -99,21 +159,19 @@ Page({
   formatTime(isoString) {
     if (!isoString) return '';
     const d = new Date(isoString);
-    return `${d.getMonth() + 1}/${d.getDate()} ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+    return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
   },
 
   // 立即支付
   goPay() {
-    wx.navigateTo({
-      url: '/pages/order-confirm/order-confirm?orderId=' + this.data.orderId
-    });
+    wx.navigateTo({ url: '/pages/order-confirm/order-confirm?orderId=' + this.data.orderId });
   },
 
   // 联系门店
   callStore() {
     wx.showModal({
       title: '联系门店',
-      content: '大力馒头·信息港店\n电话：0756-1234567\n\n营业时间：08:00 - 21:00',
+      content: '大力馒头铺·信息港店\n电话：0756-1234567\n\n营业时间：08:00 - 21:00',
       showCancel: false,
       confirmText: '拨打'
     });

@@ -8,6 +8,9 @@
       <view class="pickup-code-big" wx:if="{{(order.status === 'ready' || order.status === 'preparing') && order.pickupCode}}">{{order.pickupCode}}</view>
     </view>
 
+    <!-- 退款倒计时提示 -->
+    <view class="countdown-tip" wx:if="{{order.status === 'ready' && readyCountdown}}">{{readyCountdown}}</view>
+
     <!-- 时间线进度 -->
     <view class="timeline">
       <view class="timeline-item {{order.createdAt ? 'done' : ''}}">
@@ -97,5 +100,6 @@
   <view class="bottom-actions">
     <view class="action-btn secondary" bindtap="callStore">联系门店</view>
     <view class="action-btn primary" wx:if="{{order.status === 'pending'}}" bindtap="goPay">立即支付</view>
+    <view class="action-btn danger" wx:if="{{(order.status === 'preparing' || order.status === 'ready') && !isRefunding}}" bindtap="requestRefund">申请退款</view>
   </view>
 </view>
