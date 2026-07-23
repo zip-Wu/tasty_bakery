@@ -10,6 +10,8 @@ Page({
     gallery: [],  // 轮播图数组
     qty: 0,
     subtotal: '0.00',  // 预计算 qty * price，WXML 不支持 .toFixed()
+    storeClosed: false,
+    storeHours: '',
   },
 
   onLoad(options) {
@@ -19,6 +21,20 @@ Page({
       return;
     }
     this.loadProduct(options.id);
+    this.checkStoreStatus();
+  },
+
+  checkStoreStatus() {
+    app.request({
+      url: '/api/store/status',
+    }).then(data => {
+      this.setData({
+        storeClosed: !data.open,
+        storeHours: data.hours || ''
+      });
+    }).catch(err => {
+      console.error('[product-detail] 查询门店状态失败:', err);
+    });
   },
 
   // 重新计算小计（WXML 不能调 .toFixed，必须在 JS 层算好）
@@ -69,10 +85,18 @@ Page({
 
   // 数量加减
   addQty() {
+    if (this.data.storeClosed) {
+      wx.showToast({ title: '店家已打烊', icon: 'none' });
+      return;
+    }
     this.setData({ qty: this.data.qty + 1 });
     this._calcSubtotal();
   },
   minusQty() {
+    if (this.data.storeClosed) {
+      wx.showToast({ title: '店家已打烊', icon: 'none' });
+      return;
+    }
     if (this.data.qty > 0) {
       this.setData({ qty: this.data.qty - 1 });
       this._calcSubtotal();
@@ -81,6 +105,10 @@ Page({
 
   // 加入购物车
   addToCart() {
+    if (this.data.storeClosed) {
+      wx.showToast({ title: '店家已打烊，暂无法下单', icon: 'none' });
+      return;
+    }
     const { qty, product } = this.data;
     if (qty <= 0) return;
 

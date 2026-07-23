@@ -31,7 +31,8 @@ router.get('/stores', async (req, res) => {
   const userLng = parseFloat(req.query.lng);
 
   const [stores] = await pool.execute(
-    'SELECT id, name, address, phone, hours, latitude, longitude, is_open as open FROM stores WHERE is_open = 1'
+    // 不再过滤 is_open：顾客端关店后也要展示门店信息（地址/电话/营业时间），由前端根据 open 字段提示已打烊
+    'SELECT id, name, address, phone, hours, latitude, longitude, is_open as open FROM stores'
   );
 
   const result = stores.map(s => {

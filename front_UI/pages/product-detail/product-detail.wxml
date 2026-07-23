@@ -15,6 +15,11 @@
     <image wx:if="{{gallery.length === 0 && product.image}}" class="single-img" src="{{product.image}}" mode="aspectFill" />
   </view>
 
+  <!-- 关店提示 -->
+  <view class="closed-tip" wx:if="{{storeClosed}}">
+    <text>😴 店家已打烊{{storeHours ? '，每日 ' + storeHours + ' 营业' : ''}}，暂时无法下单</text>
+  </view>
+
   <!-- ====== 商品信息 ====== -->
   <scroll-view class="info-body" scroll-y="{{true}}">
     <view class="info-section">
@@ -33,13 +38,18 @@
 
   <!-- ====== 底部操作栏 ====== -->
   <view class="bottom-bar">
-    <view class="b-quantity">
-      <view class="b-qty-btn {{qty > 0 ? '' : 'disabled'}}" bindtap="minusQty">−</view>
-      <text class="b-qty-num">{{qty}}</text>
-      <view class="b-qty-btn plus" bindtap="addQty">+</view>
-    </view>
-    <view class="b-cart-btn {{qty > 0 ? 'active' : ''}}" bindtap="addToCart">
-      加入购物车 {{qty > 0 ? '· ¥' + subtotal : ''}}
-    </view>
+    <block wx:if="{{storeClosed}}">
+      <view class="b-closed-msg">店家已打烊，暂无法下单</view>
+    </block>
+    <block wx:else>
+      <view class="b-quantity">
+        <view class="b-qty-btn {{qty > 0 ? '' : 'disabled'}}" bindtap="minusQty">−</view>
+        <text class="b-qty-num">{{qty}}</text>
+        <view class="b-qty-btn plus" bindtap="addQty">+</view>
+      </view>
+      <view class="b-cart-btn {{qty > 0 ? 'active' : ''}}" bindtap="addToCart">
+        加入购物车 {{qty > 0 ? '· ¥' + subtotal : ''}}
+      </view>
+    </block>
   </view>
 </view>

@@ -259,16 +259,18 @@ Page({
   // ========== 门店开关状态检查 ==========
   checkStoreStatus() {
     const app = getApp();
+    console.log('[index] 查询门店状态...');
     app.request({
       url: '/api/store/status',
-    }).then(res => {
-      if (res && res.data) {
-        this.setData({
-          storeClosed: !res.data.open,
-          storeNotice: res.data.notice || '',
-          storeHours: res.data.hours || ''
-        });
-      }
-    }).catch(() => {});
+    }).then(data => {
+      console.log('[index] 门店状态:', data);
+      this.setData({
+        storeClosed: !data.open,
+        storeNotice: data.notice || '',
+        storeHours: data.hours || ''
+      });
+    }).catch(err => {
+      console.error('[index] 查询门店状态失败:', err);
+    });
   },
 });

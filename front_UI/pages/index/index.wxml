@@ -8,18 +8,11 @@
         <view class="locate-btn" wx:if="{{store.distance === '未知距离'}}" catchtap="tryCalcDistance">获取距离</view>
       </view>
     </view>
-  </view>
-
-  <!-- 关店：全屏遮罩覆盖商品区 -->
-  <view class="store-closed-overlay" wx:if="{{storeClosed}}">
-    <text class="closed-emoji">😴</text>
-    <text class="closed-title">店家已打烊</text>
-    <text class="closed-hours">{{storeHours ? '每日 ' + storeHours + ' 营业' : ''}}</text>
-    <text class="closed-desc">暂时无法下单，欢迎营业时间再来</text>
+    <view class="store-closed-tag" wx:if="{{storeClosed}}">已打烊</view>
   </view>
 
   <!-- 主内容区：左分类 + 右商品 -->
-  <view class="main-content" wx:if="{{!storeClosed}}">
+  <view class="main-content">
     <!-- 左侧分类 -->
     <scroll-view class="category-list" scroll-y="{{true}}">
       <view

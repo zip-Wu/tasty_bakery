@@ -193,3 +193,22 @@
   background: #F3D624;
   color: #333;
 }
+
+/* ========== 关店提示 ========== */
+.closed-tip {
+  background: #fff3e0;
+  padding: 16rpx 28rpx;
+  margin: 0 24rpx 16rpx;
+  border-radius: 12rpx;
+  border: 1rpx solid #ffe0b2;
+  font-size: 26rpx;
+  color: #bf360c;
+  font-weight: bold;
+  text-align: center;
+}
+.b-closed-msg {
+  flex: 1;
+  text-align: center;
+  font-size: 28rpx;
+  color: #999;
+}
