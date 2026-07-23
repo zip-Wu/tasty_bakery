@@ -3,15 +3,18 @@ Page({
     orderId: '',
     order: {},
     statusIcon: '/images/svg/order-pending.svg',
-    readyCountdown: '',        // ready 状态 24h 倒计时
-    isRefunding: false,        // 退款中
-    showCallModal: false,      // 联系门店弹窗
+    readyCountdown: '',        // ready 状态 1h 倒计时
+    showRefundModal: false,     // 退款理由弹窗（completed 状态）
+    refundReason: '',           // 退款理由
+    isSubmittingRefund: false,  // 退款申请提交中
+    showCallModal: false,       // 联系门店弹窗
     statusMap: {
-      pending:   { icon: '/images/svg/order-pending.svg',   text: '待支付' },
-      preparing: { icon: '/images/svg/order-preparing.svg', text: '制作中' },
-      ready:     { icon: '/images/svg/order-ready.svg',     text: '待取餐' },
-      completed: { icon: '/images/svg/order-completed.svg', text: '已完成' },
-      refunded:  { icon: '/images/svg/order-completed.svg', text: '已退款' }
+      pending:        { icon: '/images/svg/order-pending.svg',   text: '待支付' },
+      preparing:      { icon: '/images/svg/order-preparing.svg', text: '制作中' },
+      ready:          { icon: '/images/svg/order-ready.svg',     text: '待取餐' },
+      completed:      { icon: '/images/svg/order-completed.svg', text: '已完成' },
+      refunded:       { icon: '/images/svg/order-completed.svg', text: '已退款' },
+      refund_pending: { icon: '/images/svg/order-completed.svg', text: '退款审核中' }
     }
   },
 
@@ -43,7 +46,7 @@ Page({
     const app = getApp();
     app.request({ url: '/api/orders/' + orderId }).then(data => {
       this.processOrder(data);
-      // 终态停止轮询
+      // 终态停止轮询（refund_pending 不是终态，继续轮询等待商家审核结果）
       if (data.status === 'completed' || data.status === 'refunded') {
         this._stopPolling();
       }
@@ -127,49 +130,51 @@ Page({
     }
   },
 
-  // 申请退款
-  requestRefund() {
-    const that = this;
-    wx.showModal({
-      title: '确认退款',
-      content: '退款金额将以原支付方式退回，确认后不可撤销',
-      confirmText: '确认退款',
-      confirmColor: '#e74c3c',
-      success(res) {
-        if (res.confirm) {
-          that.setData({ isRefunding: true });
-          const app = getApp();
-          app.request({
-            url: '/api/orders/' + that.data.orderId + '/refund',
-            method: 'POST'
-          }).then(data => {
-            if (data.success) {
-              wx.showToast({ title: '退款申请已提交', icon: 'success' });
-              // 2 秒后拉最新状态，确认退款已生效
-              setTimeout(() => {
-                app.request({ url: '/api/orders/' + that.data.orderId }).then(orderData => {
-                  that.processOrder(orderData);
-                  that.setData({ isRefunding: false });
-                  if (orderData.status === 'refunded') {
-                    wx.showToast({ title: '退款成功', icon: 'success' });
-                  }
-                  if (orderData.status === 'completed' || orderData.status === 'refunded') {
-                    that._stopPolling();
-                  }
-                }).catch(() => {
-                  that.setData({ isRefunding: false });
-                });
-              }, 2000);
-            } else {
-              that.setData({ isRefunding: false });
-              wx.showToast({ title: data.message || '退款失败', icon: 'none' });
-            }
-          }).catch(() => {
-            that.setData({ isRefunding: false });
-            wx.showToast({ title: '退款失败', icon: 'none' });
-          });
-        }
+  // 申请退款（preparing / completed → 进入退款审核）
+  requestRefundReview() {
+    this.setData({ showRefundModal: true, refundReason: '' });
+  },
+
+  // 关闭退款理由弹窗
+  hideRefundReasonModal(e) {
+    // e.target === e.currentTarget → 只响应蒙版自身的点击，忽略内部元素穿透
+    if (e.target === e.currentTarget) {
+      this.setData({ showRefundModal: false, refundReason: '' });
+    }
+  },
+
+  // 退款理由输入
+  onRefundReasonInput(e) {
+    this.setData({ refundReason: e.detail.value });
+  },
+
+  // 提交退款申请
+  submitRefundRequest() {
+    const reason = this.data.refundReason.trim();
+    if (!reason) {
+      wx.showToast({ title: '请填写退款理由', icon: 'none' });
+      return;
+    }
+
+    this.setData({ isSubmittingRefund: true });
+    const app = getApp();
+    app.request({
+      url: '/api/orders/' + this.data.orderId + '/refund-request',
+      method: 'POST',
+      data: { reason }
+    }).then(data => {
+      if (data && data.success) {
+        this.setData({ showRefundModal: false, refundReason: '', isSubmittingRefund: false });
+        wx.showToast({ title: '退款申请已提交', icon: 'success' });
+        this.loadOrder(this.data.orderId);
+      } else {
+        this.setData({ isSubmittingRefund: false });
+        wx.showToast({ title: data?.message || '提交失败', icon: 'none' });
       }
+    }).catch(err => {
+      console.error('[refund-request] 请求失败:', err);
+      this.setData({ isSubmittingRefund: false });
+      wx.showToast({ title: '网络错误，请稍后重试', icon: 'none' });
     });
   },
 
@@ -191,8 +196,10 @@ Page({
   },
 
   // 关闭联系门店弹窗
-  closeCallModal() {
-    this.setData({ showCallModal: false });
+  closeCallModal(e) {
+    if (e.target === e.currentTarget) {
+      this.setData({ showCallModal: false });
+    }
   },
 
   // 拨打电话

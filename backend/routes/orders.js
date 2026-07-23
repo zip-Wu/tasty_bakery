@@ -211,66 +211,39 @@ router.post('/orders/refund/notify', async (req, res) => {
   }
 });
 
-// ========== 申请退款 ==========
-
-router.post('/orders/:id/refund', async (req, res) => {
-  let conn;
+// ========== 申请退款审核（preparing / completed → 商家审核） ==========
+// 统一退款流程：用户申请 → 商家审核 → 批准则微信退款 / 拒绝则恢复原状态
+router.post('/orders/:id/refund-request', async (req, res) => {
   try {
+    const { reason } = req.body;
+    if (!reason || !reason.trim()) {
+      return res.json({ success: false, message: '请填写退款理由' });
+    }
+    if (reason.length > 256) {
+      return res.json({ success: false, message: '退款理由不能超过256个字符' });
+    }
+
     const [rows] = await pool.execute('SELECT * FROM orders WHERE id = ?', [req.params.id]);
     if (!rows[0]) return res.json({ success: false, message: '订单不存在' });
     if (rows[0].user_id !== req.user.id) return res.status(403).json({ success: false, message: '无权操作他人订单' });
 
     const order = rows[0];
 
-    if (order.status !== 'preparing') {
-      return res.json({ success: false, message: '当前状态不支持退款' });
+    if (order.status !== 'preparing' && order.status !== 'completed') {
+      return res.json({ success: false, message: '当前状态不支持申请退款' });
     }
 
-    const outRefundNo = 'R' + order.order_no;
-    const total = Math.round(parseFloat(order.total_price) * 100);
-
-    const refundResult = await refund({
-      outTradeNo: order.pay_out_trade_no || order.order_no,
-      outRefundNo: outRefundNo,
-      totalFee: total,
-      refundFee: total,
-      refundDesc: '用户申请退款',
-    });
-
-    // 退款 API 成功 → 立即更新订单状态（不等微信回调，避免回调丢失导致状态卡死）
-    conn = await pool.getConnection();
-    await conn.beginTransaction();
-
-    await conn.execute(
-      'UPDATE orders SET status = ?, refund_id = ?, refunded_at = NOW() WHERE id = ?',
-      ['refunded', refundResult.refund_id, order.id]
+    await pool.execute(
+      `UPDATE orders SET status = 'refund_pending', refund_reason = ?, refund_requested_at = NOW(), refund_original_status = ?
+       WHERE id = ?`,
+      [reason.trim(), order.status, order.id]
     );
 
-    // 恢复库存
-    const items = typeof order.items === 'string' ? JSON.parse(order.items) : order.items;
-    for (const item of items) {
-      await conn.execute(
-        'UPDATE products SET stock = stock + ? WHERE id = ?',
-        [item.quantity, item.id]
-      );
-    }
-
-    await conn.commit();
-
-    // 退回积分（事务外，非关键路径）
-    const pts = Math.floor(parseFloat(order.total_price));
-    if (pts > 0) {
-      await pool.execute('UPDATE users SET points = GREATEST(points - ?, 0) WHERE id = ?', [pts, order.user_id]);
-    }
-
-    console.log(`[refund] 订单 ${order.order_no} 已退款, 库存已恢复`);
-    res.json({ success: true, data: { success: true, message: '退款申请已提交，将以原支付方式退回' } });
+    console.log(`[refund-request] 订单 ${order.order_no} 已提交退款申请，理由: ${reason.trim().slice(0, 30)}...`);
+    res.json({ success: true, data: { success: true, message: '退款申请已提交，等待商家审核' } });
   } catch (err) {
-    if (conn) await conn.rollback();
-    console.error('[refund] 退款失败:', err.message);
-    res.json({ success: false, message: err.message || '退款失败，请稍后重试' });
-  } finally {
-    if (conn) conn.release();
+    console.error('[refund-request] 提交失败:', err.message);
+    res.status(500).json({ success: false, message: '提交失败，请稍后重试' });
   }
 });
 
@@ -320,7 +293,7 @@ router.post('/orders/:id/status', async (req, res) => {
 });
 
 // ========== 微信支付 — 云托管封装方案（免证书、免签名、免公网回调） ==========
-const { createJsapiOrder, refund, config: payConfig } = require('../services/wechat-pay');
+const { createJsapiOrder, config: payConfig } = require('../services/wechat-pay');
 
 const isRealPay = !!payConfig.sub_mch_id;
 
@@ -569,6 +542,9 @@ function formatOrder(row) {
     acceptedAt: row.accepted_at,
     completedAt: row.completed_at,
     refundedAt: row.refunded_at,
+    refundReason: row.refund_reason || '',
+    refundRequestedAt: row.refund_requested_at || null,
+    refundReviewedAt: row.refund_reviewed_at || null,
   };
 }
 

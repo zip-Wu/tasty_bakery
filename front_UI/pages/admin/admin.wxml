@@ -81,7 +81,18 @@
             <view class="order-bottom-left">
               <view class="order-info">{{item.userNickname || '顾客'}} · {{item.totalQuantity}}件 · ¥{{item.totalPrice}}</view>
               <view class="order-remark" wx:if="{{item.remark}}">备注：{{item.remark}}</view>
+              <view class="order-remark refund-reason" wx:if="{{item.status === 'refund_pending' && item.refundReason}}">
+                📝 退款理由：{{item.refundReason}}
+              </view>
+              <view class="order-remark refund-source" wx:if="{{item.status === 'refund_pending' && item.refundOriginalStatus}}">
+                <view class="refund-source-tag {{item.refundOriginalStatus === 'preparing' ? 'source-preparing' : 'source-completed'}}">
+                  {{item.refundOriginalStatus === 'preparing' ? '制作中' : '已完成'}}
+                </view>
+              </view>
               <view class="order-time">{{item.timeDisplay}}</view>
+              <view class="order-time refund-req-time" wx:if="{{item.status === 'refund_pending' && item.refundReqDisplay}}">
+                申请时间：{{item.refundReqDisplay}}
+              </view>
             </view>
             <view class="order-pickup" wx:if="{{item.status === 'ready' || item.status === 'preparing'}}">取餐码：{{item.pickupCode}}</view>
           </view>
@@ -93,6 +104,12 @@
         <view class="order-actions" wx:if="{{item.status === 'ready'}}">
           <button class="action-btn complete-btn" size="mini"
             bindtap="markComplete" data-id="{{item.id}}">标记已完成</button>
+        </view>
+        <view class="order-actions refund-review" wx:if="{{item.status === 'refund_pending'}}">
+          <button class="action-btn reject-btn" size="mini"
+            bindtap="rejectRefund" data-id="{{item.id}}">拒绝</button>
+          <button class="action-btn approve-btn" size="mini"
+            bindtap="approveRefund" data-id="{{item.id}}">批准退款</button>
         </view>
       </view>
       <view class="empty" wx:if="{{orders.length === 0}}">

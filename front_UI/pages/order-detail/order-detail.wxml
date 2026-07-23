@@ -103,7 +103,36 @@
   <view class="bottom-actions">
     <view class="action-btn secondary" bindtap="callStore">联系门店</view>
     <view class="action-btn primary" wx:if="{{order.status === 'pending'}}" bindtap="goPay">立即支付</view>
-    <view class="action-btn danger" wx:if="{{order.status === 'preparing' && !isRefunding}}" bindtap="requestRefund">申请退款</view>
+    <view class="action-btn danger" wx:if="{{order.status === 'preparing' && !isSubmittingRefund}}" bindtap="requestRefundReview">申请退款</view>
+    <view class="action-btn danger" wx:if="{{order.status === 'completed' && !isSubmittingRefund}}" bindtap="requestRefundReview">申请退款</view>
+    <view class="action-btn disabled" wx:if="{{order.status === 'refund_pending'}}">退款审核中</view>
+  </view>
+
+  <!-- 退款理由弹窗（completed 状态） -->
+  <view class="modal-mask" wx:if="{{showRefundModal}}" bindtap="hideRefundReasonModal">
+    <view class="modal-card" catchtap="">
+      <view class="modal-title">申请退款</view>
+      <view class="modal-content">
+        <view class="refund-info">
+          <text class="refund-info-line">订单金额：¥{{order.totalPrice}}</text>
+          <text class="refund-info-line">退款将按原支付方式退回</text>
+        </view>
+        <textarea class="refund-reason-input"
+          placeholder="请填写退款理由（必填，商家审核后决定是否退款）"
+          value="{{refundReason}}"
+          bindinput="onRefundReasonInput"
+          maxlength="256"
+          auto-height="{{true}}"
+        />
+        <text class="refund-reason-count">{{refundReason.length}}/256</text>
+      </view>
+      <view class="modal-actions">
+        <view class="modal-btn cancel" bindtap="hideRefundReasonModal">取消</view>
+        <view class="modal-btn confirm {{refundReason ? '' : 'disabled'}}" bindtap="submitRefundRequest">
+          {{isSubmittingRefund ? '提交中...' : '提交申请'}}
+        </view>
+      </view>
+    </view>
   </view>
 
   <!-- 联系门店弹窗 -->

@@ -19,15 +19,16 @@ Page({
     orderFilter: 'preparing',
     orderFilters: [
       { key: 'all', label: '全部' },
-      { key: 'refunded', label: '已退款' },
+      { key: 'refund_pending', label: '退款审核' },
       { key: 'preparing', label: '制作中' },
       { key: 'ready', label: '待取餐' },
       { key: 'completed', label: '已完成' },
-      { key: 'pending', label: '待支付' }
+      { key: 'pending', label: '待支付' },
+      { key: 'refunded', label: '已退款' }
     ],
     orders: [],
     statusMap: {
-      pending: '待支付', preparing: '制作中', ready: '待取餐', completed: '已完成', refunded: '已退款'
+      pending: '待支付', preparing: '制作中', ready: '待取餐', completed: '已完成', refunded: '已退款', refund_pending: '退款审核中'
     },
 
     // 商品
@@ -47,8 +48,7 @@ Page({
 
     // 营收
     dashboard: null,
-    orderCounts: {},       // 各状态角标数字（仅 preparing 不掉）
-    viewedRefundedCount: 0, // 已读的退款数（角标 = 当前总数 - 已读数）
+    orderCounts: {},       // 各状态角标数字（preparing / refund_pending）
 
     // 快速录单
     qsProducts: [],
@@ -71,8 +71,6 @@ Page({
 
   onLoad() {
     const token = wx.getStorageSync('admin_token');
-    // 恢复已读退款计数（跨页面生命周期持久化）
-    this.setData({ viewedRefundedCount: wx.getStorageSync('viewedRefundedCount') || 0 });
     if (token) {
       this.verifyToken(token);
     }
@@ -196,15 +194,6 @@ Page({
   // ========== 订单管理 ==========
   filterOrders(e) {
     const filter = e.currentTarget.dataset.filter;
-    // 点击【已退款】tab 时标记已读：立刻清角标 + 记录当前总数
-    if (filter === 'refunded') {
-      const total = (this.data.dashboard && this.data.dashboard.refunded) || 0;
-      wx.setStorageSync('viewedRefundedCount', total);
-      this.setData({
-        viewedRefundedCount: total,
-        'orderCounts.refunded': 0
-      });
-    }
     this.setData({ orderFilter: filter, orderPage: 1 });
     this.loadOrders();
     this.loadDashboard();
@@ -274,6 +263,12 @@ Page({
         order.timeDisplay = (d.getMonth() + 1) + '/' + d.getDate() + ' ' +
           String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
       }
+      // 退款审核中：格式化申请时间
+      if (order.status === 'refund_pending' && order.refundRequestedAt) {
+        const d = new Date(order.refundRequestedAt);
+        order.refundReqDisplay = (d.getMonth() + 1) + '/' + d.getDate() + ' ' +
+          String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+      }
       return order;
     });
     this.setData({ orders });
@@ -325,6 +320,70 @@ Page({
           } else {
             wx.showToast({ title: res.message || '操作失败', icon: 'none' });
           }
+        });
+      }
+    });
+  },
+
+  // ========== 退款审核 ==========
+  approveRefund(e) {
+    const id = e.currentTarget.dataset.id;
+    const token = wx.getStorageSync('admin_token');
+
+    wx.showModal({
+      title: '确认退款',
+      content: '批准后将通过微信支付原路退款，确认？',
+      confirmText: '批准退款',
+      confirmColor: '#e74c3c',
+      success: (r) => {
+        if (!r.confirm) return;
+        wx.showLoading({ title: '退款中...' });
+        this._request({
+          url: '/api/admin/orders/' + id + '/refund-approve',
+          method: 'POST',
+          header: { Authorization: 'Bearer ' + token }
+        }).then(res => {
+          wx.hideLoading();
+          if (res.success) {
+            wx.showToast({ title: '退款已批准', icon: 'success' });
+            this.loadOrders();
+            this.loadDashboard();
+          } else {
+            wx.showToast({ title: res.message || '退款失败', icon: 'none' });
+          }
+        }).catch(() => {
+          wx.hideLoading();
+          wx.showToast({ title: '网络错误', icon: 'none' });
+        });
+      }
+    });
+  },
+
+  rejectRefund(e) {
+    const id = e.currentTarget.dataset.id;
+    const token = wx.getStorageSync('admin_token');
+
+    wx.showModal({
+      title: '拒绝退款',
+      content: '拒绝后将恢复订单原状态，确认？',
+      confirmText: '拒绝',
+      confirmColor: '#999',
+      success: (r) => {
+        if (!r.confirm) return;
+        this._request({
+          url: '/api/admin/orders/' + id + '/refund-reject',
+          method: 'POST',
+          header: { Authorization: 'Bearer ' + token }
+        }).then(res => {
+          if (res.success) {
+            wx.showToast({ title: '已拒绝', icon: 'success' });
+            this.loadOrders();
+            this.loadDashboard();
+          } else {
+            wx.showToast({ title: res.message || '操作失败', icon: 'none' });
+          }
+        }).catch(() => {
+          wx.showToast({ title: '网络错误', icon: 'none' });
         });
       }
     });
@@ -781,18 +840,10 @@ Page({
       if (res.success) {
         const d = res.data;
         this.setData({ dashboard: d });
-        // 角标：退款只显示"未读"新增数（当日总数 - 已读数）
-        // 日切时当日总数会归零，已读数若大于当日总数则重置
-        const refundedTotal = d.refunded || 0;
-        if (this.data.viewedRefundedCount > refundedTotal) {
-          wx.setStorageSync('viewedRefundedCount', 0);
-          this.setData({ viewedRefundedCount: 0 });
-        }
-        const refundedNew = Math.max(refundedTotal - this.data.viewedRefundedCount, 0);
         this.setData({
           orderCounts: {
             preparing: d.preparing || 0,
-            refunded: refundedNew,
+            refund_pending: d.refundPending || 0,
           },
         });
       }

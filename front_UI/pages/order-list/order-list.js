@@ -21,7 +21,8 @@ Page({
       preparing: '制作中',
       ready: '待取餐',
       completed: '已完成',
-      refunded: '已退款'
+      refunded: '已退款',
+      refund_pending: '退款审核中'
     }
   },
 
@@ -99,7 +100,7 @@ Page({
         ordersPending: formatted.filter(o => o.status === 'pending'),
         ordersPreparing: formatted.filter(o => o.status === 'preparing'),
         ordersReady: formatted.filter(o => o.status === 'ready'),
-        ordersCompleted: formatted.filter(o => o.status === 'completed' || o.status === 'refunded'),
+        ordersCompleted: formatted.filter(o => o.status === 'completed' || o.status === 'refunded' || o.status === 'refund_pending'),
       });
 
       this.updateTabCounts(allOrders);
@@ -110,7 +111,7 @@ Page({
   updateTabCounts(allOrders) {
     const counts = { all: allOrders.length, pending: 0, preparing: 0, ready: 0, completed: 0 };
     allOrders.forEach(o => {
-      if (o.status === 'refunded') counts.completed++;
+      if (o.status === 'refunded' || o.status === 'refund_pending') counts.completed++;
       else if (counts[o.status] !== undefined) counts[o.status]++;
     });
 

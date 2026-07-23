@@ -206,6 +206,7 @@
 .status-ready { background: #d4edda; color: #155724; }
 .status-completed { background: #e2e3e5; color: #383d41; }
 .status-refunded  { background: #f8d7da; color: #721c24; }
+.status-refund_pending { background: #fff3e0; color: #e65100; }
 .order-items-row { font-size: 28rpx; color: #333; font-weight: bold; display: block; }
 .order-item-name { display: inline-block !important; font-size: 28rpx; color: #333; font-weight: bold; margin-right: 8rpx; }
 .admin-temp {
@@ -248,6 +249,51 @@
 .action-btn { font-size: 22rpx !important; }
 .ready-btn { background: #27ae60 !important; color: #fff !important; }
 .complete-btn { background: #333 !important; color: #fff !important; }
+.approve-btn { background: #e74c3c !important; color: #fff !important; font-weight: bold !important; }
+.reject-btn { background: #e0e0e0 !important; color: #666 !important; }
+
+/* 退款审核 */
+.refund-reason {
+  color: #e65100 !important;
+  font-weight: bold !important;
+  margin-top: 6rpx !important;
+}
+.refund-req-time {
+  color: #999 !important;
+  margin-top: 0 !important;
+}
+.refund-review {
+  display: flex;
+  gap: 16rpx;
+  justify-content: flex-end;
+}
+
+/* 退款来源标签 */
+.refund-source {
+  color: #666 !important;
+  font-weight: normal !important;
+  margin-top: 2rpx !important;
+}
+.refund-source-tag {
+  display: inline-block;
+  font-size: 24rpx;
+  border-radius: 6rpx;
+  padding: 0 12rpx;
+  margin-right: 8rpx;
+  font-weight: bold;
+  line-height: 32rpx;
+  vertical-align: middle;
+  height: 32rpx;
+  box-sizing: border-box;
+}
+.source-preparing {
+  color: #fff;
+  background: #e74c3c;
+}
+.source-completed {
+  color: #fff;
+  background: #666;
+}
 
 /* 商品管理 */
 .section-header {
