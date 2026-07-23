@@ -214,6 +214,7 @@ router.post('/orders/refund/notify', async (req, res) => {
 // ========== 申请退款 ==========
 
 router.post('/orders/:id/refund', async (req, res) => {
+  let conn;
   try {
     const [rows] = await pool.execute('SELECT * FROM orders WHERE id = ?', [req.params.id]);
     if (!rows[0]) return res.json({ success: false, message: '订单不存在' });
@@ -221,25 +222,55 @@ router.post('/orders/:id/refund', async (req, res) => {
 
     const order = rows[0];
 
-    if (order.status !== 'preparing' && order.status !== 'ready') {
+    if (order.status !== 'preparing') {
       return res.json({ success: false, message: '当前状态不支持退款' });
     }
 
     const outRefundNo = 'R' + order.order_no;
     const total = Math.round(parseFloat(order.total_price) * 100);
 
-    await refund({
-      outTradeNo: order.order_no,
+    const refundResult = await refund({
+      outTradeNo: order.pay_out_trade_no || order.order_no,
       outRefundNo: outRefundNo,
       totalFee: total,
       refundFee: total,
       refundDesc: '用户申请退款',
     });
 
+    // 退款 API 成功 → 立即更新订单状态（不等微信回调，避免回调丢失导致状态卡死）
+    conn = await pool.getConnection();
+    await conn.beginTransaction();
+
+    await conn.execute(
+      'UPDATE orders SET status = ?, refund_id = ?, refunded_at = NOW() WHERE id = ?',
+      ['refunded', refundResult.refund_id, order.id]
+    );
+
+    // 恢复库存
+    const items = typeof order.items === 'string' ? JSON.parse(order.items) : order.items;
+    for (const item of items) {
+      await conn.execute(
+        'UPDATE products SET stock = stock + ? WHERE id = ?',
+        [item.quantity, item.id]
+      );
+    }
+
+    await conn.commit();
+
+    // 退回积分（事务外，非关键路径）
+    const pts = Math.floor(parseFloat(order.total_price));
+    if (pts > 0) {
+      await pool.execute('UPDATE users SET points = GREATEST(points - ?, 0) WHERE id = ?', [pts, order.user_id]);
+    }
+
+    console.log(`[refund] 订单 ${order.order_no} 已退款, 库存已恢复`);
     res.json({ success: true, data: { success: true, message: '退款申请已提交，将以原支付方式退回' } });
   } catch (err) {
+    if (conn) await conn.rollback();
     console.error('[refund] 退款失败:', err.message);
     res.json({ success: false, message: err.message || '退款失败，请稍后重试' });
+  } finally {
+    if (conn) conn.release();
   }
 });
 
@@ -322,8 +353,9 @@ router.post('/pay/notify', async (req, res) => {
   }
 
   try {
-    // 查订单 — 用 order_no 匹配（outTradeNo 就是下单时传入的订单号）
-    const [orders] = await pool.execute('SELECT * FROM orders WHERE order_no = ?', [outTradeNo]);
+    // outTradeNo 可能带 -timestamp 后缀（重试去重用），剥离后查原始 order_no
+    const baseOrderNo = outTradeNo.includes('-') ? outTradeNo.substring(0, outTradeNo.lastIndexOf('-')) : outTradeNo;
+    const [orders] = await pool.execute('SELECT * FROM orders WHERE order_no = ?', [baseOrderNo]);
     if (!orders[0]) {
       console.warn(`[pay-notify] 订单不存在: ${outTradeNo}`);
       return res.json({ errcode: 0, errmsg: 'ok' });
@@ -331,16 +363,18 @@ router.post('/pay/notify', async (req, res) => {
 
     const order = orders[0];
 
-    // 幂等：已处理过的订单不再重复处理
-    if (order.status !== 'pending') {
-      console.log(`[pay-notify] 订单 ${outTradeNo} 已处理 (状态: ${order.status})，跳过`);
-      return res.json({ errcode: 0, errmsg: 'ok' });
-    }
-
-    // 事务：订单状态更新 + 库存扣减（FOR UPDATE 行锁防超卖）
+    // 事务：订单状态更新 + 库存扣减
+    // 事务内用 SELECT...FOR UPDATE 二次确认状态，并发回调只有一个能拿到 pending 行锁
     const conn = await pool.getConnection();
     try {
       await conn.beginTransaction();
+
+      const [[current]] = await conn.execute('SELECT status FROM orders WHERE id = ? FOR UPDATE', [order.id]);
+      if (current.status !== 'pending') {
+        await conn.rollback();
+        console.log(`[pay-notify] 订单 ${outTradeNo} 已处理 (状态: ${current.status})，跳过`);
+        return res.json({ errcode: 0, errmsg: 'ok' });
+      }
 
       const now = mysqlNow();
       await conn.execute(
@@ -422,16 +456,33 @@ router.post('/pay/:orderId', async (req, res) => {
     }
 
     const items = typeof order.items === 'string' ? JSON.parse(order.items) : order.items;
-    const description = items.map(i => i.name).join('、').substring(0, 60);
+    // 微信 body 限制 127 字节（非字符），中文每字 3 字节，必须按字节截断
+    let description = items.map(i => i.name).join('、');
+    const MAX_BYTES = 127;
+    if (Buffer.byteLength(description, 'utf8') > MAX_BYTES) {
+      const suffix = '…';
+      const maxContent = MAX_BYTES - Buffer.byteLength(suffix, 'utf8');
+      let truncated = '';
+      for (const ch of description) {
+        const next = truncated + ch;
+        if (Buffer.byteLength(next, 'utf8') > maxContent) break;
+        truncated = next;
+      }
+      description = truncated + suffix;
+    }
     const total = Math.round(order.total_price * 100); // 元 → 分
 
-    // 统一下单后返回的 payment 对象可直接用于 wx.requestPayment（免另行签名）
+    // 统一下单 — out_trade_no 加时间戳后缀，避免取消后重试时商户订单号重复
+    const outTradeNo = order.order_no + '-' + Date.now();
     const respdata = await createJsapiOrder({
-      outTradeNo: order.order_no,
+      outTradeNo,
       total,
       description,
       openid: openid,
     });
+
+    // 记录本次支付使用的 out_trade_no（带后缀），退款时需要它来匹配微信支付订单
+    await pool.execute('UPDATE orders SET pay_out_trade_no = ? WHERE id = ?', [outTradeNo, order.id]);
 
     res.json({
       success: true,

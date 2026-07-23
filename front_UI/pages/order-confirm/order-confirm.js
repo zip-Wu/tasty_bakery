@@ -132,7 +132,13 @@ Page({
           remark
         },
       }).then(created => {
-        that.setData({ orderId: created.id, isNewOrder: false });
+        // 用拆分后的 items 同步本地 order（含 temperature 字段），
+        // 否则 isNewOrder=false 后 WXML 走 wx:else 分支，找不到 temperature 全 fallback 成"常温"
+        that.setData({
+          order: { ...that.data.order, items: splitItems },
+          orderId: created.id,
+          isNewOrder: false
+        });
         that.doPayForOrder(created.id);
       }).catch(() => {
         that.setData({ isPaying: false });
@@ -162,16 +168,21 @@ Page({
         },
         fail(err) {
           that.setData({ isPaying: false });
+          app.globalData.clearCartOnReturn = true;
           if (err.errMsg && err.errMsg.indexOf('cancel') !== -1) {
             wx.showToast({ title: '已取消支付', icon: 'none' });
           } else {
             wx.showToast({ title: '支付失败', icon: 'none' });
           }
+          // 取消/失败后回到订单列表，待支付订单从这里找
+          setTimeout(() => { wx.switchTab({ url: '/pages/order-list/order-list' }); }, 1200);
         }
       });
     }).catch(err => {
       that.setData({ isPaying: false });
+      app.globalData.clearCartOnReturn = true;
       wx.showToast({ title: (err && err.message) || '发起支付失败', icon: 'none' });
+      setTimeout(() => { wx.switchTab({ url: '/pages/order-list/order-list' }); }, 1200);
     });
   }
 });

@@ -48,7 +48,7 @@ Page({
     // 营收
     dashboard: null,
     orderCounts: {},       // 各状态角标数字（仅 preparing 不掉）
-    viewedStatuses: {},     // 已查看的状态（退款角标自动清）
+    viewedRefundedCount: 0, // 已读的退款数（角标 = 当前总数 - 已读数）
 
     // 快速录单
     qsProducts: [],
@@ -71,6 +71,8 @@ Page({
 
   onLoad() {
     const token = wx.getStorageSync('admin_token');
+    // 恢复已读退款计数（跨页面生命周期持久化）
+    this.setData({ viewedRefundedCount: wx.getStorageSync('viewedRefundedCount') || 0 });
     if (token) {
       this.verifyToken(token);
     }
@@ -139,6 +141,7 @@ Page({
       if (res.success) {
         this.setData({ loggedIn: true });
         this.loadOrders();
+        this.loadDashboard();
         this.loadStoreStatus();
         this._startPolling();
       } else {
@@ -193,11 +196,14 @@ Page({
   // ========== 订单管理 ==========
   filterOrders(e) {
     const filter = e.currentTarget.dataset.filter;
-    // 点击【已退款】tab 时清除角标
+    // 点击【已退款】tab 时标记已读：立刻清角标 + 记录当前总数
     if (filter === 'refunded') {
-      const viewed = this.data.viewedStatuses;
-      viewed.refunded = true;
-      this.setData({ viewedStatuses: viewed });
+      const total = (this.data.dashboard && this.data.dashboard.refunded) || 0;
+      wx.setStorageSync('viewedRefundedCount', total);
+      this.setData({
+        viewedRefundedCount: total,
+        'orderCounts.refunded': 0
+      });
     }
     this.setData({ orderFilter: filter, orderPage: 1 });
     this.loadOrders();
@@ -775,19 +781,19 @@ Page({
       if (res.success) {
         const d = res.data;
         this.setData({ dashboard: d });
-        // 更新角标（只显示 preparing，其它按查看状态决定）
-        const viewed = this.data.viewedStatuses;
-        const refundedCount = d.refunded || 0;
-        // 退款数增加了——重置查看状态，角标重新出现
-        if (refundedCount > (this.data.orderCounts.refunded || 0)) {
-          viewed.refunded = false;
+        // 角标：退款只显示"未读"新增数（当日总数 - 已读数）
+        // 日切时当日总数会归零，已读数若大于当日总数则重置
+        const refundedTotal = d.refunded || 0;
+        if (this.data.viewedRefundedCount > refundedTotal) {
+          wx.setStorageSync('viewedRefundedCount', 0);
+          this.setData({ viewedRefundedCount: 0 });
         }
+        const refundedNew = Math.max(refundedTotal - this.data.viewedRefundedCount, 0);
         this.setData({
           orderCounts: {
             preparing: d.preparing || 0,
-            refunded: viewed.refunded ? 0 : refundedCount,
+            refunded: refundedNew,
           },
-          viewedStatuses: viewed,
         });
       }
     }).catch(() => {});

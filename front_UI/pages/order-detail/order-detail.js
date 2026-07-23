@@ -145,15 +145,28 @@ Page({
           }).then(data => {
             if (data.success) {
               wx.showToast({ title: '退款申请已提交', icon: 'success' });
-              // 刷新订单（等回调更新状态）
-              setTimeout(() => that.loadOrder(that.data.orderId), 2000);
+              // 2 秒后拉最新状态，确认退款已生效
+              setTimeout(() => {
+                app.request({ url: '/api/orders/' + that.data.orderId }).then(orderData => {
+                  that.processOrder(orderData);
+                  that.setData({ isRefunding: false });
+                  if (orderData.status === 'refunded') {
+                    wx.showToast({ title: '退款成功', icon: 'success' });
+                  }
+                  if (orderData.status === 'completed' || orderData.status === 'refunded') {
+                    that._stopPolling();
+                  }
+                }).catch(() => {
+                  that.setData({ isRefunding: false });
+                });
+              }, 2000);
             } else {
+              that.setData({ isRefunding: false });
               wx.showToast({ title: data.message || '退款失败', icon: 'none' });
             }
           }).catch(() => {
-            wx.showToast({ title: '退款失败', icon: 'none' });
-          }).finally(() => {
             that.setData({ isRefunding: false });
+            wx.showToast({ title: '退款失败', icon: 'none' });
           });
         }
       }

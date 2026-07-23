@@ -105,7 +105,7 @@ function apiRequest(method, apiPath, body) {
  * @param {Object} params
  * @param {string} params.outTradeNo 商户订单号（6-32 字符，字母数字 + _-）
  * @param {number} params.total      金额（分）
- * @param {string} params.description 商品描述（≤127 字符）
+ * @param {string} params.description 商品描述（≤127 字节）
  * @param {string} params.openid     用户 openid
  * @returns {Object} respdata，含 .payment 字段直接给 wx.requestPayment 使用
  */

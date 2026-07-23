@@ -17,19 +17,24 @@
         </view>
         <text class="item-qty">x{{item.quantity}}</text>
       </view>
-      <!-- 温度分派 -->
+      <!-- 温度：新订单可编辑，已有订单只读 -->
       <view class="temp-alloc">
-        <view class="temp-row">
-          <text class="temp-label temp-cold-lbl">常温</text>
-          <text class="tqc-num">{{item.coldQty || 0}}</text>
-        </view>
-        <view class="temp-row">
-          <text class="temp-label temp-hot-lbl">加热</text>
-          <view class="temp-qty-ctrl">
-            <view class="tqc-btn {{item.hotQty > 0 ? '' : 'disabled'}}" data-idx="{{idx}}" data-temp="hot" data-delta="-1" bindtap="changeTemp">−</view>
-            <input class="tqc-num" type="number" value="{{item.hotQty}}" bindinput="onHotQtyInput" data-idx="{{idx}}" />
-            <view class="tqc-btn {{item.hotQty < item.quantity ? '' : 'disabled'}}" data-idx="{{idx}}" data-temp="hot" data-delta="1" bindtap="changeTemp">+</view>
+        <block wx:if="{{isNewOrder}}">
+          <view class="temp-row">
+            <text class="temp-label temp-cold-lbl">常温</text>
+            <text class="tqc-num">{{item.coldQty || 0}}</text>
           </view>
+          <view class="temp-row">
+            <text class="temp-label temp-hot-lbl">加热</text>
+            <view class="temp-qty-ctrl">
+              <view class="tqc-btn {{item.hotQty > 0 ? '' : 'disabled'}}" data-idx="{{idx}}" data-temp="hot" data-delta="-1" bindtap="changeTemp">−</view>
+              <input class="tqc-num" type="number" value="{{item.hotQty}}" bindinput="onHotQtyInput" data-idx="{{idx}}" />
+              <view class="tqc-btn {{item.hotQty < item.quantity ? '' : 'disabled'}}" data-idx="{{idx}}" data-temp="hot" data-delta="1" bindtap="changeTemp">+</view>
+            </view>
+          </view>
+        </block>
+        <view wx:else class="temp-row">
+          <text class="temp-label" style="background:{{item.temperature === '加热' ? '#fff3e0' : '#e3f2fd'}};color:{{item.temperature === '加热' ? '#e65100' : '#1565c0'}}">{{item.temperature || '常温'}}</text>
         </view>
       </view>
     </view>

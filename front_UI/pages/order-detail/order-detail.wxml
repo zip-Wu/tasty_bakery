@@ -103,7 +103,7 @@
   <view class="bottom-actions">
     <view class="action-btn secondary" bindtap="callStore">联系门店</view>
     <view class="action-btn primary" wx:if="{{order.status === 'pending'}}" bindtap="goPay">立即支付</view>
-    <view class="action-btn danger" wx:if="{{(order.status === 'preparing' || order.status === 'ready') && !isRefunding}}" bindtap="requestRefund">申请退款</view>
+    <view class="action-btn danger" wx:if="{{order.status === 'preparing' && !isRefunding}}" bindtap="requestRefund">申请退款</view>
   </view>
 
   <!-- 联系门店弹窗 -->
