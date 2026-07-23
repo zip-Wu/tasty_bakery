@@ -28,6 +28,12 @@ router.post('/orders', async (req, res) => {
     const userId = req.user.id;
     const { items, totalPrice, storeId, storeName, pickupTime, remark } = req.body;
 
+    // 关店检查
+    const [storeRows] = await pool.execute('SELECT is_open FROM stores LIMIT 1');
+    if (storeRows[0] && !storeRows[0].is_open) {
+      return res.json({ success: false, message: '门店已打烊，暂无法下单' });
+    }
+
     // 验证 items 结构
     if (!items || !Array.isArray(items) || !items.length) {
       return res.json({ success: false, message: '缺少商品信息' });

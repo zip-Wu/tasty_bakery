@@ -55,6 +55,53 @@
 .tab-item.active { color: #333; font-weight: bold; border-bottom: 4rpx solid #333; }
 .logout-tab { color: #e74c3c; flex: 0.6; }
 
+/* 门店开关状态栏 */
+.store-toggle-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18rpx 24rpx;
+  margin: 0 20rpx 12rpx;
+  border-radius: 16rpx;
+}
+.store-toggle-bar.open  { background: #e8f5e9; }
+.store-toggle-bar.closed { background: #ffebee; }
+.store-toggle-left {
+  display: flex;
+  align-items: center;
+}
+.store-toggle-dot {
+  width: 16rpx; height: 16rpx;
+  border-radius: 50%;
+  margin-right: 16rpx;
+  flex-shrink: 0;
+}
+.store-toggle-dot.on  { background: #4caf50; box-shadow: 0 0 8rpx rgba(76,175,80,0.4); }
+.store-toggle-dot.off { background: #f44336; box-shadow: 0 0 8rpx rgba(244,67,54,0.4); }
+.store-toggle-text {
+  display: flex;
+  flex-direction: column;
+}
+.store-toggle-label {
+  font-size: 28rpx;
+  font-weight: bold;
+  color: #333;
+}
+.store-toggle-hint {
+  font-size: 22rpx;
+  color: #999;
+  margin-top: 2rpx;
+}
+.store-toggle-btn {
+  font-size: 26rpx;
+  font-weight: bold;
+  padding: 12rpx 32rpx;
+  border-radius: 32rpx;
+  background: #fff;
+  color: #333;
+  box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.08);
+}
+
 /* 内容区 */
 .content { padding: 20rpx; height: 100%; box-sizing: border-box; }
 

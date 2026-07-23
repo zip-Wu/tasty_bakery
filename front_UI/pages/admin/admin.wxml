@@ -27,6 +27,18 @@
     <view class="tab-item logout-tab" bindtap="doLogout">退出</view>
   </view>
 
+  <!-- 门店开关状态栏 -->
+  <view class="store-toggle-bar {{storeOpen ? 'open' : 'closed'}}" bindtap="toggleStore">
+    <view class="store-toggle-left">
+      <text class="store-toggle-dot {{storeOpen ? 'on' : 'off'}}"></text>
+      <view class="store-toggle-text">
+        <text class="store-toggle-label">{{storeOpen ? '营业中' : '已打烊'}}</text>
+        <text class="store-toggle-hint">{{storeOpen ? '店铺正在接受顾客下单' : '顾客无法下单'}}</text>
+      </view>
+    </view>
+    <view class="store-toggle-btn">{{storeOpen ? '关店' : '开店'}}</view>
+  </view>
+
   <swiper class="admin-swiper" current="{{tabIndex}}" bindchange="onTabSwipe" duration="250">
   <swiper-item>
   <!-- ====== 订单管理 ====== -->
@@ -62,7 +74,7 @@
           <text class="order-status status-{{item.status}}">{{item.statusText}}</text>
         </view>
         <view class="order-body">
-          <view class="order-items-row" wx:for="{{item.items}}" wx:key="id" wx:for-item="oi">
+          <view class="order-items-row" wx:for="{{item.items}}" wx:key="itemKey" wx:for-item="oi">
             <text class="order-item-name">{{oi.name}}<text class="admin-temp temp-{{oi.temperature === '加热' ? 'hot' : 'cold'}}" wx:if="{{oi.temperature}}">{{oi.temperature}}</text> x{{oi.quantity}}</text>
           </view>
           <view class="order-bottom">

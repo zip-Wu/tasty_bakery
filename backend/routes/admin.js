@@ -412,4 +412,21 @@ router.get('/admin/dashboard', async (req, res) => {
   });
 });
 
+// ========== 门店开关 ==========
+router.put('/admin/store/toggle', async (req, res) => {
+  const [row] = await pool.execute('SELECT id, name, is_open FROM stores LIMIT 1');
+  if (!row[0]) {
+    return res.json({ success: false, message: '门店未配置' });
+  }
+  const newStatus = row[0].is_open ? 0 : 1;
+  await pool.execute('UPDATE stores SET is_open = ? WHERE id = ?', [newStatus, row[0].id]);
+  res.json({
+    success: true,
+    data: {
+      open: !!newStatus,
+      notice: newStatus ? '' : `${row[0].name}已打烊`
+    }
+  });
+});
+
 module.exports = router;

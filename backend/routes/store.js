@@ -54,4 +54,22 @@ router.get('/stores', async (req, res) => {
   res.json({ success: true, data: result });
 });
 
+// 门店开关状态（公开，供顾客端和首页查询）
+router.get('/store/status', async (req, res) => {
+  const [rows] = await pool.execute(
+    'SELECT name, hours, is_open FROM stores LIMIT 1'
+  );
+  if (!rows[0]) {
+    return res.json({ success: true, data: { open: false, name: '', hours: '', notice: '门店未配置' } });
+  }
+  const s = rows[0];
+  const notice = s.is_open
+    ? ''
+    : `${s.name}已打烊，${s.hours || '次日'} 恢复营业`;
+  res.json({
+    success: true,
+    data: { open: !!s.is_open, name: s.name, hours: s.hours, notice }
+  });
+});
+
 module.exports = router;

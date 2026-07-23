@@ -24,6 +24,10 @@ Page({
       address: '珠海市高新区唐家湾镇香山路88号2栋1层101-10室',
       distance: ''
     },
+
+    // 门店开关状态
+    storeClosed: false,
+    storeNotice: '',
   },
 
   onLoad() {
@@ -38,6 +42,7 @@ Page({
 
     this.loadProducts();
     this.loadCategories();
+    this.checkStoreStatus();
   },
 
   // 无门店时自动加载第一个门店，并尝试获取位置计算距离
@@ -135,6 +140,7 @@ Page({
       this.loadProducts();
       this.loadCategories();
     }
+    this.checkStoreStatus();
   },
 
   // 切换分类
@@ -211,6 +217,10 @@ Page({
 
   // 去结算（缓存购物车数据，确认支付时才创建订单）
   goToCheckout() {
+    if (this.data.storeClosed) {
+      wx.showToast({ title: '店家已打烊，暂无法下单', icon: 'none' });
+      return;
+    }
     if (this.data.cartCount === 0) {
       wx.showToast({ title: '请先选择商品', icon: 'none' });
       return;
@@ -244,5 +254,21 @@ Page({
     // 注意：不在这里设 clearCartOnReturn，等支付成功后再清空
 
     wx.navigateTo({ url: '/pages/order-confirm/order-confirm' });
+  },
+
+  // ========== 门店开关状态检查 ==========
+  checkStoreStatus() {
+    const app = getApp();
+    app.request({
+      url: '/api/store/status',
+    }).then(res => {
+      if (res && res.data) {
+        this.setData({
+          storeClosed: !res.data.open,
+          storeNotice: res.data.notice || '',
+          storeHours: res.data.hours || ''
+        });
+      }
+    }).catch(() => {});
   },
 });

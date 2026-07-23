@@ -8,6 +8,9 @@ Page({
     password: '',
     loginError: '',
 
+    // 门店开关状态
+    storeOpen: true,
+
     // 当前标签页
     currentTab: 'orders',   // orders | quick-sale | products | dashboard
     tabIndex: 0,
@@ -113,6 +116,7 @@ Page({
         this.setData({ loggedIn: true, loginError: '' });
         this.loadOrders();
         this.loadDashboard();
+        this.loadStoreStatus();
         this._startPolling();
       } else {
         this.setData({ loginError: res.message || '密码错误' });
@@ -133,6 +137,7 @@ Page({
       if (res.success) {
         this.setData({ loggedIn: true });
         this.loadOrders();
+        this.loadStoreStatus();
         this._startPolling();
       } else {
         wx.removeStorageSync('admin_token');
@@ -252,6 +257,10 @@ Page({
       order.statusText = this.data.statusMap[order.status] || order.status;
       order.totalQuantity = (order.items || []).reduce((sum, item) => sum + (item.quantity || 0), 0);
       order.itemNames = (order.items || []).map(i => i.name + (i.temperature ? '(' + i.temperature + ')' : '') + ' x' + i.quantity).join(', ');
+      // 为每个 item 注入唯一 key（同商品不同温度 id 相同）
+      (order.items || []).forEach((item, idx) => {
+        item.itemKey = `${item.id}_${item.temperature || 'x'}_${idx}`;
+      });
       if (order.createdAt) {
         const d = new Date(order.createdAt);
         order.timeDisplay = (d.getMonth() + 1) + '/' + d.getDate() + ' ' +
@@ -1040,6 +1049,45 @@ Page({
         },
         fail: (err) => reject(err)
       });
+    });
+  },
+
+  // ========== 门店开关 ==========
+  loadStoreStatus() {
+    this._request({
+      url: '/api/store/status',
+      method: 'GET'
+    }).then(res => {
+      if (res.success) {
+        this.setData({ storeOpen: res.data.open });
+      }
+    }).catch(() => {});
+  },
+
+  toggleStore() {
+    const that = this;
+    const next = !this.data.storeOpen;
+    const token = wx.getStorageSync('admin_token');
+    wx.showModal({
+      title: next ? '确认开店' : '确认关店',
+      content: next ? '开店后顾客可以正常下单' : '关店后顾客将无法下单',
+      confirmText: next ? '开店' : '关店',
+      confirmColor: next ? '#07c160' : '#e74c3c',
+      success(res) {
+        if (!res.confirm) return;
+        that._request({
+          url: '/api/admin/store/toggle',
+          method: 'PUT',
+          header: { Authorization: 'Bearer ' + token }
+        }).then(res => {
+          if (res.success) {
+            that.setData({ storeOpen: res.data.open });
+            wx.showToast({ title: res.data.open ? '已开店' : '已关店', icon: 'success' });
+          } else {
+            wx.showToast({ title: res.message || '操作失败', icon: 'none' });
+          }
+        }).catch(() => {});
+      }
     });
   }
 });
