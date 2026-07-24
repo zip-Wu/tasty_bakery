@@ -12,11 +12,11 @@ Page({
     this._tapCount = 0;
   },
 
-  // 隐藏管理入口：连续点击 Banner 5 次唤醒
-  onBannerTap() {
+  // 隐藏管理入口：连续点击"加热方法"卡片 7 次唤醒
+  onHeatingTap() {
     this._tapCount = (this._tapCount || 0) + 1;
     if (this._tapTimer) clearTimeout(this._tapTimer);
-    if (this._tapCount >= 5) {
+    if (this._tapCount >= 7) {
       this._tapCount = 0;
       wx.navigateTo({ url: '/pages/admin/admin' });
     } else {

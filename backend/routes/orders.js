@@ -3,7 +3,7 @@
  */
 const express = require('express');
 const crypto = require('crypto');
-const { pool, mysqlNow } = require('../database');
+const { pool, mysqlNow, generateOrderNo } = require('../database');
 const { requireUser } = require('../middleware/auth');
 
 const router = express.Router();
@@ -73,7 +73,7 @@ router.post('/orders', async (req, res) => {
 
     const order = {
       id: generateId(),
-      orderNo: 'ORD' + Date.now().toString(36) + crypto.randomBytes(3).toString('hex').toUpperCase(),
+      orderNo: await generateOrderNo('ORD'),
       userId,
       storeId: storeId || null,
       storeName: storeName || '',

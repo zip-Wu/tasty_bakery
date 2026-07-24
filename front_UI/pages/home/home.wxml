@@ -2,15 +2,15 @@
 <view class="home-page">
   <!-- 顶部 Banner + 中间 2x2 卡片，全部包在 scroll-view 里允许上下滑动 -->
   <scroll-view scroll-y enhanced show-scrollbar="{{false}}" class="home-scroll">
-    <!-- 顶部 Banner（点击5次进入商家管理） -->
-    <image class="banner" src="/images/png/banner.png" mode="widthFix" bindtap="onBannerTap"></image>
+    <!-- 顶部 Banner -->
+    <image class="banner" src="/images/png/banner.png" mode="widthFix"></image>
 
     <!-- 中间 2x2 功能卡片 -->
     <view class="card-grid">
       <image class="card" src="/images/png/pickup_order.png" mode="widthFix" bindtap="goToOrder"></image>
       <image class="card" src="/images/png/store_place.png" mode="widthFix" bindtap="goToAddress"></image>
       <image class="card" src="/images/png/storage_method.png" mode="widthFix"></image>
-      <image class="card" src="/images/png/heating_method.png" mode="widthFix"></image>
+      <image class="card" src="/images/png/heating_method.png" mode="widthFix" bindtap="onHeatingTap"></image>
     </view>
 
     <!-- 底部留白：给悬浮 tabBar（110rpx + 48rpx 留底）+ 24rpx 视觉间距让出滚动空间 -->

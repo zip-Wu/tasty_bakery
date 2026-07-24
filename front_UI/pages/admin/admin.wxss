@@ -462,8 +462,8 @@
 .edit-cancel-btn { font-size: 24rpx !important; background: #e0e0e0 !important; }
 .edit-row-desc { align-items: flex-start !important; }
 .edit-textarea {
-  height: auto !important;
   min-height: 80rpx !important;
+  max-height: 400rpx !important;
   line-height: 1.4 !important;
   padding: 8rpx 12rpx !important;
 }

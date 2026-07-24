@@ -843,6 +843,7 @@ Page({
         this.setData({
           orderCounts: {
             preparing: d.preparing || 0,
+            ready: d.ready || 0,
             refund_pending: d.refundPending || 0,
           },
         });

@@ -3,7 +3,7 @@
  */
 const express = require('express');
 const crypto = require('crypto');
-const { pool, mysqlNow } = require('../database');
+const { pool, mysqlNow, generateOrderNo } = require('../database');
 const { refund } = require('../services/wechat-pay');
 
 const router = express.Router();
@@ -447,11 +447,7 @@ router.post('/admin/quick-sale', async (req, res) => {
 
   // 3. 生成订单号（OFF 前缀 = 线下录单）
   const id = Date.now().toString(36) + crypto.randomBytes(4).toString('hex');
-  const bjNow = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Shanghai' }));
-  const today = bjNow.getFullYear().toString().slice(2) +
-    String(bjNow.getMonth() + 1).padStart(2, '0') +
-    String(bjNow.getDate()).padStart(2, '0');
-  const orderNo = 'OFF' + today + '-' + crypto.randomBytes(3).toString('hex').toUpperCase().slice(0, 5);
+  const orderNo = await generateOrderNo('OFF');
 
   // 4. 插入订单（直接 completed，跳过支付流程）
   const now = mysqlNow();
@@ -488,6 +484,7 @@ router.get('/admin/dashboard', async (req, res) => {
     String(bjNow.getMonth() + 1).padStart(2, '0') + '-' +
     String(bjNow.getDate()).padStart(2, '0');
 
+  // 今日营收统计（按创建日期过滤）
   const [[stats]] = await pool.execute(`
     SELECT
       COUNT(*) as total_orders,
@@ -502,17 +499,26 @@ router.get('/admin/dashboard', async (req, res) => {
     WHERE DATE(created_at) = ?
   `, [today]);
 
+  // 角标统计（不限日期 — 制作中/待取餐/退款审核跨天也需常亮提醒）
+  const [[badgeStats]] = await pool.execute(`
+    SELECT
+      SUM(CASE WHEN status = 'preparing' THEN 1 ELSE 0 END) as preparing_count,
+      SUM(CASE WHEN status = 'ready' THEN 1 ELSE 0 END) as ready_count,
+      SUM(CASE WHEN status = 'refund_pending' THEN 1 ELSE 0 END) as refund_pending_count
+    FROM orders
+  `);
+
   res.json({
     success: true,
     data: {
       today,
       totalOrders: stats.total_orders || 0,
       pending: stats.pending || 0,
-      preparing: stats.preparing || 0,
-      ready: stats.ready || 0,
+      preparing: badgeStats.preparing_count || 0,
+      ready: badgeStats.ready_count || 0,
       completed: stats.completed || 0,
       refunded: stats.refunded || 0,
-      refundPending: stats.refund_pending || 0,
+      refundPending: badgeStats.refund_pending_count || 0,
       revenue: stats.revenue || 0,
     },
   });

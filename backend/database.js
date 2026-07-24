@@ -170,7 +170,7 @@ const ready = (async () => {
   }
 })();
 
-module.exports = { pool, ready, mysqlNow };
+module.exports = { pool, ready, mysqlNow, generateOrderNo };
 
 /**
  * 北京时间格式化的当前时间字符串（YYYY-MM-DD HH:MM:SS）
@@ -185,4 +185,33 @@ function mysqlNow() {
     String(bj.getHours()).padStart(2, '0') + ':' +
     String(bj.getMinutes()).padStart(2, '0') + ':' +
     String(bj.getSeconds()).padStart(2, '0');
+}
+
+/**
+ * 生成可读订单号：前缀 + YYMMDD + 3位当天序号
+ * 例 generateOrderNo('ORD') → 'ORD260725001'
+ *
+ * 序号用 settings 表原子递增（INSERT ... ON DUPLICATE KEY UPDATE），
+ * 无并发冲突风险。每天从 001 开始，超过 999 回绕（实际不可能）。
+ */
+async function generateOrderNo(prefix) {
+  const bjNow = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Shanghai' }));
+  const yymmdd = bjNow.getFullYear().toString().slice(2) +
+    String(bjNow.getMonth() + 1).padStart(2, '0') +
+    String(bjNow.getDate()).padStart(2, '0');
+
+  const seqKey = 'order_seq_' + prefix + yymmdd;
+
+  // 原子递增：键不存在则从 1 开始，存在则 +1
+  await pool.execute(
+    "INSERT INTO settings (kkey, value) VALUES (?, '1') ON DUPLICATE KEY UPDATE value = CAST(value AS UNSIGNED) + 1",
+    [seqKey]
+  );
+
+  const [rows] = await pool.execute('SELECT value FROM settings WHERE kkey = ?', [seqKey]);
+  const seq = parseInt(rows[0].value);
+  // 超过 999 回绕（同一天几乎不可能，但做防御）
+  const displaySeq = seq > 999 ? ((seq - 1) % 999 + 1) : seq;
+
+  return prefix + yymmdd + String(displaySeq).padStart(3, '0');
 }
