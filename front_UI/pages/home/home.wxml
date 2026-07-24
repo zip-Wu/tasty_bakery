@@ -1,29 +1,22 @@
-<!-- 首页 - SVG 图片布局 -->
+<!-- 首页 - scroll-view 滚动 + 2x2 卡片布局 -->
 <view class="home-page">
-  <!-- 顶部 Banner（点击5次进入商家管理） -->
-  <image class="banner" src="/images/png/banner.png" mode="widthFix" bindtap="onBannerTap"></image>
+  <!-- 顶部 Banner + 中间 2x2 卡片，全部包在 scroll-view 里允许上下滑动 -->
+  <scroll-view scroll-y enhanced show-scrollbar="{{false}}" class="home-scroll">
+    <!-- 顶部 Banner（点击5次进入商家管理） -->
+    <image class="banner" src="/images/png/banner.png" mode="widthFix" bindtap="onBannerTap"></image>
 
-  <!-- 点餐 / 门店地址 -->
-  <view class="service-row">
-    <view class="service-card" bindtap="goToOrder">
-      <text class="card-icon">🍞</text>
-      <text class="card-title">点餐</text>
+    <!-- 中间 2x2 功能卡片 -->
+    <view class="card-grid">
+      <image class="card" src="/images/png/pickup_order.png" mode="widthFix" bindtap="goToOrder"></image>
+      <image class="card" src="/images/png/store_place.png" mode="widthFix" bindtap="goToAddress"></image>
+      <image class="card" src="/images/png/storage_method.png" mode="widthFix"></image>
+      <image class="card" src="/images/png/heating_method.png" mode="widthFix"></image>
     </view>
-    <view class="service-card" bindtap="goToAddress">
-      <text class="card-icon">📍</text>
-      <text class="card-title">门店地址</text>
-    </view>
-  </view>
 
-  <!-- 活动区（绝对定位，固定在 TabBar 上方，活动栏永远靠近 tab） -->
-  <scroll-view scroll-x enhanced show-scrollbar="{{false}}" class="activity-scroll">
-    <view class="activity-list">
-      <view class="activity-item" wx:for="{{activities}}" wx:key="id">
-        <image class="activity-img" src="{{item.image}}" mode="aspectFill"></image>
-      </view>
-    </view>
+    <!-- 底部留白：给悬浮 tabBar（110rpx + 48rpx 留底）+ 24rpx 视觉间距让出滚动空间 -->
+    <view class="scroll-spacer"></view>
   </scroll-view>
 
-  <!-- 自定义 TabBar -->
+  <!-- 自定义 TabBar 浮在最外层，固定在视口底部，不参与 scroll-view 滚动 -->
   <custom-tab-bar></custom-tab-bar>
 </view>

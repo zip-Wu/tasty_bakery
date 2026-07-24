@@ -1,15 +1,6 @@
 Page({
   data: {
-    // 活动横幅数据 — 更换图片：把新图片放到 /images/png/ 目录下，改下面的文件名即可
-    // 数量可任意增减（建议 6~10 张，过多会影响滚动性能）
-    activities: [
-      { id: 1, image: '/images/png/products.png' },
-      { id: 2, image: '/images/png/products.png' },
-      { id: 3, image: '/images/png/products.png' },
-      { id: 4, image: '/images/png/products.png' },
-      { id: 5, image: '/images/png/products.png' },
-      { id: 6, image: '/images/png/products.png' }
-    ],
+    // 首页 2x2 卡片直接用静态图片，不走数据驱动
   },
 
   onShow() {
@@ -33,10 +24,12 @@ Page({
     }
   },
 
+  // 自提下单 → 跳到"点单"tab
   goToOrder() {
     wx.switchTab({ url: '/pages/index/index' });
   },
 
+  // 门店导航 → 跳到门店选择页
   goToAddress() {
     wx.navigateTo({ url: '/pages/store-select/store-select' });
   }

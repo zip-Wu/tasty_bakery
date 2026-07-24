@@ -1,14 +1,18 @@
 /* ===== 首页 ===== */
 page {
   background: #F3D624;
-  height: 100vh;
-  overflow: hidden;
 }
 
 .home-page {
-  position: relative;     /* 作为活动栏 absolute 定位的参照 */
-  height: 100vh;          /* 撑满屏幕 */
+  height: 100vh;        /* 整个视口高度，作为 scroll-view + 浮层 tabBar 的容器 */
   background: #F3D624;
+}
+
+/* 滚动容器：负责 banner + 2x2 卡片的上下滚动 */
+.home-scroll {
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
 }
 
 /* ========== 顶部 Banner ========== */
@@ -17,70 +21,25 @@ page {
   display: block;
 }
 
-/* ========== 点餐 / 门店地址（并排） ========== */
-.service-row {
+/* ========== 中间 2x2 功能卡片 ========== */
+.card-grid {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   padding: 0 28rpx;
-  margin-top: 80rpx;
+  margin-top: 40rpx;
+  row-gap: 28rpx;
 }
 
-.service-card {
-  width: 334rpx;
-  height: 200rpx;
-  background: #fff;
-  border-radius: 20rpx;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 4rpx 16rpx rgba(0,0,0,0.08);
-}
-
-.card-icon {
-  font-size: 56rpx;
-  margin-bottom: 12rpx;
-}
-
-.card-title {
-  font-size: 30rpx;
-  font-weight: bold;
-  color: #333;
-}
-
-/* ========== 活动区（绝对定位，固定在 TabBar 上方 30rpx） ==========
-   关键：position: absolute + bottom: 188rpx
-   158rpx 是 TabBar 占用空间 (110rpx 高 + bottom 48rpx) + 30rpx 视觉留白 */
-.activity-scroll {
-  position: absolute;
-  bottom: 188rpx;
-  left: 0;
-  right: 0;
-  width: 100%;
-  height: 240rpx;
-  white-space: nowrap;
-  padding-left: 28rpx;
-}
-
-.activity-list {
-  display: inline-flex;
-  width: max-content;
-  gap: 12rpx;
-  padding-right: 28rpx;
-}
-
-.activity-item {
-  display: inline-block;
-  width: 260rpx;
-  height: 220rpx;
-  flex-shrink: 0;
-  border-radius: 12rpx;
-  overflow: hidden;
-}
-
-.activity-img {
-  width: 260rpx;
-  height: 220rpx;
-  border-radius: 12rpx;
+.card {
+  width: 334rpx;          /* 设计稿画板 750px 中卡片宽 334px → 334rpx */
   display: block;
+  border-radius: 50rpx;   /* 设计稿白卡圆角很大 */
+  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.08);
+}
+
+/* 滚动容器底部留白：tabBar 高 110rpx + 距底 48rpx + 视觉余量 22rpx = 180rpx
+   跟 app.wxss 里的 .tab-bar-page padding-bottom 同步 */
+.scroll-spacer {
+  height: 180rpx;
 }
