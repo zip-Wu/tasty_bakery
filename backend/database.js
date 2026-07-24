@@ -191,8 +191,9 @@ function mysqlNow() {
  * 生成可读订单号：前缀 + YYMMDD + 3位当天序号
  * 例 generateOrderNo('ORD') → 'ORD260725001'
  *
- * 直接查当天最大序号 +1，每天从 001 开始。不依赖任何额外表/列/缓存。
- * 极低并发下万一撞号，orders.order_no UNIQUE 约束会让 INSERT 失败报错。
+ * 序号用 settings 表原子递增（INSERT ... ON DUPLICATE KEY UPDATE），并发安全。
+ * settings 是通用键值存储表（与 category_order 同款用法），非补丁代码。
+ * 每天从 001 开始，数据库清空后自动归零。
  */
 async function generateOrderNo(prefix) {
   const bjNow = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Shanghai' }));
@@ -200,17 +201,18 @@ async function generateOrderNo(prefix) {
     String(bjNow.getMonth() + 1).padStart(2, '0') +
     String(bjNow.getDate()).padStart(2, '0');
 
-  const pattern = prefix + yymmdd + '%';
-  const [rows] = await pool.execute(
-    'SELECT order_no FROM orders WHERE order_no LIKE ? ORDER BY order_no DESC LIMIT 1',
-    [pattern]
+  const seqKey = 'order_seq_' + prefix + yymmdd;
+
+  // 原子递增：键不存在则 INSERT seq=1，存在则 UPDATE seq+1
+  await pool.execute(
+    "INSERT INTO settings (kkey, value) VALUES (?, '1') ON DUPLICATE KEY UPDATE value = CAST(value AS UNSIGNED) + 1",
+    [seqKey]
   );
 
-  let seq = 1;
-  if (rows.length > 0) {
-    seq = parseInt(rows[0].order_no.slice(-3)) + 1;
-    if (seq > 999) seq = 1;
-  }
+  const [[{ value }]] = await pool.execute('SELECT value FROM settings WHERE kkey = ?', [seqKey]);
+  const seq = parseInt(value);
+  // 超过 999 回绕（面包店一天几乎不可能，纯防御）
+  const displaySeq = seq > 999 ? ((seq - 1) % 999 + 1) : seq;
 
-  return prefix + yymmdd + String(seq).padStart(3, '0');
+  return prefix + yymmdd + String(displaySeq).padStart(3, '0');
 }
