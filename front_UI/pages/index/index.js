@@ -74,6 +74,21 @@ Page({
             app.globalData.selectedStore = store;
             this.setData({ store });
           }
+        }).catch(() => {
+          // 请求后端失败（网络/服务端错误）
+          wx.showToast({ title: '距离计算失败，请稍后重试', icon: 'none' });
+        });
+      },
+      fail: () => {
+        // 用户拒绝授权 或 系统定位服务关闭 → 弹 Modal 引导去设置
+        wx.showModal({
+          title: '无法获取位置',
+          content: '需要位置权限来计算门店距离，请去「设置」中开启定位权限',
+          success: (modalRes) => {
+            if (modalRes.confirm) {
+              wx.openSetting();
+            }
+          }
         });
       }
     });
