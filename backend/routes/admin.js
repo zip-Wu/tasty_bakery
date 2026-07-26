@@ -300,7 +300,8 @@ router.post('/admin/products', async (req, res) => {
     return res.json({ success: false, message: '商品名称不能超过128个字符' });
   }
 
-  const parsedStock = parseInt(stock) || 50;  // 未填默认 50，避免 0 库存导致无法下单
+  // 未填（undefined/null/空字符串）默认 50；显式传 0 则允许零库存
+  const parsedStock = (stock === undefined || stock === null || stock === '') ? 50 : parseInt(stock);
   if (parsedStock < 0) {
     return res.json({ success: false, message: '库存不能为负数' });
   }

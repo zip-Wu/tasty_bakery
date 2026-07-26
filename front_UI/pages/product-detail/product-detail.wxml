@@ -41,6 +41,9 @@
     <block wx:if="{{storeClosed}}">
       <view class="b-closed-msg">店家已打烊，暂无法下单</view>
     </block>
+    <block wx:elif="{{product.stock <= 0}}">
+      <view class="b-closed-msg">该商品已售罄</view>
+    </block>
     <block wx:else>
       <view class="b-quantity">
         <view class="b-qty-btn {{qty > 0 ? '' : 'disabled'}}" bindtap="minusQty">−</view>

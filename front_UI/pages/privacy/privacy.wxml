@@ -1,0 +1,32 @@
+<view class="privacy-page">
+  <view class="privacy-title">隐私政策</view>
+  <view class="privacy-date">更新日期：2026年7月</view>
+
+  <view class="privacy-section">
+    <view class="privacy-label">一、我们收集的信息</view>
+    <view class="privacy-text">为提供门店点单、距离计算和订单管理服务，我们会申请获取以下信息：</view>
+    <view class="privacy-text">• 微信OpenID：用于识别您的身份，关联订单记录和积分</view>
+    <view class="privacy-text">• 位置信息：用于展示附近门店并计算您与门店的距离</view>
+    <view class="privacy-text">• 相册/相机：用于商家管理商品时上传商品图片</view>
+  </view>
+
+  <view class="privacy-section">
+    <view class="privacy-label">二、信息的使用</view>
+    <view class="privacy-text">以上信息仅用于完成订单服务和改善使用体验，不会用于任何其他目的，不会与第三方共享。</view>
+  </view>
+
+  <view class="privacy-section">
+    <view class="privacy-label">三、信息的存储</view>
+    <view class="privacy-text">您的个人信息存储在微信云托管平台，采用安全加密措施进行保护。</view>
+  </view>
+
+  <view class="privacy-section">
+    <view class="privacy-label">四、您的权利</view>
+    <view class="privacy-text">您可以在微信中管理小程序的权限设置，随时撤回位置、相册等授权。</view>
+  </view>
+
+  <view class="privacy-section">
+    <view class="privacy-label">五、联系我们</view>
+    <view class="privacy-text">如有隐私相关问题，请通过小程序内"我的→联系客服"与我们取得联系。</view>
+  </view>
+</view>

@@ -177,8 +177,17 @@ page {
   word-break: break-all;
 }
 .goods-sales {
+  font-size: 16rpx;  /* 比库存稍小一档：月销是次要信息，不该抢眼 */
+  color: #aaa;
+  line-height: 1;  /* 显式锁定行高，消除默认行高带来的基线偏移 */
+  flex-shrink: 0;
+}
+
+.goods-stock {
   font-size: 18rpx;
   color: #aaa;
+  line-height: 1;  /* 与 .goods-sales 同款行高，保证两段文字基线完全对齐 */
+  flex-shrink: 0;
 }
 
 .goods-bottom {
@@ -189,9 +198,11 @@ page {
 .goods-bottom-left {
   display: flex;
   align-items: baseline;
-  gap: 8rpx;
+  gap: 6rpx;
   min-width: 0;
   flex-shrink: 1;
+  /* 三元素横向排列，baseline 对齐保证库存/月销同一水平线；
+     月销在加购后自动隐藏（wx:if），不会挤到加减按钮 */
 }
 
 .goods-price {
@@ -386,4 +397,33 @@ page {
   padding: 6rpx 20rpx;
   border-radius: 20rpx;
   flex-shrink: 0;
+}
+
+/* ========== 售罄状态 ========== */
+.goods-item.out-of-stock {
+  position: relative;
+}
+.stock-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(180, 180, 180, 0.35);
+  border-radius: 12rpx;
+  z-index: 1;
+  pointer-events: none;  /* 透传点击到下方详情页链接 */
+}
+.sold-out-tag {
+  font-size: 20rpx;
+  color: #999;
+  padding: 4rpx 12rpx;
+  background: #eee;
+  border-radius: 8rpx;
+  flex-shrink: 0;
+}
+
+/* 分类切换时隐藏不匹配的商品（display:none 保持 DOM 不销毁，图片不重载） */
+.goods-hidden {
+  display: none;
 }

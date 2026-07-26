@@ -2,9 +2,13 @@
 
 Page({
   data: {
-    // 分类数据（从后端动态加载，初始仅「全部」）
+    // 分类数据（从后端动态加载，初始仅「全部」；「暂无库存」由 filterBreadList 动态追加）
     categories: ['全部'],
+    baseCategories: ['全部'],
     currentCategory: '全部',
+
+    // 商品列表滚动位置（切分类时重置为 0）
+    scrollTop: 0,
 
     // 商品数据
     breadList: [],
@@ -106,7 +110,10 @@ Page({
       url: '/api/categories',
       method: 'GET',
     }).then(data => {
-      this.setData({ categories: data });
+      // 仅更新 baseCategories；categories（含「暂无库存」）由 filterBreadList 统一管理
+      this.setData({ baseCategories: data }, () => {
+        this.filterBreadList();
+      });
     }).catch(err => {
       console.error('[loadCategories] 分类加载失败:', err);
       // 保留默认分类作为降级
@@ -121,7 +128,15 @@ Page({
       url: '/api/products',
       method: 'GET',
     }).then(data => {
-      this.setData({ breadList: data }, () => {
+      // 预初始化 _show + 按库存排序：有库存在前、无库存在后（sort 稳定，组内原序不变）
+      data.forEach(item => { item._show = true; });
+      data.sort((a, b) => {
+        const aOut = a.stock <= 0 ? 1 : 0;
+        const bOut = b.stock <= 0 ? 1 : 0;
+        return aOut - bOut;
+      });
+      // 同时设 breadList 和 filteredBreadList，避免异步回调延迟导致首帧空白
+      this.setData({ breadList: data, filteredBreadList: data }, () => {
         this.filterBreadList();
       });
     }).catch((err) => {
@@ -161,31 +176,57 @@ Page({
   // 切换分类
   switchCategory(e) {
     const category = e.currentTarget.dataset.category;
-    this.setData({ currentCategory: category }, () => {
-      this.filterBreadList();
-    });
+    // scrollTop 在 0 和 0.1 之间 toggle：保证每次值不同，微信才会触发滚动；
+    // 0.1rpx 偏差肉眼不可见，配合 scroll-with-animation 平滑过渡
+    this.setData({ currentCategory: category, scrollTop: this.data.scrollTop === 0 ? 0.1 : 0 });
+    this.filterBreadList();
   },
 
-  // 前端分类筛选：商品总量 < 100，全量加载到前端后本地筛选
-  // 原因：避免了每次切换分类都请求后端（减少网络延迟，用户体验更流畅）
-  // 代价：商品量增大到数千时需改为后端筛选 + 分页
-  // 降级：如果 loadProducts 失败，用户看到空列表而非卡在加载中
+  // 前端分类筛选：不再创建新数组替换 filteredBreadList，改为给每个 item 打 _show 标记
+  // 然后用 CSS display:none 显隐，DOM 节点始终不销毁 → 图片不重载
+  // 「暂无库存」为虚拟分类：库存 ≤ 0 的商品从原分类中移出，统一归入此分类
   filterBreadList() {
-    const { breadList, currentCategory } = this.data;
-    console.log('筛选，原始数据:', breadList.length, '分类:', currentCategory);
-    
-    let filtered = breadList;
-    if (currentCategory !== '全部') {
-      filtered = breadList.filter(item => item.category === currentCategory);
+    const { breadList, baseCategories, currentCategory } = this.data;
+
+    const hasOutOfStock = breadList.some(item => item.stock <= 0);
+
+    // 边界：用户正在看「暂无库存」但商品全部补货 → 自动切回「全部」
+    let effectiveCategory = currentCategory;
+    if (currentCategory === '暂无库存' && !hasOutOfStock) {
+      effectiveCategory = '全部';
     }
-    
-    console.log('筛选后数量:', filtered.length);
-    this.setData({ filteredBreadList: filtered });
+
+    // 打 _show 标记（排序已在 loadProducts 完成，这里仅控制显隐）
+    breadList.forEach(item => {
+      if (effectiveCategory === '暂无库存') {
+        item._show = item.stock <= 0;
+      } else if (effectiveCategory === '全部') {
+        item._show = true;
+      } else {
+        item._show = item.stock > 0 && item.category === effectiveCategory;
+      }
+    });
+
+    // 动态追加/移除「暂无库存」分类
+    const categories = hasOutOfStock
+      ? [...baseCategories, '暂无库存']
+      : [...baseCategories];
+
+    this.setData({
+      filteredBreadList: [...breadList],
+      categories,
+      currentCategory: effectiveCategory
+    });
   },
 
   // 加入购物车
   addToCart(e) {
     const id = e.currentTarget.dataset.id;
+    const bread = this.data.breadList.find(item => item.id == id);
+    if (bread && bread.stock <= 0) {
+      wx.showToast({ title: '该商品已售罄', icon: 'none' });
+      return;
+    }
     const cart = { ...this.data.cart };
     cart[id] = (cart[id] || 0) + 1;
     this.updateCart(cart);
@@ -219,6 +260,11 @@ Page({
 
   // 供商品详情页调用的批量加购（跨页面共享购物车）
   addProductToCart(productId, quantity) {
+    const bread = this.data.breadList.find(item => item.id == productId);
+    if (bread && bread.stock <= 0) {
+      wx.showToast({ title: '该商品已售罄', icon: 'none' });
+      return;
+    }
     const cart = { ...this.data.cart };
     cart[productId] = (cart[productId] || 0) + quantity;
     this.updateCart(cart);

@@ -46,17 +46,23 @@ router.post('/orders', async (req, res) => {
     const ids = items.map(i => i.id);
     const placeholders = ids.map(() => '?').join(',');
     const [dbProducts] = await pool.execute(
-      `SELECT id, price FROM products WHERE id IN (${placeholders})`,
+      `SELECT id, price, stock FROM products WHERE id IN (${placeholders})`,
       ids
     );
     const priceMap = {};
-    dbProducts.forEach(p => { priceMap[p.id] = p.price; });
+    const stockMap = {};
+    dbProducts.forEach(p => { priceMap[p.id] = p.price; stockMap[p.id] = p.stock; });
 
     let serverTotal = 0;
     for (const item of items) {
       const dbPrice = priceMap[item.id];
       if (!dbPrice) {
         return res.json({ success: false, message: `商品已下架，请刷新页面` });
+      }
+      // 库存为 0 的商品禁止下单
+      const dbStock = stockMap[item.id];
+      if (dbStock != null && dbStock <= 0) {
+        return res.json({ success: false, message: `${item.name || '商品'}已售罄，请返回点单页刷新` });
       }
       serverTotal += dbPrice * item.quantity;
     }

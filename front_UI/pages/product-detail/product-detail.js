@@ -109,6 +109,10 @@ Page({
       wx.showToast({ title: '店家已打烊，暂无法下单', icon: 'none' });
       return;
     }
+    if (this.data.product.stock <= 0) {
+      wx.showToast({ title: '该商品已售罄', icon: 'none' });
+      return;
+    }
     const { qty, product } = this.data;
     if (qty <= 0) return;
 

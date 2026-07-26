@@ -74,6 +74,11 @@
         <text class="tool-name">关于我们</text>
         <text class="tool-arrow">›</text>
       </view>
+      <view class="tool-item" bindtap="goPrivacy">
+        <image class="tool-icon" src="/images/svg/tool-contact.svg" mode="aspectFit"></image>
+        <text class="tool-name">隐私政策</text>
+        <text class="tool-arrow">›</text>
+      </view>
     </view>
   </view>
 

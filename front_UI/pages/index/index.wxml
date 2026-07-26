@@ -27,10 +27,12 @@
     </scroll-view>
 
     <!-- 右侧商品 -->
-    <scroll-view class="goods-list" scroll-y="{{true}}">
+    <scroll-view class="goods-list" scroll-y="{{true}}" scroll-top="{{scrollTop}}" scroll-with-animation="{{true}}">
       <!-- 商品列表 -->
       <block wx:for="{{filteredBreadList}}" wx:key="id">
-        <view class="goods-item">
+        <view class="goods-item {{item.stock <= 0 ? 'out-of-stock' : ''}} {{!item._show ? 'goods-hidden' : ''}}">
+          <!-- 售罄灰色遮罩（覆盖整张卡片，pointer-events: none 透传点击到详情页） -->
+          <view class="stock-overlay" wx:if="{{item.stock <= 0}}"></view>
           <!-- 图片单独一格：可点进详情 -->
           <image class="goods-img" src="{{item.image}}" mode="aspectFill"
             bindtap="navigateToProductDetail" data-id="{{item.id}}"></image>
@@ -40,17 +42,19 @@
               <text class="goods-name">{{item.name}}</text>
               <text class="goods-desc" wx:if="{{item.description}}">{{item.description}}</text>
             </view>
-            <!-- 底部组：月销 + 价格/操作 -->
+            <!-- 底部组：库存 + 月销 + 价格/操作 -->
             <view class="goods-info">
               <view class="goods-bottom">
                 <view class="goods-bottom-left">
                   <text class="goods-price">¥{{item.price}}</text>
-                  <text class="goods-sales">月销: {{item.monthlySales || 0}}</text>
+                  <text class="goods-stock">库存: {{item.stock || 0}}</text>
+                  <text class="goods-sales" wx:if="{{!cart[item.id]}}">月销: {{item.monthlySales || 0}}</text>
                 </view>
                 <view class="goods-action">
-                  <view class="count-btn minus" wx:if="{{!storeClosed && cart[item.id] > 0}}" catchtap="minusFromCart" data-id="{{item.id}}"><text>−</text></view>
-                  <text class="goods-count" wx:if="{{!storeClosed && cart[item.id] > 0}}">{{cart[item.id]}}</text>
-                  <view class="count-btn plus" wx:if="{{!storeClosed}}" catchtap="addToCart" data-id="{{item.id}}"><text>+</text></view>
+                  <view class="count-btn minus" wx:if="{{!storeClosed && cart[item.id] > 0 && item.stock > 0}}" catchtap="minusFromCart" data-id="{{item.id}}"><text>−</text></view>
+                  <text class="goods-count" wx:if="{{!storeClosed && cart[item.id] > 0 && item.stock > 0}}">{{cart[item.id]}}</text>
+                  <view class="count-btn plus" wx:if="{{!storeClosed && item.stock > 0}}" catchtap="addToCart" data-id="{{item.id}}"><text>+</text></view>
+                  <text class="sold-out-tag" wx:if="{{item.stock <= 0}}">售罄</text>
                 </view>
               </view>
             </view>

@@ -4,6 +4,33 @@
 // 云环境 ID 非机密信息（小程序编译后包含在代码包中）
 const { CLOUD_ENV, SERVICE_NAME } = require('./config');
 
+// ===== 全局分享注入 =====
+// 拦截 Page() 构造函数，自动为所有页面注入转发 + 朋友圈分享能力
+// 页面已自定义 onShareAppMessage / onShareTimeline 的不覆盖
+const _Page = Page;
+Page = function (options) {
+  if (!options.onShareAppMessage) {
+    options.onShareAppMessage = function () {
+      return {
+        title: '大力馒头（纯手工馒头·健康无添加·每日现做现蒸）',
+        path: '/pages/home/home'
+      };
+    };
+  }
+  if (!options.onShareTimeline) {
+    options.onShareTimeline = function () {
+      return { title: '大力馒头（纯手工馒头·健康无添加·每日现做现蒸）' };
+    };
+  }
+  // 每个页面显示时都激活转发 + 朋友圈按钮
+  const _onShow = options.onShow;
+  options.onShow = function () {
+    wx.showShareMenu({ withShareTicket: true, menus: ['shareAppMessage', 'shareTimeline'] });
+    if (_onShow) _onShow.call(this);
+  };
+  return _Page(options);
+};
+
 App({
   onLaunch() {
     wx.cloud.init({ env: CLOUD_ENV });

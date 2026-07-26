@@ -8,7 +8,8 @@
     "pages/order-detail/order-detail",
     "pages/logs/logs",
     "pages/admin/admin",
-    "pages/product-detail/product-detail"
+    "pages/product-detail/product-detail",
+    "pages/privacy/privacy"
   ],
   "window": {
     "navigationBarTextStyle": "black",
@@ -21,6 +22,9 @@
       "desc": "获取您的位置用于展示附近门店"
     }
   },
+  "requiredPrivateInfos": [
+    "getLocation"
+  ],
   "tabBar": {
     "custom": true,
     "list": [
@@ -44,6 +48,7 @@
     "selectedColor": "#f5a623",
     "backgroundColor": "#FFEB99"
   },
+  "__usePrivacyCheck__": true,
   "style": "v2",
   "sitemapLocation": "sitemap.json"
 }
