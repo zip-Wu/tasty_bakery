@@ -242,8 +242,8 @@ erDiagram
         DATETIME completed_at "完成时间"
     }
 
-    users ||--o{ orders : "一个用户可下多笔订单"
-    stores ||--o{ orders : "一笔订单属于一个门店"
+    users ||--o{ orders : "places"
+    stores ||--o{ orders : "fulfills"
 ```
 
 `database.js` 实现了自动建表 + 冷启动守护：先检查 orders 表是否存在，已存在则跳过建表，避免云托管缩容到 0 后每次冷启动都执行一遍建表 SQL。`seed.js` 提供初始种子数据（1 个门店 + 1 个测试商品）。
