@@ -82,7 +82,7 @@ flowchart LR
 
 | 制作中 | 待取餐 | 已完成 |
 |:---:|:---:|:---:|
-| <a href="./screenshots/08-订单详情-制作中.png"><img src="./screenshots/08-订单详情-制作中.png" width="160"></a> | <a href="./screenshots/08-订单详情-待取餐.png"><img src="./screenshots/08-订单详情-待取餐.png" width="160"></a> | <a href="./screenshots/08-订单详情-已完成.png"><img src="./screenshots/08-订单详情-已完成.png" width="160"></a> |
+| <a href="./screenshots/08-订单详情-制作中.png"><img src="./screenshots/08-订单详情-制作中.png" width="100"></a> | <a href="./screenshots/08-订单详情-待取餐.png"><img src="./screenshots/08-订单详情-待取餐.png" width="100"></a> | <a href="./screenshots/08-订单详情-已完成.png"><img src="./screenshots/08-订单详情-已完成.png" width="100"></a> |
 
 *制作中的订单展示取餐码和实时进度，商家标记可取餐后进入 1 小时倒计时，取餐完成后时间线全部亮起。*
 
