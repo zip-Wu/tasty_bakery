@@ -19,7 +19,6 @@
 同一时间，商家手机会震动并播放提示音，提醒有新订单进来。商家做完后标记"可取餐"，顾客端立即收到通知。
 
 ```mermaid
-%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#fff8e1', 'primaryTextColor': '#222', 'primaryBorderColor': '#d4921a', 'lineColor': '#d4921a', 'secondaryColor': '#ffeb99', 'tertiaryColor': '#fff8e1', 'textColor': '#222'}}}%%
 flowchart LR
     A[顾客扫码] -->|选商品加购| B[下单支付]
     B -->|wx.requestPayment| C[微信支付]
@@ -108,7 +107,6 @@ flowchart LR
 ## 技术架构
 
 ```mermaid
-%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#fff8e1', 'primaryTextColor': '#222', 'primaryBorderColor': '#d4921a', 'lineColor': '#d4921a', 'secondaryColor': '#ffeb99', 'tertiaryColor': '#fff8e1', 'textColor': '#222'}}}%%
 flowchart TB
     subgraph 小程序端["微信小程序 · 原生框架"]
         direction LR
@@ -142,7 +140,6 @@ flowchart TB
 ## 订单状态机
 
 ```mermaid
-%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#fff8e1', 'primaryTextColor': '#222', 'primaryBorderColor': '#d4921a', 'lineColor': '#d4921a', 'secondaryColor': '#ffeb99', 'tertiaryColor': '#fff8e1', 'textColor': '#222', 'actorBkg': '#fff8e1', 'actorTextColor': '#222', 'actorBorder': '#d4921a', 'signalColor': '#222', 'noteBkgColor': '#fff8e1', 'noteTextColor': '#222', 'noteBorderColor': '#d4921a'}}}%%
 sequenceDiagram
     actor 顾客
     participant 前端
@@ -199,7 +196,6 @@ sequenceDiagram
 共 5 张表。不使用 ORM——4 张业务表的规模下直接写 SQL 比引入 Sequelize 更清晰可控。
 
 ```mermaid
-%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#fff8e1', 'primaryTextColor': '#222', 'primaryBorderColor': '#d4921a', 'lineColor': '#d4921a', 'secondaryColor': '#ffeb99', 'tertiaryColor': '#fff8e1', 'textColor': '#222'}}}%%
 erDiagram
     users {
         VARCHAR id PK "用户ID"
