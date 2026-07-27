@@ -19,7 +19,7 @@
 同一时间，商家手机会震动并播放提示音，提醒有新订单进来。商家做完后标记"可取餐"，顾客端立即收到通知。
 
 ```mermaid
-%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#f5a623', 'primaryTextColor': '#fff', 'primaryBorderColor': '#d4921a', 'lineColor': '#f5a623', 'secondaryColor': '#ffeb99', 'tertiaryColor': '#fff8e1'}}}%%
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#fff8e1', 'primaryTextColor': '#222', 'primaryBorderColor': '#d4921a', 'lineColor': '#d4921a', 'secondaryColor': '#ffeb99', 'tertiaryColor': '#fff8e1', 'textColor': '#222'}}}%%
 flowchart LR
     A[顾客扫码] -->|选商品加购| B[下单支付]
     B -->|wx.requestPayment| C[微信支付]
@@ -108,7 +108,7 @@ flowchart LR
 ## 技术架构
 
 ```mermaid
-%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#f5a623', 'primaryTextColor': '#fff', 'primaryBorderColor': '#d4921a', 'lineColor': '#f5a623', 'secondaryColor': '#ffeb99', 'tertiaryColor': '#fff8e1'}}}%%
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#fff8e1', 'primaryTextColor': '#222', 'primaryBorderColor': '#d4921a', 'lineColor': '#d4921a', 'secondaryColor': '#ffeb99', 'tertiaryColor': '#fff8e1', 'textColor': '#222'}}}%%
 flowchart TB
     subgraph 小程序端["微信小程序 · 原生框架"]
         direction LR
@@ -142,7 +142,7 @@ flowchart TB
 ## 订单状态机
 
 ```mermaid
-%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#f5a623', 'primaryTextColor': '#fff', 'primaryBorderColor': '#d4921a', 'lineColor': '#e5941e', 'secondaryColor': '#ffeb99', 'tertiaryColor': '#fff8e1'}}}%%
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#fff8e1', 'primaryTextColor': '#222', 'primaryBorderColor': '#d4921a', 'lineColor': '#d4921a', 'secondaryColor': '#ffeb99', 'tertiaryColor': '#fff8e1', 'textColor': '#222', 'actorBkg': '#fff8e1', 'actorTextColor': '#222', 'actorBorder': '#d4921a', 'signalColor': '#222', 'noteBkgColor': '#fff8e1', 'noteTextColor': '#222', 'noteBorderColor': '#d4921a'}}}%%
 sequenceDiagram
     actor 顾客
     participant 前端
@@ -199,7 +199,7 @@ sequenceDiagram
 共 5 张表。不使用 ORM——4 张业务表的规模下直接写 SQL 比引入 Sequelize 更清晰可控。
 
 ```mermaid
-%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#f5a623', 'primaryTextColor': '#fff', 'primaryBorderColor': '#d4921a', 'lineColor': '#f5a623', 'secondaryColor': '#ffeb99', 'tertiaryColor': '#fff8e1'}}}%%
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#fff8e1', 'primaryTextColor': '#222', 'primaryBorderColor': '#d4921a', 'lineColor': '#d4921a', 'secondaryColor': '#ffeb99', 'tertiaryColor': '#fff8e1', 'textColor': '#222'}}}%%
 erDiagram
     users {
         VARCHAR id PK "用户ID"
@@ -242,8 +242,8 @@ erDiagram
         DATETIME completed_at "完成时间"
     }
 
-    users ||--o{ orders : "places"
-    stores ||--o{ orders : "fulfills"
+    users ||--o{ orders : "一个用户可下多笔订单"
+    stores ||--o{ orders : "一笔订单属于一个门店"
 ```
 
 `database.js` 实现了自动建表 + 冷启动守护：先检查 orders 表是否存在，已存在则跳过建表，避免云托管缩容到 0 后每次冷启动都执行一遍建表 SQL。`seed.js` 提供初始种子数据（1 个门店 + 1 个测试商品）。
