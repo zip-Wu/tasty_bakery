@@ -1,96 +1,222 @@
-# 大力馒头 — 面包店扫码点单小程序
+# 大力馒头铺 — 扫码点单小程序
 
-> **从扫码到取餐，全流程闭环** — 为珠海「大力馒头·信息港店」打造，已在门店实际使用。
+> 覆盖完整的点单-支付-取餐流程，为珠海「大力馒头铺·信息港店」开发，已在门店实际使用。
 
 [![MiniProgram](https://img.shields.io/badge/前端-微信小程序原生-07c160)](https://developers.weixin.qq.com/miniprogram/dev/framework/)
-[![Backend](https://img.shields.io/badge/后端-Node.js_%2B_Express-339933)](https://expressjs.com/)
-[![Database](https://img.shields.io/badge/数据库-MySQL-4479A1)](https://www.mysql.com/)
-[![Auth](https://img.shields.io/badge/认证-JWT-000000)](https://jwt.io/)
-[![Payment](https://img.shields.io/badge/支付-微信支付V3-09BB07)](https://pay.weixin.qq.com/)
+[![Backend](https://img.shields.io/badge/后端-Node.js_Express-339933)](https://expressjs.com/)
+[![Database](https://img.shields.io/badge/数据库-MySQL_8.0-4479A1)](https://www.mysql.com/)
+[![Auth](https://img.shields.io/badge/认证-JWT_HS256-000000)](https://jwt.io/)
+[![Payment](https://img.shields.io/badge/支付-微信支付_V2-09BB07)](https://pay.weixin.qq.com/)
 [![Deploy](https://img.shields.io/badge/部署-微信云托管_Docker-07c160)](https://cloud.weixin.qq.com/)
 [![License](https://img.shields.io/badge/license-MIT-blue)](./LICENSE)
 
-A full-stack order-and-pickup system for a bakery in Zhuhai, China. Customers scan a QR code to browse the menu, place orders, and track preparation status in real time. Merchants manage orders, products, and revenue from an in-app admin panel. Backend runs on WeChat Cloud Run (Docker), with mock payment fallback when the WeChat merchant account is pending.
+---
+
+## 快速了解
+
+顾客扫描线下小程序码或搜索小程序进入，选商品加入购物车，微信支付下单，之后可以在订单详情页实时看到制作进度——从"制作中"到"可取餐"状态会随商家操作同步更新。
+
+同一时间，商家手机会震动并播放提示音，提醒有新订单进来。商家做完后标记"可取餐"，顾客端立即收到通知。
+
+```mermaid
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#f5a623', 'primaryTextColor': '#fff', 'primaryBorderColor': '#d4921a', 'lineColor': '#f5a623', 'secondaryColor': '#ffeb99', 'tertiaryColor': '#fff8e1'}}}%%
+flowchart LR
+    A[顾客扫码] -->|选商品加购| B[下单支付]
+    B -->|wx.requestPayment| C[微信支付]
+    C -->|支付成功| D[追踪进度]
+
+    C -.->|新订单通知| F[商家收到提醒]
+    F -->|接单制作| G[标记可取餐]
+    G -->|顾客收到通知| H[取餐完成]
+```
 
 ---
 
-## 30 秒速览
+## 功能一览
 
-```
-  顾客扫码 → 选店看菜单 → 加购下单 → 支付 → 实时追踪订单状态
-                                              ↕
-  商家登录 → 看新订单(手机震动) → 标记制作完成 → 标记已取餐 → 营收看板
-```
+### 顾客端
 
-两端通过 `wx.cloud.callContainer` 私有协议直连同一套 Express API，订单状态变更秒级双向可见。完成全栈开发。
+| 功能 | 说明 |
+|------|------|
+| **门店选择** | 腾讯地图定位 + Haversine 公式计算球面距离，小于 1km 显示米、大于 1km 显示公里 |
+| **商品浏览** | 左侧分类筛选（后端动态提取，非硬编码）、右侧商品列表，售罄商品灰显 |
+| **购物车** | 页面级状态管理，切分类不丢数据，结算后自动清空 |
+| **商品详情** | 轮播图 + 完整描述 + 月销量，支持从详情页直接加购 |
+| **下单支付** | 订单确认后服务端按数据库真实价格重算总额，杜绝前端篡改；通过微信支付完成付款 |
+| **订单追踪** | 4 步时间线（创建 → 制作 → 可取餐 → 完成），页面每 5 秒自动刷新状态 |
+| **退款申请** | 已支付订单支持提交退款申请，商家审核批准后原路退回 |
+| **个人中心** | DiceBear 自动头像 + "大力馒头宝001~999"顺序编号昵称 + 积分 |
+
+### 商家端
+
+| 功能 | 说明 |
+|------|------|
+| **实时订单提醒** | 新订单到达时手机震动 + 提示音（静音模式下也会响），顶部弹出"N 笔新订单"横幅 |
+| **订单管理** | 状态筛选（全部/退款审核/制作中/待取餐/已完成/待支付/已退款），支持分页加载 |
+| **退款审核** | 查看退款理由，批准 → 微信原路退款 + 回库存 + 退积分，拒绝 → 恢复原状态 |
+| **商品管理** | 新增/编辑/上下架/删除，支持封面图及多图轮播上传至微信云存储，可调整排序 |
+| **快速录单** | 线下现金收款专用，选好商品确认后自动生成 OFF 前缀订单号，直接完成并扣库存 |
+| **营收看板** | 今日营收、订单总数、各状态分布，退款审核/制作中角标跨天常亮提醒 |
+| **门店开关** | 一键打烊，顾客端立刻显示"已打烊"提示并拦住新下单 |
+
+### 鉴权机制
+
+顾客端和商家端采用两套独立的鉴权方案：
+
+- **顾客端**：微信云托管网关在每次 API 请求中自动注入 `X-WX-OPENID` 头部，后端 `requireUser` 中间件根据 openid 查出该用户并挂载到 `req.user`。所有涉及用户数据的接口强制使用 `req.user.id` 而非客户端传入的 userId，防止横向越权（IDOR）。
+
+- **商家端**：管理员密码登录后，后端签发 JWT（HS256 签名，12 小时有效）。之后每次 admin API 请求在 `Authorization` 头中携带 `Bearer <token>`，`requireAdmin` 中间件验证签名。同一 IP 每分钟最多 5 次登录尝试。
+
+---
+
+## 界面预览
+
+### 顾客端
+
+| 首页 | 点单 | 门店选择 | 商品详情 | 支付 | 个人中心 |
+|:---:|:---:|:---:|:---:|:---:|:---:|
+| <a href="./screenshots/01-首页.png"><img src="./screenshots/01-首页.png" width="130"></a> | <a href="./screenshots/02-点单页-全部.png"><img src="./screenshots/02-点单页-全部.png" width="130"></a> | <a href="./screenshots/05-门店列表页.jpg"><img src="./screenshots/05-门店列表页.jpg" width="130"></a> | <a href="./screenshots/06-商品详情页.png"><img src="./screenshots/06-商品详情页.png" width="130"></a> | <a href="./screenshots/07-支付页.png"><img src="./screenshots/07-支付页.png" width="130"></a> | <a href="./screenshots/04-我的.png"><img src="./screenshots/04-我的.png" width="130"></a> |
+
+*首页展示门店入口和活动区，点单页按分类筛选商品并加入购物车，支付页确认订单后调起微信支付。点击小图可查看原始截图。*
+
+### 订单追踪（4 步时间线）
+
+| 制作中 | 待取餐 | 已完成 |
+|:---:|:---:|:---:|
+| <a href="./screenshots/08-订单详情-制作中.png"><img src="./screenshots/08-订单详情-制作中.png" width="200"></a> | <a href="./screenshots/08-订单详情-待取餐.png"><img src="./screenshots/08-订单详情-待取餐.png" width="200"></a> | <a href="./screenshots/08-订单详情-已完成.png"><img src="./screenshots/08-订单详情-已完成.png" width="200"></a> |
+
+*制作中的订单展示取餐码和实时进度，商家标记可取餐后进入 1 小时倒计时，取餐完成后时间线全部亮起。*
+
+### 商家后台
+
+| 登录页 | 订单管理 | 退款审核 | 商品管理 | 快速录单 | 营收看板 |
+|:---:|:---:|:---:|:---:|:---:|:---:|
+| <a href="./screenshots/09-商家登录页.png"><img src="./screenshots/09-商家登录页.png" width="130"></a> | <a href="./screenshots/10-订单管理.png"><img src="./screenshots/10-订单管理.png" width="130"></a> | <a href="./screenshots/10-订单管理-退款审核.png"><img src="./screenshots/10-订单管理-退款审核.png" width="130"></a> | <a href="./screenshots/11-商品管理.png"><img src="./screenshots/11-商品管理.png" width="130"></a> | <a href="./screenshots/12-快速录单.png"><img src="./screenshots/12-快速录单.png" width="130"></a> | <a href="./screenshots/13-营收看板.png"><img src="./screenshots/13-营收看板.png" width="130"></a> |
+
+*管理后台通过首页"加热方法"卡片连续点击 7 次进入，支持订单实时提醒与退款审核、商品上下架与排序、线下现金快速录单、当日营收数据看板。点击小图可查看原始截图。*
+
+### 更多截图
+
+| 售罄分类 | 订单列表 | 制作中 | 待取餐 | 待支付 | 已完成 | 商品编辑 |
+|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| <a href="./screenshots/02-点单页-无库存.png"><img src="./screenshots/02-点单页-无库存.png" width="115"></a> | <a href="./screenshots/03-订单页-全部.png"><img src="./screenshots/03-订单页-全部.png" width="115"></a> | <a href="./screenshots/03-订单页-制作中.png"><img src="./screenshots/03-订单页-制作中.png" width="115"></a> | <a href="./screenshots/03-订单页-待取餐.png"><img src="./screenshots/03-订单页-待取餐.png" width="115"></a> | <a href="./screenshots/03-订单页-待支付.png"><img src="./screenshots/03-订单页-待支付.png" width="115"></a> | <a href="./screenshots/03-订单页-已完成.png"><img src="./screenshots/03-订单页-已完成.png" width="115"></a> | <a href="./screenshots/11-商品管理-编辑.png"><img src="./screenshots/11-商品管理-编辑.png" width="115"></a> |
+
+*左起：售罄分类自动聚合、订单列表多状态切换、订单列表各 Tab 筛选结果（制作中/待取餐/待支付/已完成）、商品编辑表单。*
 
 ---
 
 ## 技术架构
 
-小程序前端与后端服务之间不经过公网域名，而是通过微信云托管的私有协议 `callContainer` 直连。这一设计省去了域名备案环节，也避免了 HTTPS 证书管理。
-
 ```mermaid
-graph TB
-    subgraph 前端["前端 · 微信小程序原生"]
-        A[顾客端<br/>WXML / WXSS / JS]
-        B[商家管理端<br/>内嵌后台]
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#f5a623', 'primaryTextColor': '#fff', 'primaryBorderColor': '#d4921a', 'lineColor': '#f5a623', 'secondaryColor': '#ffeb99', 'tertiaryColor': '#fff8e1'}}}%%
+flowchart TB
+    subgraph 小程序端["微信小程序 · 原生框架"]
+        direction LR
+        CUST["顾客端<br/>4 Tab + 10 页面"] ~~~ ADM["商家端<br/>内嵌管理后台"]
     end
 
-    subgraph 通信["通信 · 云托管私有协议"]
-        C[wx.cloud.callContainer]
+    subgraph 通信层["微信云托管私有信道"]
+        CC["wx.cloud.callContainer<br/>免域名备案 / 免 HTTPS 证书"]
     end
 
-    subgraph 服务端["服务端 · Node.js Express"]
-        D[6 个路由模块<br/>auth / menu / orders / store<br/>admin / admin-auth]
-        E[JWT 认证中间件<br/>HS256 · 12 小时]
-        F[微信支付 API v3<br/>RSA-SHA256 签名]
+    subgraph 服务端["Node.js Express"]
+        direction LR
+        RT["6 路由模块<br/>auth / menu / orders<br/>store / admin / admin-auth"]
+        MW["认证中间件<br/>JWT HS256 · 12h<br/>requireUser 身份守卫"]
+        PAY["支付服务<br/>云托管封装微信支付 V2<br/>下单 / 签名 / 退款 / 回调"]
     end
 
-    subgraph 数据层
-        G[(MySQL 8.0<br/>utf8mb4 · 连接池)]
-        H[微信云存储<br/>商品图片上传]
+    subgraph 数据层["数据存储"]
+        direction LR
+        DB[("MySQL 8.0<br/>utf8mb4 · 连接池")] ~~~ COS["微信云存储<br/>商品图片"]
     end
 
-    A --> C
-    B --> C
-    C --> D
-    D --> E
-    D --> F
-    D --> G
-    D --> H
-
-    classDef cyan fill:#0C447C,stroke:#378ADD,color:#B5D4F4
-    class A,B cyan
+    小程序端 --> CC --> 服务端
+    服务端 --> 数据层
 ```
 
-**路由安全模型**：`/api/admin/*` 全部需要 JWT 鉴权，顾客端 API 无需认证。管理员通过密码登录获取 token，前端在请求头中携带 `Authorization: Bearer <token>`。token 有效期 12 小时，过期自动清除并跳转登录页。
+**支付**：采用微信云托管封装的微信支付接口（V2 风格），免证书管理、免 RSA 签名、无需配置公网回调地址。商户号通过环境变量 `WX_PAY_SUB_MCHID` 注入，未配置时支付功能不可用。
+
+---
+
+## 订单状态机
+
+```mermaid
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#f5a623', 'primaryTextColor': '#fff', 'primaryBorderColor': '#d4921a', 'lineColor': '#e5941e', 'secondaryColor': '#ffeb99', 'tertiaryColor': '#fff8e1'}}}%%
+sequenceDiagram
+    actor 顾客
+    participant 前端
+    participant 后端
+    participant 微信支付
+    actor 商家
+
+    顾客->>前端: 提交订单
+    前端->>后端: POST /api/orders
+    后端-->>前端: 订单创建 (pending)
+
+    顾客->>前端: 确认支付
+    前端->>后端: POST /api/pay/:orderId
+    后端->>微信支付: 统一下单
+    微信支付-->>后端: prepay_id
+    后端-->>前端: 支付参数
+    前端->>微信支付: wx.requestPayment
+    微信支付-->>后端: 回调通知
+    后端->>后端: 库存扣减 + 积分累加
+    后端-->>前端: status → preparing
+
+    微信支付-->>商家: 新订单提醒
+    商家->>后端: 标记接单（可选）
+    后端-->>前端: accepted_at 写入
+
+    商家->>后端: 标记可取餐
+    后端-->>前端: status → ready
+
+    Note over 前端,后端: 顾客端展示 1 小时取餐倒计时
+
+    alt 超时自动完成
+        后端->>后端: 定时器触发（ready 超 1h）
+        后端-->>前端: status → completed
+    else 商家手动完成
+        商家->>后端: 标记已取餐
+        后端->>后端: 累加商品销量
+        后端-->>前端: status → completed
+    end
+
+    Note over 顾客,商家: 退款旁路：preparing/completed → refund_pending → 商家审核 → refunded
+```
+
+**约束规则**：
+
+- 价格校验：服务端按数据库真实价格重算总额，与客户端传入值偏差超过 0.01 元则拒绝
+- 库存保护：`BEGIN TRANSACTION` + `SELECT ... FOR UPDATE` 行锁，库存不足回滚整个事务
+- 回调幂等：支付回调中用 `FOR UPDATE` 二次确认订单状态，并发回调只有一个能通过
+- 超时清理：pending 超过 30 分钟自动删除，ready 超过 1 小时自动完成
 
 ---
 
 ## 数据库设计
 
-四张核心表，字段精简、职责单一。
+共 5 张表。不使用 ORM——4 张业务表的规模下直接写 SQL 比引入 Sequelize 更清晰可控。
 
 ```mermaid
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#f5a623', 'primaryTextColor': '#fff', 'primaryBorderColor': '#d4921a', 'lineColor': '#f5a623', 'secondaryColor': '#ffeb99', 'tertiaryColor': '#fff8e1'}}}%%
 erDiagram
     users {
         VARCHAR id PK "用户ID"
         VARCHAR openid UK "微信OpenID"
-        VARCHAR nickname "随机馒头昵称"
+        VARCHAR nickname "大力馒头宝001~999"
         TEXT avatar "DiceBear头像URL"
         INT points "积分"
-        DECIMAL balance "余额"
     }
 
     products {
         INT id PK "自增"
         VARCHAR name "商品名"
         DECIMAL price "单价"
-        TEXT image "图片URL"
-        VARCHAR category "7个分类"
+        TEXT image "封面图cloud://URL"
+        VARCHAR category "动态分类"
         INT stock "库存"
-        INT sales "销量"
+        INT sales "累计销量"
         TINYINT is_available "上下架"
     }
 
@@ -103,142 +229,71 @@ erDiagram
 
     orders {
         VARCHAR id PK "订单ID"
-        VARCHAR order_no UK "订单号"
-        VARCHAR user_id FK
-        INT store_id FK
+        VARCHAR order_no UK "ORD前缀+日期+序号"
+        VARCHAR user_id FK "所属用户"
+        INT store_id FK "所属门店"
         TEXT items "商品JSON"
         DECIMAL total_price "总金额"
-        VARCHAR status "状态"
-        DATETIME created_at
-        DATETIME paid_at
-        DATETIME accepted_at
-        DATETIME completed_at
+        VARCHAR status "状态机"
+        INT pickup_code "取餐码"
+        DATETIME created_at "创建时间"
+        DATETIME paid_at "支付时间"
+        DATETIME ready_at "可取餐时间"
+        DATETIME completed_at "完成时间"
     }
 
-    users ||--o{ orders : "下单"
-    stores ||--o{ orders : "所属"
+    users ||--o{ orders : "一个用户可下多笔订单"
+    stores ||--o{ orders : "一笔订单属于一个门店"
 ```
 
-`database.js` 中实现了**自动建表 + 列迁移**：服务启动时检查表是否存在，不存在则创建；如果旧表缺少列（如 `stock`、`source`），自动 `ALTER TABLE` 补齐。`seed.js` 提供初始种子数据（1 个门店 + 1 个测试商品），开发环境一键就绪。
+`database.js` 实现了自动建表 + 冷启动守护：先检查 orders 表是否存在，已存在则跳过建表，避免云托管缩容到 0 后每次冷启动都执行一遍建表 SQL。`seed.js` 提供初始种子数据（1 个门店 + 1 个测试商品）。
 
 ---
 
-## 订单状态机
-
-这是整个系统最核心的设计。订单在 4 种数据库状态间流转，前端映射为 5 步时间线，每一步都记录时间戳：
+## 项目结构
 
 ```
-  pending ──支付──▶ preparing ──商家接单──▶ preparing ──标记可取餐──▶ ready ──取餐──▶ completed
-   (创建)          (paid_at 写入)        (accepted_at 写入)      (待取餐)       (completed_at 写入)
+tasty_bakery/
+├── front_UI/                     # 微信小程序前端
+│   ├── app.js                    # 入口 · callContainer 封装 · 全局分享注入
+│   ├── app.json                  # 页面路由 · 自定义 TabBar
+│   ├── config.js                 # 云环境 ID
+│   ├── pages/
+│   │   ├── home/                 # 首页（Banner + 功能入口 + 隐藏管理后台）
+│   │   ├── store-select/         # 门店选择（腾讯地图 + Haversine 距离）
+│   │   ├── index/                # 点单（分类筛选 + 购物车）
+│   │   ├── product-detail/       # 商品详情（轮播图 + 加购）
+│   │   ├── order-confirm/        # 订单确认 + 微信支付
+│   │   ├── order-detail/         # 订单追踪（4 步时间线 + 退款）
+│   │   ├── order-list/           # 订单列表（状态 Tab + 下拉刷新）
+│   │   ├── logs/                 # 个人中心
+│   │   ├── admin/                # 商家后台（订单/商品/录单/营收 4 个 Tab）
+│   │   └── privacy/              # 隐私政策
+│   └── custom-tab-bar/           # 自定义悬浮 TabBar 组件
+│
+├── backend/                      # Node.js 后端
+│   ├── app.js                    # Express 入口 · 路由挂载 · 优雅关闭
+│   ├── database.js               # MySQL 连接池 · 自动建表 · 冷启动守护
+│   ├── seed.js                   # 种子数据
+│   ├── Dockerfile                # 云托管容器镜像
+│   ├── middleware/
+│   │   └── auth.js               # JWT 签发/验证 · requireUser 身份守卫
+│   ├── routes/
+│   │   ├── auth.js               # 微信 code2session · 用户 CRUD
+│   │   ├── menu.js               # 商品列表 · 分类提取 · 月销统计
+│   │   ├── orders.js             # 订单创建 · 微信支付 · 状态流转 · 退款
+│   │   ├── store.js              # 门店列表 · Haversine 距离
+│   │   ├── admin.js              # 管理 API（订单/商品/录单/营收/门店开关）
+│   │   └── admin-auth.js         # 管理员登录 · 频率限制
+│   └── services/
+│       └── wechat-pay.js         # 云托管微信支付封装
+│
+└── README.md
 ```
 
-| 数据库状态 | 时间线展示 | 触发动作 | 涉及接口 |
-|-----------|-----------|---------|---------|
-| `pending` | 订单创建 | 顾客提交订单 | `POST /api/orders` |
-| `preparing` | 支付成功 | 模拟支付直接完成 / 微信回调通知 | `POST /api/pay/:orderId` |
-| `preparing` | 商家接单 | 管理员点击接单 | `POST /api/orders/:id/accept` |
-| `ready` | 制作完成 | 管理员标记可取餐 | `POST /api/admin/orders/:id/ready` |
-| `completed` | 已取餐 | 顾客确认取餐 / 管理员标记完成 | `POST /api/orders/:id/complete` |
-
-**支付模式智能降级**：`wechat-pay.js` 启动时检查 `WX_PAY_MCHID` 环境变量。如果商户号已配置，走完整的 API v3 流程（JSAPI 下单 → RSA-SHA256 签名 → 回调通知 → AES-256-GCM 解密）；如果未配置，自动降级为模拟支付——订单直接标记为 `preparing` 并扣减库存，前端不调用 `wx.requestPayment`。这一设计让系统在商户资质就绪前即可完整演示全流程。
-
 ---
 
-## 顾客端界面
-
-顾客端由 4 个 Tab 构成（首页 · 点单 · 订单 · 我的），外加门店选择页和订单确认页，共 6 个核心页面。
-
-### 首页 & 门店选择
-
-首页提供 Banner 展示区、门店自提 / 邮寄服务入口、活动滚动横幅。点击"门店自提"进入门店选择页——腾讯地图标记门店位置，Haversine 公式计算用户到门店的球面距离，小于 1km 以米显示，大于 1km 以公里显示。
-
-| 首页 | 门店选择 |
-|:---:|:---:|
-| ![首页](./screenshots/01-home.png) | ![门店选择](./screenshots/02-store-select.png) |
-
-**Haversine 距离计算**（`backend/routes/store.js`）：前端通过 `wx.getLocation` 获取用户经纬度，作为查询参数传给 `GET /api/stores?lat=XX&lng=XX`，后端使用地球半径 6371km 计算球面距离，格式化后返回。用户未授权定位时显示"未知距离"。
-
-### 点单 & 下单
-
-进入点单页后，左侧显示商品分类（由 `GET /api/categories` 从数据库实时提取），右侧显示当前分类下的在售商品（`GET /api/products?category=XX`，自动过滤 `is_available=0` 和 `stock=0` 的商品）。点击加号按钮将商品加入购物车，购物车状态存储在页面 `data.cart` 对象中（`{ 商品ID: 数量 }`），底部悬浮栏实时计算总价。
-
-<p align="center"><img src="./screenshots/03-order.png" width="55%" alt="点单页" /></p>
-
-确认购物车后进入订单确认页，汇总商品清单和金额，选择微信支付后提交。这一页是顾客下单流程的最后一个确认节点：
-
-<p align="center"><img src="./screenshots/04-order-confirm.png" width="55%" alt="订单确认" /></p>
-
-### 订单追踪
-
-支付完成后进入订单详情页。这是最能体现前后端联动的页面——顶部展示当前状态图标，下方是 5 步时间线，已完成的步骤高亮，未完成的置灰。用户可以看到订单从创建到取餐的每一步时间。
-
-| 支付成功 · 制作中 | 制作完成 · 待取餐 |
-|:---:|:---:|
-| ![准备中](./screenshots/05-order-detail-wait.png) | ![待取餐](./screenshots/05-order-detail-ready.png) |
-
-时间线的每一步对应一个数据库时间戳字段——`created_at`、`paid_at`、`accepted_at`、状态变为 `ready` 的时间点、`completed_at`。商家端每次操作都会触发前端轮询刷新，确保顾客看到的进度是实时的。
-
-### 订单列表 & 个人中心
-
-订单列表页按状态分组（全部 / 待支付 / 制作中 / 待取餐 / 已完成），支持下拉刷新。个人中心展示 DiceBear 自动生成的卡通头像、馒头主题随机昵称，以及积分 / 优惠券 / 余额资产卡片。
-
-| 订单列表 | 个人中心 |
-|:---:|:---:|
-| ![订单列表](./screenshots/06-order-list.png) | ![个人中心](./screenshots/07-profile.png) |
-
-**用户体系**：顾客首次打开小程序时，前端调用 `wx.login` 获取临时 code，后端通过 `jscode2session` 接口换取真实 openid 作为用户唯一标识。新用户自动分配馒头主题昵称（如"馒头侠A3F"、"蒸笼客B7K"）和 DiceBear 头像。
-
----
-
-## 商家管理端
-
-商家管理端内嵌在小程序中，通过**连续点击首页 Banner 5 次**进入——这是一个隐藏入口设计，避免普通顾客误触。进入后需输入管理员密码，后端签发 JWT token，后续所有操作携带 token 鉴权。
-
-### 订单管理
-
-商家管理端 4 个 Tab 中最常用的模块。顶部状态筛选栏支持按 pending / preparing / ready / completed 分类查看订单。核心亮点是**实时轮询机制**——前端使用递归 `setTimeout`（而非 `setInterval`）每 5 秒调用一次 `GET /api/admin/orders`，发现新订单时自动刷新列表并触发手机震动（`wx.vibrateShort`），同时顶部显示"有 N 笔新订单"横幅。
-
-<p align="center"><img src="./screenshots/08-admin-orders.png" width="55%" alt="商家订单管理" /></p>
-
-订单状态栏中的绿色圆点表示轮询正在运行，点击"手动刷新"可立即拉取最新数据。每笔订单卡片显示订单号、顾客昵称、商品清单、金额和时间，已支付的订单提供"标记待取餐"按钮。
-
-### 商品管理
-
-支持新增、编辑、上下架、删除商品，编辑模式下展开完整的表单（名称、价格、分类、库存）和图片上传入口。图片通过 `wx.chooseImage` 从相册选择，上传至微信云存储后返回 URL 存入数据库。
-
-<p align="center"><img src="./screenshots/09-admin-products.png" width="55%" alt="商品管理" /></p>
-
-列表中的每个商品显示图片、名称、分类、价格、库存和累计销量。库存为 0 时自动下架（`is_available=0`），补货后可通过编辑重新上架。`DELETE` 操作提供"一键清空"快捷入口，方便重新初始化商品数据。
-
-### 快速录单 & 营收看板
-
-快速录单用于线下现金收款——店员直接选择商品和数量，系统自动生成订单号（`OFF` 前缀表示线下录单），跳过支付流程直接标记 `completed`，同时扣减库存、累加销量、计入当日营收。底部汇总栏实时计算已选件数和合计金额。
-
-<p align="center"><img src="./screenshots/10-admin-quick-sale.png" width="55%" alt="快速录单" /></p>
-
-营收看板展示今日数据：营收（已支付订单总金额）、总订单数、各状态分布。数据通过 `GET /api/admin/dashboard` 实时查询当日 `created_at` 的订单聚合结果。
-
-<p align="center"><img src="./screenshots/11-admin-dashboard.png" width="55%" alt="营收看板" /></p>
-
----
-
-## 完整流程演示
-
-### 顾客端：选店 → 加购 → 下单 → 支付 → 追踪订单
-
-<p align="center"><img src="./screenshots/12-order-flow.gif" width="55%" alt="顾客下单流程" /></p>
-
-从首页选择门店 → 进入点单页浏览商品加购 → 确认订单并支付 → 跳转订单详情页查看制作进度。模拟支付模式下支付即时完成，真实支付模式下会调起微信支付收银台。
-
-### 商家端：登录 → 查看新订单 → 标记完成 → 营收看板
-
-<p align="center"><img src="./screenshots/13-admin-flow.gif" width="55%" alt="商家接单流程" /></p>
-
-输入密码登录管理后台 → 订单列表自动刷新，新订单触发手机震动 → 标记制作完成 → 标记已取餐 → 切换营收看板查看今日数据。
-
----
-
-## 本地开发
+## 快速开始
 
 ```bash
 # 1. 克隆仓库
@@ -248,120 +303,56 @@ cd tasty_bakery
 # 2. 启动后端
 cd backend
 npm install
-cp .env.example .env
-# 编辑 .env：ADMIN_PASSWORD / JWT_SECRET / DB_PASS 为必需项
-node seed.js     # 初始化数据库 + 种子数据（1 门店 + 1 测试商品）
-node app.js      # 启动 Express 服务（默认 80 端口）
+cp .env.example .env   # 编辑填入 ADMIN_PASSWORD / JWT_SECRET / DB_PASS
+node seed.js            # 初始化数据库 + 种子数据
+node app.js             # 启动 Express（默认 80 端口）
 
 # 3. 启动前端
 # 微信开发者工具 → 导入项目 → 选择 front_UI/ 目录
-# 修改 project.config.json 中的 appid 为你自己的小程序 AppID
+# 修改 project.config.json 中的 appid
 ```
 
-**环境变量**（所有敏感信息通过 `.env` 注入，仓库不含任何明文凭据）：
+**环境变量**（通过 `.env` 注入，仓库不含任何明文凭据）：
 
-| 变量 | 用途 | 是否必需 |
+| 变量 | 用途 | 必需 |
 |------|------|:---:|
 | `ADMIN_PASSWORD` | 商家后台登录密码 | 是 |
 | `JWT_SECRET` | JWT 签名密钥 | 是 |
 | `DB_PASS` | MySQL 密码 | 是 |
 | `WX_APP_ID` / `WX_APP_SECRET` | 微信 code2session | 是 |
-| `WX_PAY_MCHID` 等 6 个 | 微信支付商户凭证 | 否（缺则模拟支付） |
+| `WX_PAY_SUB_MCHID` | 微信支付子商户号 | 支付需要 |
 
 ---
 
 ## 生产部署
 
-这套系统跑在微信云托管上，几个踩过的坑记在这里。
+系统运行在微信云托管上。以下是在生产环境中验证过的关键决策：
 
-**冷启动**：云托管在无流量一段时间后会把实例缩到 0，下个请求来时要重新起容器——镜像拉取 + Node 启动 + 数据库初始化 + 建表检查，加起来 10-30 秒。前端 `callContainer` 默认超时扛不住这个时长，顾客第一次打开会白屏。解决办法很简单：去云托管控制台把最小实例数设为 1（一个月大概二三十块钱），始终有一个容器在跑，就没有冷启动了。
+**冷启动** — 云托管长时间无流量会将实例缩容到 0，下次请求需要重新拉镜像、启动容器、初始化数据库，耗时 10-30 秒。前端 `callContainer` 默认超时无法覆盖这个时长。解决方式：在云托管控制台将最小实例数设为 1（月费约二三十元）。
 
-**优雅关闭**：云托管缩容时会发 `SIGTERM` 信号，等一小会儿再强杀。`app.js` 里注册了这个信号——先 `server.close()` 停止接新请求，等当前请求跑完，再 `pool.end()` 把数据库连接池释放了。这样不会在支付回调或订单写入半途中被干掉。
+**优雅关闭** — 缩容或重新部署时云托管发送 `SIGTERM` 信号。app.js 中注册了该信号：先调用 `server.close()` 停止接收新请求，等待当前请求处理完毕，再执行 `pool.end()` 释放数据库连接池。防止支付回调在写入数据库中途被强杀。
 
-**健康检查**：`/health` 不只是返回 200 了事，会实际 `SELECT 1` 查一下数据库。如果 MySQL 挂了但 Node 进程还活着，云平台能发现并把流量切走，而不是继续往坏实例上路由。
+**健康检查** — `/health` 端点并非简单返回 200，而是实际执行 `SELECT 1` 探测 MySQL。如果数据库挂了但 Node 进程仍存活，负载均衡能检测到并将流量切走。
 
-**异步异常兜底**：Express 4 不会自动接住 async 路由里抛的异常，抛了就挂在那里不回客户端了。加了一行 `express-async-errors`，所有未捕获的 async 异常自动转发到全局错误处理，该 500 就 500，不会让客户端干等。
+**异步异常兜底** — Express 4 不会自动捕获 async 路由中抛出的异常。引入 `express-async-errors` 将所有未捕获的异步异常转发到全局错误处理，避免请求挂起无响应。
 
-**密钥检查**：`ADMIN_PASSWORD` 和 `JWT_SECRET` 必须设，忘了配服务直接拒绝启动——之前是打个 warning 继续跑，万一忘了就等于后台没密码。
+**CORS** — 仅允许 `https://servicewechat.com` 跨域访问。
 
-**CORS**：限制只允许 `https://servicewechat.com` 跨域访问，不对外开放。
-
-**价格服务端校验**：下单时不信任客户端传来的金额，后端根据商品 ID 从数据库查真实价格重算总额，不一致直接拒绝。防止改前端 JS 传 0.01 元下单。
-
-**订单状态机**：定义了合法的状态转换规则（pending→preparing→ready→completed），不在白名单里的状态值直接 400，不允许的状态跳转直接拒绝。
-
-**库存事务保护**：支付时用 `BEGIN TRANSACTION` + `SELECT ... FOR UPDATE` 行锁，同一件商品不会被两个人同时买走。扣库存失败整个事务回滚，不会出现"已付款但没扣库存"或反过来。
-
-**管理后台频率限制**：`/api/admin/login` 同一 IP 每分钟最多试 5 次，防暴力破解。
-
-**其他加固**：支付回调验签在未配证书时直接拒绝（不是降级放行）；订单号加随机字符串防同毫秒碰撞；管理员标记订单时必须当前状态合法才生效。
-
-**管理后台分页**：订单列表支持翻页（每页 50 条），底部"加载更多"按钮按需拉取，避免订单多了之后前面 100 条挡住看不见。
-
-**缓存失效恢复**：用户本地缓存的登录信息过期后自动清除，下次操作需要身份时自动重新走静默登录流程，不会卡在"未登录但无法登录"的死胡同。
-
-**订单进度轮询**：订单详情页每 5 秒自动刷新状态（使用递归 setTimeout，切到后台自动停止），顾客不用手动切页面才能看到进度更新。
+**密钥启动校验** — `ADMIN_PASSWORD` 和 `JWT_SECRET` 未配置时直接 `process.exit(1)` 拒绝启动，不会带着空密码跑起来。
 
 ---
 
-## 项目结构
+## 安全加固
 
-```
-tasty_bakery/
-├── front_UI/                   # 微信小程序前端（9 页面 + 1 组件）
-│   ├── app.js                  # 应用入口 · callContainer 请求封装
-│   ├── app.json                # 页面路由 · 自定义悬浮 TabBar
-│   ├── config.js               # 云环境 ID 与服务名
-│   ├── pages/
-│   │   ├── home/               # 首页（Banner + 功能入口 + 活动区）
-│   │   ├── store-select/       # 门店选择（腾讯地图 + Haversine 距离）
-│   │   ├── index/              # 点单（分类筛选 + 购物车）
-│   │   ├── order-confirm/      # 订单确认 + 支付
-│   │   ├── order-detail/       # 5 状态时间线
-│   │   ├── order-list/         # 订单列表（状态 Tab + 下拉刷新）
-│   │   ├── logs/               # 个人中心
-│   │   ├── admin/              # 商家管理（订单/商品/录单/营收 4 Tab）
-│   │   └── auth/               # 商家登录
-│   └── custom-tab-bar/         # 自定义悬浮 TabBar 组件
-│
-├── backend/                    # Node.js 后端
-│   ├── app.js                  # Express 入口 · 路由挂载 · 异常捕获 · 优雅关闭
-│   ├── database.js             # MySQL 连接池 · 自动建表 · 列迁移
-│   ├── seed.js                 # 种子数据（商品 + 门店）
-│   ├── Dockerfile              # 云托管容器镜像
-│   ├── middleware/
-│   │   └── auth.js             # JWT 签发 + Bearer Token 验证
-│   ├── routes/
-│   │   ├── auth.js             # 微信 code2session · 用户 CRUD
-│   │   ├── menu.js             # 商品列表 · 分类提取
-│   │   ├── orders.js           # 订单创建 · 支付 · 状态流转 · 模拟支付
-│   │   ├── store.js            # 门店列表 · Haversine 距离计算
-│   │   ├── admin.js            # 管理 API（订单/商品/录单/营收）
-│   │   └── admin-auth.js       # 管理员密码验证 · JWT 签发
-│   └── services/
-│       └── wechat-pay.js       # 微信支付 V3 签名/下单/回调解密
-│
-├── screenshots/                # 界面截图与流程 GIF
-└── README.md
-```
-
----
-
-## 查阅指南
-
-| 你想看... | 看这个文件 |
-|-----------|-----------|
-| 小程序全局入口和云通信封装 | `front_UI/app.js` → `request()` |
-| 页面路由和自定义 TabBar | `front_UI/app.json` + `custom-tab-bar/index.js` |
-| 购物车状态管理 | `front_UI/pages/index/index.js` → `data.cart` |
-| 订单 5 状态时间线渲染 | `front_UI/pages/order-detail/order-detail.wxml` |
-| 商家端实时轮询 + 震动 | `front_UI/pages/admin/admin.js` → `startPolling()` |
-| 数据库表结构和列迁移逻辑 | `backend/database.js` |
-| JWT 签发和验证 | `backend/middleware/auth.js` |
-| 微信支付签名 + 模拟支付降级 | `backend/services/wechat-pay.js` + `backend/routes/orders.js` → `processMockPayment()` |
-| 订单完整生命周期 | `backend/routes/orders.js` + `backend/routes/admin.js` |
-| Haversine 距离计算 | `backend/routes/store.js` → `haversine()` |
-| 初始种子数据 | `backend/seed.js` |
+- 价格服务端重算：不信任客户端传入的 `totalPrice`，后端根据商品 ID 查数据库真实价格重新计算并对比
+- 库存事务保护：`BEGIN TRANSACTION` + `SELECT ... FOR UPDATE` 行锁，库存不足自动回滚
+- 支付回调幂等：回调处理器内用 `FOR UPDATE` 二次确认状态，同一笔订单的并发回调只有一个能生效
+- IDOR 防护：`requireUser` 中间件通过 `X-WX-OPENID` 注入 `req.user`，所有涉及用户 ID 的接口强制校验归属
+- JWT 认证：HS256 签名、12 小时过期、密钥通过环境变量注入，启动时校验必填
+- 登录频率限制：管理员登录同一 IP 每分钟最多 5 次
+- 状态机白名单：仅允许 `pending → preparing → ready → completed`，禁止跳过或回退
+- 用户隐私：`customerResponse()` 返回的字段不含 openid，日志中 openid 使用 SHA256 截断
+- 退款审核：用户提交申请 → 商家审核 → 批准才执行原路退款，拒绝则恢复订单原状态
 
 ---
 
