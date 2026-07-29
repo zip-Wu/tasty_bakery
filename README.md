@@ -12,6 +12,16 @@
 
 ---
 
+## 扫码体验
+
+<p align="center">
+  <img src="./screenshots/小程序码.jpg" width="220" alt="大力馒头铺小程序码">
+  <br/>
+  <sub>微信扫一扫，即刻体验</sub>
+</p>
+
+---
+
 ## 快速了解
 
 顾客扫描线下小程序码或搜索小程序进入，选商品加入购物车，微信支付下单，之后可以在订单详情页实时看到制作进度——从"制作中"到"可取餐"状态会随商家操作同步更新。
@@ -74,7 +84,7 @@ flowchart LR
 
 | 首页 | 点单 | 门店选择 | 商品详情 | 支付 | 个人中心 |
 |:---:|:---:|:---:|:---:|:---:|:---:|
-| <a href="./screenshots/01-首页.png"><img src="./screenshots/01-首页.png" width="130"></a> | <a href="./screenshots/02-点单页-全部.png"><img src="./screenshots/02-点单页-全部.png" width="130"></a> | <a href="./screenshots/05-门店列表页.jpg"><img src="./screenshots/05-门店列表页.jpg" width="130"></a> | <a href="./screenshots/06-商品详情页.png"><img src="./screenshots/06-商品详情页.png" width="130"></a> | <a href="./screenshots/07-支付页.png"><img src="./screenshots/07-支付页.png" width="130"></a> | <a href="./screenshots/04-我的.png"><img src="./screenshots/04-我的.png" width="130"></a> |
+| <a href="./screenshots/01-首页.png" target="_blank"><img src="./screenshots/01-首页.png" width="130"></a> | <a href="./screenshots/02-点单页-全部.png" target="_blank"><img src="./screenshots/02-点单页-全部.png" width="130"></a> | <a href="./screenshots/05-门店列表页.jpg" target="_blank"><img src="./screenshots/05-门店列表页.jpg" width="130"></a> | <a href="./screenshots/06-商品详情页.png" target="_blank"><img src="./screenshots/06-商品详情页.png" width="130"></a> | <a href="./screenshots/07-支付页.png" target="_blank"><img src="./screenshots/07-支付页.png" width="130"></a> | <a href="./screenshots/04-我的.png" target="_blank"><img src="./screenshots/04-我的.png" width="130"></a> |
 
 *首页展示门店入口和活动区，点单页按分类筛选商品并加入购物车，支付页确认订单后调起微信支付。点击小图可查看原始截图。*
 
@@ -82,7 +92,7 @@ flowchart LR
 
 | 制作中 | 待取餐 | 已完成 |
 |:---:|:---:|:---:|
-| <a href="./screenshots/08-订单详情-制作中.png"><img src="./screenshots/08-订单详情-制作中.png" width="100"></a> | <a href="./screenshots/08-订单详情-待取餐.png"><img src="./screenshots/08-订单详情-待取餐.png" width="100"></a> | <a href="./screenshots/08-订单详情-已完成.png"><img src="./screenshots/08-订单详情-已完成.png" width="100"></a> |
+| <a href="./screenshots/08-订单详情-制作中.png" target="_blank"><img src="./screenshots/08-订单详情-制作中.png" width="100"></a> | <a href="./screenshots/08-订单详情-待取餐.png" target="_blank"><img src="./screenshots/08-订单详情-待取餐.png" width="100"></a> | <a href="./screenshots/08-订单详情-已完成.png" target="_blank"><img src="./screenshots/08-订单详情-已完成.png" width="100"></a> |
 
 *制作中的订单展示取餐码和实时进度，商家标记可取餐后进入 1 小时倒计时，取餐完成后时间线全部亮起。*
 
@@ -90,7 +100,7 @@ flowchart LR
 
 | 登录页 | 订单管理 | 退款审核 | 商品管理 | 快速录单 | 营收看板 |
 |:---:|:---:|:---:|:---:|:---:|:---:|
-| <a href="./screenshots/09-商家登录页.png"><img src="./screenshots/09-商家登录页.png" width="130"></a> | <a href="./screenshots/10-订单管理.png"><img src="./screenshots/10-订单管理.png" width="130"></a> | <a href="./screenshots/10-订单管理-退款审核.png"><img src="./screenshots/10-订单管理-退款审核.png" width="130"></a> | <a href="./screenshots/11-商品管理.png"><img src="./screenshots/11-商品管理.png" width="130"></a> | <a href="./screenshots/12-快速录单.png"><img src="./screenshots/12-快速录单.png" width="130"></a> | <a href="./screenshots/13-营收看板.png"><img src="./screenshots/13-营收看板.png" width="130"></a> |
+| <a href="./screenshots/09-商家登录页.png" target="_blank"><img src="./screenshots/09-商家登录页.png" width="130"></a> | <a href="./screenshots/10-订单管理.png" target="_blank"><img src="./screenshots/10-订单管理.png" width="130"></a> | <a href="./screenshots/10-订单管理-退款审核.png" target="_blank"><img src="./screenshots/10-订单管理-退款审核.png" width="130"></a> | <a href="./screenshots/11-商品管理.png" target="_blank"><img src="./screenshots/11-商品管理.png" width="130"></a> | <a href="./screenshots/12-快速录单.png" target="_blank"><img src="./screenshots/12-快速录单.png" width="130"></a> | <a href="./screenshots/13-营收看板.png" target="_blank"><img src="./screenshots/13-营收看板.png" width="130"></a> |
 
 *管理后台通过首页"加热方法"卡片连续点击 7 次进入，支持订单实时提醒与退款审核、商品上下架与排序、线下现金快速录单、当日营收数据看板。点击小图可查看原始截图。*
 
@@ -98,7 +108,7 @@ flowchart LR
 
 | 售罄分类 | 订单列表 | 制作中 | 待取餐 | 待支付 | 已完成 | 商品编辑 |
 |:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| <a href="./screenshots/02-点单页-无库存.png"><img src="./screenshots/02-点单页-无库存.png" width="115"></a> | <a href="./screenshots/03-订单页-全部.png"><img src="./screenshots/03-订单页-全部.png" width="115"></a> | <a href="./screenshots/03-订单页-制作中.png"><img src="./screenshots/03-订单页-制作中.png" width="115"></a> | <a href="./screenshots/03-订单页-待取餐.png"><img src="./screenshots/03-订单页-待取餐.png" width="115"></a> | <a href="./screenshots/03-订单页-待支付.png"><img src="./screenshots/03-订单页-待支付.png" width="115"></a> | <a href="./screenshots/03-订单页-已完成.png"><img src="./screenshots/03-订单页-已完成.png" width="115"></a> | <a href="./screenshots/11-商品管理-编辑.png"><img src="./screenshots/11-商品管理-编辑.png" width="115"></a> |
+| <a href="./screenshots/02-点单页-无库存.png" target="_blank"><img src="./screenshots/02-点单页-无库存.png" width="115"></a> | <a href="./screenshots/03-订单页-全部.png" target="_blank"><img src="./screenshots/03-订单页-全部.png" width="115"></a> | <a href="./screenshots/03-订单页-制作中.png" target="_blank"><img src="./screenshots/03-订单页-制作中.png" width="115"></a> | <a href="./screenshots/03-订单页-待取餐.png" target="_blank"><img src="./screenshots/03-订单页-待取餐.png" width="115"></a> | <a href="./screenshots/03-订单页-待支付.png" target="_blank"><img src="./screenshots/03-订单页-待支付.png" width="115"></a> | <a href="./screenshots/03-订单页-已完成.png" target="_blank"><img src="./screenshots/03-订单页-已完成.png" width="115"></a> | <a href="./screenshots/11-商品管理-编辑.png" target="_blank"><img src="./screenshots/11-商品管理-编辑.png" width="115"></a> |
 
 *左起：售罄分类自动聚合、订单列表多状态切换、订单列表各 Tab 筛选结果（制作中/待取餐/待支付/已完成）、商品编辑表单。*
 
