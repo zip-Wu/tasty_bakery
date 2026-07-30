@@ -79,7 +79,7 @@
           </view>
           <view class="order-bottom">
             <view class="order-bottom-left">
-              <view class="order-info">{{item.userNickname || '顾客'}} · {{item.totalQuantity}}件 · ¥{{item.totalPrice}}</view>
+              <view class="order-info">{{item.userNickname || '顾客'}}<text wx:if="{{item.userPhone}}" class="order-user-phone"> · {{item.userPhone}}</text> · {{item.totalQuantity}}件 · ¥{{item.totalPrice}}</view>
               <view class="order-remark" wx:if="{{item.remark}}">备注：{{item.remark}}</view>
               <view class="order-remark refund-reason" wx:if="{{item.status === 'refund_pending' && item.refundReason}}">
                 📝 退款理由：{{item.refundReason}}

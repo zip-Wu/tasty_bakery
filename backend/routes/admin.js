@@ -5,6 +5,7 @@ const express = require('express');
 const crypto = require('crypto');
 const { pool, mysqlNow, generateOrderNo } = require('../database');
 const { refund } = require('../services/wechat-pay');
+const { sendSubscribeMessage } = require('../services/wechat-notify');
 
 const router = express.Router();
 
@@ -16,7 +17,7 @@ router.get('/admin/orders', async (req, res) => {
   const offset = (pageNum - 1) * size;
 
   let sql = `
-    SELECT o.*, u.nickname as user_nickname
+    SELECT o.*, u.nickname as user_nickname, u.phone as user_phone
     FROM orders o
     LEFT JOIN users u ON o.user_id = u.id
   `;
@@ -43,6 +44,7 @@ router.get('/admin/orders', async (req, res) => {
     orderNo: row.order_no,
     userId: row.user_id,
     userNickname: row.user_nickname || '未知用户',
+    userPhone: row.user_phone || '',
     storeName: row.store_name,
     items: typeof row.items === 'string' ? JSON.parse(row.items) : row.items,
     totalPrice: row.total_price,
@@ -74,7 +76,13 @@ router.get('/admin/orders', async (req, res) => {
 
 // ========== 标记制作完成 ==========
 router.post('/admin/orders/:id/ready', async (req, res) => {
-  const [rows] = await pool.execute('SELECT * FROM orders WHERE id = ?', [req.params.id]);
+  const [rows] = await pool.execute(
+    `SELECT o.*, u.openid AS user_openid, s.phone AS store_phone
+     FROM orders o
+     LEFT JOIN users u ON o.user_id = u.id
+     LEFT JOIN stores s ON o.store_id = s.id
+     WHERE o.id = ?`, [req.params.id]
+  );
 
   if (!rows[0]) {
     return res.json({ success: false, message: '订单不存在' });
@@ -86,6 +94,47 @@ router.post('/admin/orders/:id/ready', async (req, res) => {
   }
 
   await pool.execute("UPDATE orders SET status = 'ready', ready_at = ? WHERE id = ?", [mysqlNow(), req.params.id]);
+
+  // ========== 异步发送订阅消息（非阻塞，失败不影响 ready 操作结果） ==========
+  const order = rows[0];
+  if (order.user_openid && order.pickup_code != null) {
+    const items = typeof order.items === 'string' ? JSON.parse(order.items) : order.items;
+    const itemNames = (items || []).map(i => i.name).join(',');
+    // thing6 限制 20 字，超长截断
+    const productName = itemNames.length > 20 ? itemNames.slice(0, 19) + '…' : (itemNames || '商品');
+
+    // 把 created_at 格式化为北京时间的 YYYY-MM-DD HH:MM:SS
+    // 数据库虽配置 timezone:'+08:00'，但容器 OS 是 UTC，
+    // Date 对象的 getHours() 返回 UTC 小时而非北京时间，须显式转时区
+    let createdAtStr = '';
+    const ts = order.created_at;
+    if (ts instanceof Date) {
+      const bj = new Date(ts.toLocaleString('en-US', { timeZone: 'Asia/Shanghai' }));
+      createdAtStr = bj.getFullYear() + '-' +
+        String(bj.getMonth() + 1).padStart(2, '0') + '-' +
+        String(bj.getDate()).padStart(2, '0') + ' ' +
+        String(bj.getHours()).padStart(2, '0') + ':' +
+        String(bj.getMinutes()).padStart(2, '0') + ':' +
+        String(bj.getSeconds()).padStart(2, '0');
+    } else if (typeof ts === 'string') {
+      createdAtStr = ts;
+    }
+
+    sendSubscribeMessage(
+      order.user_openid,
+      {
+        date3:             { value: createdAtStr },
+        thing6:            { value: productName },
+        thing7:            { value: '请凭取餐编号到店取餐' },
+        phone_number32:    { value: order.store_phone || '' },
+        character_string12:{ value: String(order.pickup_code).padStart(3, '0') },
+      },
+      '/pages/order-detail/order-detail?id=' + req.params.id
+    ).catch(err => console.error('[ready] 发通知失败:', err.message));
+  } else if (order.pickup_code != null) {
+    console.warn(`[ready] 订单 ${order.order_no} 缺少 openid，跳过通知（线下录单无微信用户）`);
+  }
+
   res.json({ success: true, message: '已标记为待取餐' });
 });
 

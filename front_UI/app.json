@@ -9,7 +9,8 @@
     "pages/logs/logs",
     "pages/admin/admin",
     "pages/product-detail/product-detail",
-    "pages/privacy/privacy"
+    "pages/privacy/privacy",
+    "pages/notify-auth/notify-auth"
   ],
   "window": {
     "navigationBarTextStyle": "black",

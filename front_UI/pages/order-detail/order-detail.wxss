@@ -386,3 +386,116 @@ page {
   display: block;
   margin-top: 8rpx;
 }
+
+/* ========== 取餐通知订阅 ========== */
+.notify-section {
+  margin: 20rpx 30rpx;
+}
+
+.notify-done {
+  background: #e8f5e9;
+  border-radius: 12rpx;
+  padding: 24rpx 30rpx;
+  font-size: 26rpx;
+  color: #2e7d32;
+  display: flex;
+  align-items: center;
+}
+
+.notify-icon {
+  margin-right: 12rpx;
+  font-size: 30rpx;
+}
+
+.notify-card {
+  background: #fff;
+  border-radius: 12rpx;
+  padding: 30rpx;
+  box-shadow: 0 2rpx 12rpx rgba(0,0,0,0.06);
+}
+
+.notify-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 8rpx;
+}
+
+.notify-sub {
+  font-size: 24rpx;
+  color: #999;
+  margin-bottom: 24rpx;
+}
+
+.notify-btn {
+  width: 100%;
+  background: #0ab98e;
+  color: #fff;
+  font-size: 28rpx;
+  border-radius: 10rpx;
+  padding: 20rpx 0;
+  border: none;
+}
+
+.notify-divider {
+  display: flex;
+  align-items: center;
+  margin: 28rpx 0;
+  color: #ccc;
+  font-size: 24rpx;
+}
+
+.notify-divider::before,
+.notify-divider::after {
+  content: '';
+  flex: 1;
+  height: 1rpx;
+  background: #eee;
+}
+
+.notify-divider text {
+  padding: 0 24rpx;
+}
+
+.notify-phone-row {
+  display: flex;
+  gap: 16rpx;
+}
+
+.notify-phone-input {
+  flex: 1;
+  height: 80rpx;
+  border: 1rpx solid #ddd;
+  border-radius: 10rpx;
+  padding: 0 20rpx;
+  font-size: 28rpx;
+  background: #fafafa;
+}
+
+.notify-phone-btn {
+  width: 140rpx;
+  height: 80rpx;
+  line-height: 80rpx;
+  background: #333;
+  color: #fff;
+  font-size: 26rpx;
+  border-radius: 10rpx;
+  border: none;
+  text-align: center;
+  padding: 0;
+}
+
+/* 手机号编辑/清除小按钮 */
+.phone-mini-btn {
+  font-size: 22rpx;
+  color: #333;
+  background: #f0f0f0;
+  padding: 6rpx 16rpx;
+  border-radius: 8rpx;
+  margin-left: 12rpx;
+}
+
+.phone-mini-btn.clear {
+  color: #e53935;
+  background: #fff0f0;
+}

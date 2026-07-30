@@ -232,6 +232,7 @@
   min-width: 0;
 }
 .order-info { font-size: 24rpx; color: #666; }
+.order-user-phone { color: #0ab98e; font-weight: 500; }
 .order-remark { font-size: 24rpx; color: #ff9800; margin-top: 2rpx; word-break: break-all; }
 .order-time { font-size: 22rpx; color: #999; margin-top: 2rpx; }
 .order-pickup {

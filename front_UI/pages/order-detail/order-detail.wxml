@@ -50,6 +50,44 @@
     </view>
   </view>
 
+  <!-- ====== 取餐通知 / 手机号（已支付未完成的订单显示） ====== -->
+  <view class="notify-section" wx:if="{{order.status !== 'pending' && order.status !== 'refunded' && order.status !== 'completed'}}">
+    <!-- 授权状态 -->
+    <view class="notify-done" wx:if="{{notifyAuthorized}}">
+      <text class="notify-icon">✅</text>
+      <text>已授权微信取餐通知</text>
+    </view>
+    <view class="notify-card" wx:elif="{{phone}}">
+      <view class="notify-sub">还可授权微信通知，第一时间推送取餐提醒</view>
+      <button class="notify-btn" bindtap="requestNotify">同意接收取餐通知</button>
+    </view>
+    <view class="notify-card" wx:else>
+      <view class="notify-title">🔔 想要收到取餐提醒？</view>
+      <view class="notify-sub">授权微信通知，订单做好后第一时间通知您</view>
+      <button class="notify-btn" bindtap="requestNotify">同意接收取餐通知</button>
+    </view>
+
+    <!-- 手机号管理（始终可见，与授权状态独立） -->
+    <view class="notify-card phone-card" style="margin-top:20rpx">
+      <block wx:if="{{phone}}">
+        <view class="notify-done" style="flex-wrap:wrap;margin-bottom:0">
+          <text class="notify-icon">📱</text>
+          <text>手机号: {{phone}}</text>
+          <text class="phone-mini-btn" bindtap="startEditPhone">修改</text>
+          <text class="phone-mini-btn clear" bindtap="clearPhone">清除</text>
+        </view>
+      </block>
+      <block wx:else>
+        <view class="notify-sub">也可预留手机号，商家会电话联系您</view>
+        <view class="notify-phone-row">
+          <input class="notify-phone-input" type="number" maxlength="11" placeholder="请输入手机号"
+            value="{{phoneInput}}" bindinput="onPhoneInput" />
+          <button class="notify-phone-btn" bindtap="savePhone">保存</button>
+        </view>
+      </block>
+    </view>
+  </view>
+
   <!-- 门店信息 -->
   <view class="info-card">
     <view class="card-title">取餐信息</view>

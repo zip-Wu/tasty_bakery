@@ -1,0 +1,30 @@
+<!-- 通知授权页 — 支付成功后跳转，引导用户授权取餐通知 -->
+<view class="notify-page">
+  <view class="notify-main">
+    <image class="notify-icon" src="/images/svg/order-ready.svg" mode="aspectFit"></image>
+    <view class="notify-title">为了明天及时收到取餐提醒</view>
+    <view class="notify-sub">请允许微信通知</view>
+
+    <button class="notify-auth-btn" bindtap="requestNotify">同意接收取餐通知</button>
+    <view class="notify-skip" bindtap="skipAuth">暂不授权</view>
+  </view>
+
+  <!-- 手机号兜底：已有手机号可编辑，没有可新增 -->
+  <view class="notify-phone-section">
+    <view class="phone-title">或者留个手机号，商家会联系您</view>
+    <block wx:if="{{phone}}">
+      <view class="phone-row">
+        <text class="phone-value">{{phone}}</text>
+        <text class="phone-edit" bindtap="startEditPhone">修改</text>
+        <text class="phone-clear" bindtap="clearPhone">清除</text>
+      </view>
+    </block>
+    <view class="phone-input-row" wx:else>
+      <input class="phone-input" type="number" maxlength="11" placeholder="请输入手机号"
+        value="{{phoneInput}}" bindinput="onPhoneInput" />
+      <button class="phone-save-btn" bindtap="savePhone">保存</button>
+    </view>
+  </view>
+
+  <view class="notify-footer" bindtap="skipAuth">跳过，直接查看订单详情</view>
+</view>

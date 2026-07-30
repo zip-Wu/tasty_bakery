@@ -87,6 +87,7 @@ const ready = (async () => {
         avatar       TEXT,
         points       INT DEFAULT 0,
         nick_number  INT UNIQUE,
+        phone        VARCHAR(16) DEFAULT NULL,
         created_at   DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at   DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4

@@ -125,6 +125,7 @@ function customerResponse(user) {
     nickname: user.nickname,
     avatar: user.avatar,
     points: user.points,
+    phone: user.phone || '',
   };
 }
 
@@ -146,7 +147,7 @@ router.post('/login', async (req, res) => {
   }
 
   const [rows] = await pool.execute(
-    'SELECT id, openid, nickname, avatar, points FROM users WHERE openid = ?',
+    'SELECT id, openid, nickname, avatar, points, phone FROM users WHERE openid = ?',
     [openId]
   );
   let user = rows[0];
@@ -208,10 +209,28 @@ router.post('/user/:id', async (req, res) => {
   }
 
   const [updated] = await pool.execute(
-    'SELECT id, openid, nickname, avatar, points FROM users WHERE id = ?',
+    'SELECT id, openid, nickname, avatar, points, phone FROM users WHERE id = ?',
     [req.user.id]
   );
   res.json({ success: true, data: customerResponse(updated[0]) });
+});
+
+// ========== 保存手机号 ==========
+router.put('/user/:id/phone', async (req, res) => {
+  if (req.params.id !== req.user.id) {
+    return res.status(403).json({ success: false, message: '无权修改他人手机号' });
+  }
+  const { phone } = req.body;
+  // 允许清空手机号（传空字符串）
+  if (phone === '' || phone === null) {
+    await pool.execute('UPDATE users SET phone = NULL WHERE id = ?', [req.user.id]);
+    return res.json({ success: true, message: '手机号已清除' });
+  }
+  if (!phone || !/^1[3-9]\d{9}$/.test(phone)) {
+    return res.json({ success: false, message: '请输入正确的 11 位手机号' });
+  }
+  await pool.execute('UPDATE users SET phone = ? WHERE id = ?', [phone, req.user.id]);
+  res.json({ success: true, message: '手机号已保存' });
 });
 
 module.exports = router;

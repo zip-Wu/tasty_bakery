@@ -163,8 +163,8 @@ Page({
         package: payParams.package, signType: payParams.signType, paySign: payParams.paySign,
         success() {
           app.globalData.clearCartOnReturn = true;
-          // 替换当前页，不回退到确认订单页
-          wx.redirectTo({ url: '/pages/order-detail/order-detail?id=' + orderId });
+          // 跳转通知授权页，引导用户授权取餐提醒后再进订单详情
+          wx.redirectTo({ url: '/pages/notify-auth/notify-auth?orderId=' + orderId });
         },
         fail(err) {
           that.setData({ isPaying: false });
