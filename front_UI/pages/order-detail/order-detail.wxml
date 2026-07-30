@@ -104,7 +104,7 @@
       <view class="goods-item" wx:for="{{order.items}}" wx:key="itemKey">
         <image class="goods-img" src="{{item.image}}" mode="aspectFill"></image>
         <view class="goods-info">
-          <text class="goods-name">{{item.name}}<text class="item-temp temp-{{item.temperature === '加热' ? 'hot' : 'cold'}}" wx:if="{{item.temperature}}">{{item.temperature}}</text></text>
+          <text class="goods-name">{{item.name}}</text>
           <text class="goods-price">¥{{item.price}}</text>
         </view>
         <text class="goods-qty">x{{item.quantity}}</text>

@@ -14,6 +14,7 @@ Page = function (options) {
       return {
         title: '大力馒头（纯手工馒头·健康无添加·每日现做现蒸）',
         path: '/pages/home/home'
+        // imageUrl: '替换为你上传到云存储的 banner.png HTTPS 地址'
       };
     };
   }

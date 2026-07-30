@@ -3,9 +3,9 @@
 Page({
   data: {
     // 分类数据（从后端动态加载，初始仅「全部」；「暂无库存」由 filterBreadList 动态追加）
-    categories: ['全部'],
-    baseCategories: ['全部'],
-    currentCategory: '全部',
+    categories: [],
+    baseCategories: [],
+    currentCategory: null,
 
     // 商品列表滚动位置（切分类时重置为 0）
     scrollTop: 0,
@@ -190,18 +190,18 @@ Page({
 
     const hasOutOfStock = breadList.some(item => item.stock <= 0);
 
-    // 边界：用户正在看「暂无库存」但商品全部补货 → 自动切回「全部」
+    // 边界：用户正在看「暂无库存」但商品全部补货 → 自动取消分类选择
     let effectiveCategory = currentCategory;
     if (currentCategory === '暂无库存' && !hasOutOfStock) {
-      effectiveCategory = '全部';
+      effectiveCategory = null;
     }
 
     // 打 _show 标记（排序已在 loadProducts 完成，这里仅控制显隐）
     breadList.forEach(item => {
       if (effectiveCategory === '暂无库存') {
         item._show = item.stock <= 0;
-      } else if (effectiveCategory === '全部') {
-        item._show = true;
+      } else if (effectiveCategory === null) {
+        item._show = true;  // 未选分类：显示全部
       } else {
         item._show = item.stock > 0 && item.category === effectiveCategory;
       }

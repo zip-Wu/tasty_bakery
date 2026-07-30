@@ -78,9 +78,8 @@ Page({
       const formatted = allOrders.map(order => {
         order.statusText = this.data.statusMap[order.status] || order.status;
         order.totalQuantity = (order.items || []).reduce((sum, item) => sum + (item.quantity || 0), 0);
-        // 为每个 item 注入唯一 key（同商品不同温度 id 相同）
         (order.items || []).forEach((item, idx) => {
-          item.itemKey = `${item.id}_${item.temperature || 'x'}_${idx}`;
+          item.itemKey = `${item.id}_${idx}`;
         });
         const d = new Date(order.createdAt);
         order.timeDisplay = `${d.getMonth() + 1}/${d.getDate()} ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;

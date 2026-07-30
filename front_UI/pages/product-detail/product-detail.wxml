@@ -17,7 +17,7 @@
 
   <!-- 关店提示 -->
   <view class="closed-tip" wx:if="{{storeClosed}}">
-    <text>😴 店家已打烊{{storeHours ? '，每日 ' + storeHours + ' 营业' : ''}}，暂时无法下单</text>
+    <text>😴 店家已打烊，暂时无法下单</text>
   </view>
 
   <!-- ====== 商品信息 ====== -->

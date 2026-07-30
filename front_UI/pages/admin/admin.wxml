@@ -75,7 +75,7 @@
         </view>
         <view class="order-body">
           <view class="order-items-row" wx:for="{{item.items}}" wx:key="itemKey" wx:for-item="oi">
-            <text class="order-item-name">{{oi.name}}<text class="admin-temp temp-{{oi.temperature === '加热' ? 'hot' : 'cold'}}" wx:if="{{oi.temperature}}">{{oi.temperature}}</text> x{{oi.quantity}}</text>
+            <text class="order-item-name">{{oi.name}} x{{oi.quantity}}</text>
           </view>
           <view class="order-bottom">
             <view class="order-bottom-left">
