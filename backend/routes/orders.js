@@ -235,7 +235,7 @@ router.post('/orders/:id/refund-request', async (req, res) => {
 
     const order = rows[0];
 
-    if (order.status !== 'preparing' && order.status !== 'completed') {
+    if (order.status !== 'preparing' && order.status !== 'ready' && order.status !== 'completed') {
       return res.json({ success: false, message: '当前状态不支持申请退款' });
     }
 
@@ -555,21 +555,6 @@ function formatOrder(row) {
 }
 
 module.exports = router;
-
-// ========== 自动完成定时器：ready 超过 1 小时的订单自动标记 completed ==========
-setInterval(async () => {
-  try {
-    const [result] = await pool.execute(
-      `UPDATE orders SET status = 'completed', completed_at = NOW()
-       WHERE status = 'ready' AND ready_at < DATE_SUB(NOW(), INTERVAL 1 HOUR)`
-    );
-    if (result.affectedRows > 0) {
-      console.log(`[auto-complete] ${result.affectedRows} 笔订单自动完成`);
-    }
-  } catch (err) {
-    console.error('[auto-complete] 定时器异常:', err.message);
-  }
-}, 60000);
 
 // ========== 自动清理定时器：待支付超过 30 分钟的订单自动删除 ==========
 setInterval(async () => {

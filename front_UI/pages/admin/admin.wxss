@@ -634,3 +634,48 @@
   border-radius: 8rpx;
   margin: 16rpx 24rpx;
 }
+
+/* ========== 制作清单 ========== */
+.prod-header {
+  font-size: 30rpx;
+  font-weight: 700;
+  color: #333;
+  padding: 24rpx 30rpx 16rpx;
+}
+.prod-header.warn { color: #e65100; }
+.prod-header.info { color: #1565c0; }
+
+.prod-empty {
+  text-align: center;
+  color: #999;
+  padding: 80rpx 0;
+  font-size: 28rpx;
+}
+
+.prod-total-row {
+  font-size: 24rpx;
+  color: #666;
+  padding: 8rpx 30rpx 16rpx;
+}
+
+.prod-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16rpx 30rpx;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+.prod-name { font-size: 28rpx; color: #333; }
+.prod-qty  { font-size: 30rpx; font-weight: 700; color: #0ab98e; }
+
+.prod-afternoon, .prod-tomorrow {
+  margin-top: 20rpx;
+  padding: 0 30rpx 20rpx;
+}
+
+.prod-order {
+  padding: 12rpx 0;
+  font-size: 24rpx;
+  color: #666;
+  border-bottom: 1rpx dashed #eee;
+}

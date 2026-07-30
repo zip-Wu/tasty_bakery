@@ -3,7 +3,6 @@ Page({
     orderId: '',
     order: {},
     statusIcon: '/images/svg/order-pending.svg',
-    readyCountdown: '',        // ready 状态 1h 倒计时
     showRefundModal: false,     // 退款理由弹窗（completed 状态）
     refundReason: '',           // 退款理由
     isSubmittingRefund: false,  // 退款申请提交中
@@ -48,7 +47,6 @@ Page({
 
   onUnload() {
     this._stopPolling();
-    this._stopCountdown();
   },
 
   // 加载订单
@@ -85,32 +83,6 @@ Page({
     }
   },
 
-  // ready 状态 1h 倒计时（退款窗口 + 自动确认）
-  _startCountdown(readyAt) {
-    this._stopCountdown();
-    const that = this;
-    const tick = () => {
-      const now = Date.now();
-      const deadline = new Date(readyAt).getTime() + 60 * 60 * 1000;
-      const left = deadline - now;
-      if (left <= 0) {
-        that.setData({ readyCountdown: '订单即将自动确认完成' });
-        return;
-      }
-      const m = Math.floor(left / 60000);
-      that.setData({ readyCountdown: `请在 ${m} 分钟内取餐，超时将自动确认完成` });
-    };
-    tick();
-    this._countdownTimer = setInterval(tick, 30000);
-  },
-
-  _stopCountdown() {
-    if (this._countdownTimer) {
-      clearInterval(this._countdownTimer);
-      this._countdownTimer = null;
-    }
-  },
-
   // 处理订单数据
   processOrder(order) {
     const statusInfo = this.data.statusMap[order.status] || { icon: '/images/svg/clipboard.svg', text: order.status };
@@ -122,7 +94,6 @@ Page({
     order.totalQuantity = order.items.reduce((sum, item) => sum + item.quantity, 0);
     order.address = order.address || '珠海市高新区唐家湾镇香山路88号2栋1层101-10室';
     order.statusText = statusInfo.text;
-    // 为每个 item 注入唯一 key（同商品不同温度 id 相同，wx:key="id" 会报重复）
     order.items.forEach((item, idx) => {
       item.itemKey = `${item.id}_${idx}`;
     });
@@ -131,13 +102,6 @@ Page({
       order: order,
       statusIcon: statusInfo.icon
     });
-
-    // ready 状态启动倒计时
-    if (order.status === 'ready' && order.readyAt) {
-      this._startCountdown(order.readyAt);
-    } else {
-      this._stopCountdown();
-    }
   },
 
   // 申请退款（preparing / completed → 进入退款审核）

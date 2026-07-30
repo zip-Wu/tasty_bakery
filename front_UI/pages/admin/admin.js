@@ -57,6 +57,9 @@ Page({
     qsTotal: 0,
     qsSubmitting: false,
 
+    // 制作清单
+    productionList: { items: [], totalKinds: 0, afterNoonOrders: [], tomorrowOrders: [] },
+
     // 订单轮询提醒
     newOrderAlert: false,
     newOrderCount: 0,
@@ -166,20 +169,21 @@ Page({
   switchTab(e) {
     this._stopPolling();
     const tab = e.currentTarget.dataset.tab;
-    const tabMap = { orders: 0, products: 1, 'quick-sale': 2, dashboard: 3 };
+    const tabMap = { orders: 0, products: 1, 'quick-sale': 2, production: 3, dashboard: 4 };
     this.setData({ currentTab: tab, tabIndex: tabMap[tab] });
     if (tab === 'orders') {
       this.loadOrders();
       this._startPolling();
     } else if (tab === 'quick-sale') this.loadQuickSale();
     else if (tab === 'products') { this.loadProducts(); this.loadCategoryOrder(); }
+    else if (tab === 'production') this.loadProductionList();
     else if (tab === 'dashboard') this.loadDashboard();
   },
 
   // 主 Tab 滑动切换
   onTabSwipe(e) {
     const idx = e.detail.current;
-    const tabs = ['orders', 'products', 'quick-sale', 'dashboard'];
+    const tabs = ['orders', 'products', 'quick-sale', 'production', 'dashboard'];
     const tab = tabs[idx];
     if (tab !== this.data.currentTab) {
       this._stopPolling();
@@ -187,6 +191,7 @@ Page({
       if (tab === 'orders') { this.loadOrders(); this.loadDashboard(); this._startPolling(); }
       else if (tab === 'quick-sale') this.loadQuickSale();
       else if (tab === 'products') { this.loadProducts(); this.loadCategoryOrder(); }
+      else if (tab === 'production') this.loadProductionList();
       else if (tab === 'dashboard') this.loadDashboard();
     }
   },
@@ -826,6 +831,21 @@ Page({
           wx.showToast({ title: err?.data?.message || '网络错误', icon: 'none' });
         });
       }
+    });
+  },
+
+  // ========== 制作清单 ==========
+  loadProductionList() {
+    const token = wx.getStorageSync('admin_token');
+    this._request({
+      url: '/api/admin/production-list',
+      header: { Authorization: 'Bearer ' + token }
+    }).then(res => {
+      if (res.success) {
+        this.setData({ productionList: res.data });
+      }
+    }).catch(() => {
+      wx.showToast({ title: '加载制作清单失败', icon: 'none' });
     });
   },
 

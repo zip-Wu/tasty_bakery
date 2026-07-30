@@ -22,6 +22,8 @@
       bindtap="switchTab" data-tab="products">商品管理</view>
     <view class="tab-item {{currentTab === 'quick-sale' ? 'active' : ''}}"
       bindtap="switchTab" data-tab="quick-sale">快速录单</view>
+    <view class="tab-item {{currentTab === 'production' ? 'active' : ''}}"
+      bindtap="switchTab" data-tab="production">制作清单</view>
     <view class="tab-item {{currentTab === 'dashboard' ? 'active' : ''}}"
       bindtap="switchTab" data-tab="dashboard">营收看板</view>
     <view class="tab-item logout-tab" bindtap="doLogout">退出</view>
@@ -327,6 +329,42 @@
         loading="{{qsSubmitting}}">确认录入</button>
     </view>
   </view>
+  </swiper-item>
+
+  <swiper-item>
+  <!-- ====== 制作清单 ====== -->
+  <scroll-view scroll-y class="content" enhanced show-scrollbar="{{true}}">
+    <view class="prod-header">📋 制作清单</view>
+    <view class="prod-empty" wx:if="{{productionList.items.length === 0}}">暂无待制作订单</view>
+
+    <!-- 商品聚合 -->
+    <view class="prod-grid" wx:if="{{productionList.items.length > 0}}">
+      <view class="prod-total-row">
+        <text>共 {{productionList.totalKinds}} 种商品待制作</text>
+      </view>
+      <view class="prod-item" wx:for="{{productionList.items}}" wx:key="id">
+        <text class="prod-name">{{item.name}}</text>
+        <text class="prod-qty">{{item.total}} 个</text>
+      </view>
+    </view>
+
+    <!-- 12:00后新订单提示 -->
+    <view class="prod-afternoon" wx:if="{{productionList.afterNoonOrders.length > 0}}">
+      <view class="prod-header warn">⚠️ 今日12:00后的新订单（未纳入制作清单）</view>
+      <view class="prod-order" wx:for="{{productionList.afterNoonOrders}}" wx:key="id">
+        <text>{{item.orderNo}} · {{item.userNickname || '顾客'}}</text>
+        <text wx:if="{{item.userPhone}}">📱{{item.userPhone}}</text>
+      </view>
+    </view>
+
+    <!-- 明日订单 -->
+    <view class="prod-tomorrow" wx:if="{{productionList.tomorrowOrders.length > 0}}">
+      <view class="prod-header info">📅 明日订单预览</view>
+      <view class="prod-order" wx:for="{{productionList.tomorrowOrders}}" wx:key="id">
+        <text>{{item.orderNo}} · {{item.status === 'pending' ? '待支付' : '待制作'}}</text>
+      </view>
+    </view>
+  </scroll-view>
   </swiper-item>
 
   <swiper-item>
