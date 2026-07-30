@@ -11,10 +11,11 @@ const _Page = Page;
 Page = function (options) {
   if (!options.onShareAppMessage) {
     options.onShareAppMessage = function () {
+      const app = getApp();
       return {
         title: '大力馒头（纯手工馒头·健康无添加·每日现做现蒸）',
-        path: '/pages/home/home'
-        // imageUrl: '替换为你上传到云存储的 banner.png HTTPS 地址'
+        path: '/pages/home/home',
+        imageUrl: app._shareImageUrl || ''
       };
     };
   }
@@ -36,6 +37,9 @@ App({
   onLaunch() {
     wx.cloud.init({ env: CLOUD_ENV });
 
+    // 预加载分享配图（首次上传到云存储，后续走缓存）
+    this.initShareImage();
+
     // 确保每位访客都有身份（转化率 / 访客统计需要完整分母）
     const userId = wx.getStorageSync('userId');
     if (userId) {
@@ -43,6 +47,42 @@ App({
     } else {
       this.login();
     }
+  },
+
+  // 首次启动时把 banner.png 上传到云存储，后续分享用 HTTPS URL 做预览图
+  initShareImage() {
+    const that = this;
+    const cachedUrl = wx.getStorageSync('share_banner_tempurl');
+    if (cachedUrl) { that._shareImageUrl = cachedUrl; }
+    const fileId = wx.getStorageSync('share_banner_fileid');
+    if (fileId) {
+      wx.cloud.getTempFileURL({ fileList: [fileId] }).then(res => {
+        if (res.fileList[0] && res.fileList[0].tempFileURL) {
+          that._shareImageUrl = res.fileList[0].tempFileURL;
+          wx.setStorageSync('share_banner_tempurl', that._shareImageUrl);
+        }
+      }).catch(() => {});
+      return;
+    }
+    // 首次：从代码包复制 banner.png → 上传云存储
+    const fs = wx.getFileSystemManager();
+    fs.readFile({
+      filePath: '/images/png/banner.png',
+      success(readRes) {
+        const p = wx.env.USER_DATA_PATH + '/banner_share.png';
+        fs.writeFile({ filePath: p, data: readRes.data, success() {
+          wx.cloud.uploadFile({ cloudPath: 'share/banner.png', filePath: p })
+            .then(r => { wx.setStorageSync('share_banner_fileid', r.fileID); return r.fileID; })
+            .then(fid => wx.cloud.getTempFileURL({ fileList: [fid] }))
+            .then(t => {
+              if (t.fileList[0] && t.fileList[0].tempFileURL) {
+                that._shareImageUrl = t.fileList[0].tempFileURL;
+                wx.setStorageSync('share_banner_tempurl', that._shareImageUrl);
+              }
+            }).catch(() => {});
+        }});
+      }
+    });
   },
 
   globalData: {
