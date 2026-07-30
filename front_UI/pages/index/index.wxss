@@ -87,9 +87,14 @@ page {
 }
 
 .category-item {
-  padding: 28rpx 20rpx;
+  padding: 14rpx 12rpx;
   text-align: center;
   border-left: 6rpx solid transparent;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 120rpx;
+  box-sizing: border-box;
 }
 
 .category-item.active {
@@ -97,12 +102,14 @@ page {
   border-left-color: #F3D624;
 }
 
-.category-name {
+.category-line {
   font-size: 26rpx;
   color: #666;
+  line-height: 1.4;
+  text-align: center;
 }
 
-.category-item.active .category-name {
+.category-item.active .category-line {
   color: #333;
   font-weight: bold;
 }

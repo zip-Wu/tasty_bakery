@@ -18,12 +18,12 @@
   <view class="tab-bar">
     <view class="tab-item {{currentTab === 'orders' ? 'active' : ''}}"
       bindtap="switchTab" data-tab="orders">订单管理</view>
+    <view class="tab-item {{currentTab === 'production' ? 'active' : ''}}"
+      bindtap="switchTab" data-tab="production">制作清单</view>
     <view class="tab-item {{currentTab === 'products' ? 'active' : ''}}"
       bindtap="switchTab" data-tab="products">商品管理</view>
     <view class="tab-item {{currentTab === 'quick-sale' ? 'active' : ''}}"
       bindtap="switchTab" data-tab="quick-sale">快速录单</view>
-    <view class="tab-item {{currentTab === 'production' ? 'active' : ''}}"
-      bindtap="switchTab" data-tab="production">制作清单</view>
     <view class="tab-item {{currentTab === 'dashboard' ? 'active' : ''}}"
       bindtap="switchTab" data-tab="dashboard">营收看板</view>
     <view class="tab-item logout-tab" bindtap="doLogout">退出</view>
@@ -122,6 +122,39 @@
       <view class="load-more" wx:if="{{orderHasMore}}" bindtap="loadMoreOrders">
         <text wx:if="{{!orderLoadingMore}}">加载更多订单</text>
         <text wx:else>加载中...</text>
+      </view>
+    </view>
+  </scroll-view>
+  </swiper-item>
+
+  <swiper-item>
+  <!-- ====== 制作清单 ====== -->
+  <scroll-view scroll-y class="content" enhanced show-scrollbar="{{true}}">
+    <view class="prod-header">📋 制作清单</view>
+    <view class="prod-empty" wx:if="{{productionList.items.length === 0}}">暂无待制作订单</view>
+
+    <view class="prod-grid" wx:if="{{productionList.items.length > 0}}">
+      <view class="prod-total-row">
+        <text>共 {{productionList.totalKinds}} 种商品待制作</text>
+      </view>
+      <view class="prod-item" wx:for="{{productionList.items}}" wx:key="id">
+        <text class="prod-name">{{item.name}}</text>
+        <text class="prod-qty">{{item.total}} 个</text>
+      </view>
+    </view>
+
+    <view class="prod-afternoon" wx:if="{{productionList.afterNoonOrders.length > 0}}">
+      <view class="prod-header warn">⚠️ 今日12:00后的新订单（未纳入制作清单）</view>
+      <view class="prod-order" wx:for="{{productionList.afterNoonOrders}}" wx:key="id">
+        <text>{{item.orderNo}} · {{item.userNickname || '顾客'}}</text>
+        <text wx:if="{{item.userPhone}}">📱{{item.userPhone}}</text>
+      </view>
+    </view>
+
+    <view class="prod-tomorrow" wx:if="{{productionList.tomorrowOrders.length > 0}}">
+      <view class="prod-header info">📅 明日订单预览</view>
+      <view class="prod-order" wx:for="{{productionList.tomorrowOrders}}" wx:key="id">
+        <text>{{item.orderNo}} · {{item.status === 'pending' ? '待支付' : '待制作'}}</text>
       </view>
     </view>
   </scroll-view>
@@ -332,82 +365,72 @@
   </swiper-item>
 
   <swiper-item>
-  <!-- ====== 制作清单 ====== -->
-  <scroll-view scroll-y class="content" enhanced show-scrollbar="{{true}}">
-    <view class="prod-header">📋 制作清单</view>
-    <view class="prod-empty" wx:if="{{productionList.items.length === 0}}">暂无待制作订单</view>
-
-    <!-- 商品聚合 -->
-    <view class="prod-grid" wx:if="{{productionList.items.length > 0}}">
-      <view class="prod-total-row">
-        <text>共 {{productionList.totalKinds}} 种商品待制作</text>
-      </view>
-      <view class="prod-item" wx:for="{{productionList.items}}" wx:key="id">
-        <text class="prod-name">{{item.name}}</text>
-        <text class="prod-qty">{{item.total}} 个</text>
-      </view>
-    </view>
-
-    <!-- 12:00后新订单提示 -->
-    <view class="prod-afternoon" wx:if="{{productionList.afterNoonOrders.length > 0}}">
-      <view class="prod-header warn">⚠️ 今日12:00后的新订单（未纳入制作清单）</view>
-      <view class="prod-order" wx:for="{{productionList.afterNoonOrders}}" wx:key="id">
-        <text>{{item.orderNo}} · {{item.userNickname || '顾客'}}</text>
-        <text wx:if="{{item.userPhone}}">📱{{item.userPhone}}</text>
-      </view>
-    </view>
-
-    <!-- 明日订单 -->
-    <view class="prod-tomorrow" wx:if="{{productionList.tomorrowOrders.length > 0}}">
-      <view class="prod-header info">📅 明日订单预览</view>
-      <view class="prod-order" wx:for="{{productionList.tomorrowOrders}}" wx:key="id">
-        <text>{{item.orderNo}} · {{item.status === 'pending' ? '待支付' : '待制作'}}</text>
-      </view>
-    </view>
-  </scroll-view>
-  </swiper-item>
-
-  <swiper-item>
   <!-- ====== 营收看板 ====== -->
-  <view class="content">
-    <view class="dash-header" wx:if="{{dashboard}}">
-      <text class="dash-date">{{dashboard.today}}</text>
-      <text class="dash-title">今日数据</text>
+  <scroll-view scroll-y class="content" enhanced show-scrollbar="{{true}}">
+    <!-- 日期选择栏 -->
+    <view class="dash-date-bar">
+      <view class="date-btn {{dashType === 'day' ? 'active' : ''}}" bindtap="setDashType" data-type="day">日</view>
+      <view class="date-btn {{dashType === 'month' ? 'active' : ''}}" bindtap="setDashType" data-type="month">月</view>
+      <view class="date-btn {{dashType === 'year' ? 'active' : ''}}" bindtap="setDashType" data-type="year">年</view>
+      <picker wx:if="{{dashType === 'month'}}" class="date-picker" mode="date" fields="month" value="{{dashboard.dateForPicker || (dashboard.date + '-01')}}" bindchange="onDateChange">
+        <view class="date-pick-text">{{dashboard.date || '选择月份'}} ▾</view>
+      </picker>
+      <picker wx:elif="{{dashType === 'year'}}" class="date-picker" mode="date" fields="year" value="{{dashboard.dateForPicker || (dashboard.date + '-01-01')}}" bindchange="onDateChange">
+        <view class="date-pick-text">{{dashboard.date || '选择年份'}} ▾</view>
+      </picker>
+      <picker wx:else class="date-picker" mode="date" value="{{dashboard.date}}" bindchange="onDateChange">
+        <view class="date-pick-text">{{dashboard.date || '选择日期'}} ▾</view>
+      </picker>
+      <view class="date-btn today-btn" bindtap="goToday">今天</view>
     </view>
-    <view class="dash-grid" wx:if="{{dashboard}}">
-      <view class="dash-card highlight">
-        <text class="dash-num">¥{{dashboard.revenue}}</text>
-        <text class="dash-label">今日营收</text>
+
+    <!-- 当月/当年汇总 -->
+    <view class="dash-summary" wx:if="{{dashType === 'month' || dashType === 'year'}}">
+      <view class="dash-sum-card">
+        <text class="dash-num big">¥{{dashType === 'month' ? dashboard.monthSummary.totalRevenue : dashboard.yearSummary.totalRevenue}}</text>
+        <text class="dash-label">{{dashType === 'month' ? '本月营收' : '本年营收'}}</text>
       </view>
-      <view class="dash-card">
-        <text class="dash-num">{{dashboard.totalOrders}}</text>
-        <text class="dash-label">总订单</text>
-      </view>
-      <view class="dash-card">
-        <text class="dash-num">{{dashboard.completed}}</text>
-        <text class="dash-label">已完成</text>
-      </view>
-      <view class="dash-card">
-        <text class="dash-num">{{dashboard.preparing}}</text>
-        <text class="dash-label">制作中</text>
-      </view>
-      <view class="dash-card">
-        <text class="dash-num">{{dashboard.ready}}</text>
-        <text class="dash-label">待取餐</text>
-      </view>
-      <view class="dash-card">
-        <text class="dash-num">{{dashboard.pending}}</text>
-        <text class="dash-label">待支付</text>
-      </view>
-      <view class="dash-card">
-        <text class="dash-num" style="color:#e74c3c">{{dashboard.refunded}}</text>
-        <text class="dash-label">已退款</text>
+      <view class="dash-sum-card">
+        <text class="dash-num big">{{dashType === 'month' ? dashboard.monthSummary.totalOrders : dashboard.yearSummary.totalOrders}}</text>
+        <text class="dash-label">{{dashType === 'month' ? '本月总订单' : '本年总订单'}}</text>
       </view>
     </view>
-    <view class="empty" wx:if="{{!dashboard}}">
-      <text>加载中...</text>
+
+    <!-- 当日数据 -->
+    <view class="dash-grid" wx:if="{{dashType === 'day' && dashboard.dayStats.length > 0}}">
+      <view class="dash-card" wx:for="{{dashboard.dayStats}}" wx:key="day">
+        <text class="dash-num">¥{{item.revenue || 0}}</text>
+        <text class="dash-label">当日营收</text>
+      </view>
     </view>
-  </view>
+
+    <!-- 当日订单列表 -->
+    <view class="dash-order-list" wx:if="{{dashType === 'day' && dashboard.todayOrders.length > 0}}">
+      <view class="prod-header">📋 当日订单 ({{dashboard.todayOrders.length}} 笔)</view>
+      <view class="dash-order-card" wx:for="{{dashboard.todayOrders}}" wx:key="id">
+        <view class="dash-order-row">
+          <text class="dash-order-no">{{item.order_no}}</text>
+          <text class="dash-order-status {{item.status === 'completed' ? 's-green' : item.status === 'refunded' ? 's-red' : item.status === 'refund_pending' ? 's-orange' : ''}}">{{item._statusText}}</text>
+          <text class="dash-order-price">¥{{item.total_price}}</text>
+        </view>
+        <text class="dash-order-items" wx:if="{{item._itemsSummary}}">{{item._itemsSummary}}</text>
+      </view>
+    </view>
+
+    <!-- 商品月销量 -->
+    <view class="dash-product-list" wx:if="{{dashboard.productSales.length > 0}}">
+      <view class="prod-header">🏆 商品{{dashType === 'month' ? '月' : dashType === 'year' ? '年' : '日'}}销量 ({{dashboard.salesPeriod}})</view>
+      <view class="prod-item" wx:for="{{dashboard.productSales}}" wx:key="id">
+        <text class="prod-name">{{item.name}}</text>
+        <view class="prod-stats">
+          <text class="prod-qty">{{item.quantity}} 个</text>
+          <text class="prod-revenue">¥{{item.revenue}}</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="empty" wx:if="{{!dashboard}}">加载中...</view>
+  </scroll-view>
   </swiper-item>
 </swiper>
 </view>

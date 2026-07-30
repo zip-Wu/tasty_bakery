@@ -91,11 +91,11 @@ router.get('/categories', async (req, res) => {
   );
   const realCategories = rows.map(r => r.category);
 
-  // 排序：管理员配过的排前面，未配置的按字母序排后面；"全部"永远第一位
+  // 排序：管理员配过的排前面，未配置的按字母序排后面
   const configured = categoryOrder.filter(c => realCategories.includes(c));
   const unconfigured = realCategories.filter(c => !categoryOrder.includes(c)).sort();
 
-  res.json({ success: true, data: ['全部', ...configured, ...unconfigured] });
+  res.json({ success: true, data: [...configured, ...unconfigured] });
 });
 
 module.exports = router;

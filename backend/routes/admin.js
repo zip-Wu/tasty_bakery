@@ -527,49 +527,119 @@ router.post('/admin/quick-sale', async (req, res) => {
   });
 });
 
-// ========== 今日营收看板 ==========
+// ========== 营收看板（支持日期选择 + 当月/当年 + 商品月销量 + 每日营业额） ==========
 router.get('/admin/dashboard', async (req, res) => {
+  const { date, type } = req.query;
   const bjNow = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Shanghai' }));
-  const today = bjNow.getFullYear() + '-' +
-    String(bjNow.getMonth() + 1).padStart(2, '0') + '-' +
-    String(bjNow.getDate()).padStart(2, '0');
 
-  // 今日营收统计（按创建日期过滤）
-  const [[stats]] = await pool.execute(`
-    SELECT
-      COUNT(*) as total_orders,
-      SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending,
-      SUM(CASE WHEN status = 'preparing' THEN 1 ELSE 0 END) as preparing,
-      SUM(CASE WHEN status = 'ready' THEN 1 ELSE 0 END) as ready,
-      SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed,
-      SUM(CASE WHEN status = 'refunded' THEN 1 ELSE 0 END) as refunded,
-      SUM(CASE WHEN status = 'refund_pending' THEN 1 ELSE 0 END) as refund_pending,
-      SUM(CASE WHEN status IN ('preparing', 'ready', 'completed', 'refund_pending') THEN total_price ELSE 0 END) as revenue
-    FROM orders
-    WHERE DATE(created_at) = ?
-  `, [today]);
+  // 目标日期（支持 YYYY / YYYY-MM / YYYY-MM-DD 三种格式）
+  let targetDate;
+  if (date && /^\d{4}$/.test(date)) {
+    targetDate = date;  // 年模式
+  } else if (date && /^\d{4}-\d{2}$/.test(date)) {
+    targetDate = date;  // 月模式
+  } else if (date && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    targetDate = date;  // 日模式
+  } else {
+    targetDate = bjNow.getFullYear() + '-' +
+      String(bjNow.getMonth() + 1).padStart(2, '0') + '-' +
+      String(bjNow.getDate()).padStart(2, '0');
+  }
 
-  // 角标统计（不限日期 — 制作中/待取餐/退款审核跨天也需常亮提醒）
+  // 当月月份
+  const thisMonth = targetDate.slice(0, 7);
+  // 当年年份
+  const thisYear = targetDate.slice(0, 4);
+
+  // 1. 单日营收统计
+  let dayStatsSql, dayParams;
+  if (type === 'month') {
+    dayStatsSql = `SELECT DATE(created_at) as day, COUNT(*) as orders, SUM(total_price) as revenue
+                   FROM orders WHERE DATE_FORMAT(created_at, '%Y-%m') = ?
+                   AND status IN ('preparing', 'ready', 'completed', 'refund_pending')
+                   GROUP BY DATE(created_at) ORDER BY day ASC`;
+    dayParams = [thisMonth];
+  } else if (type === 'year') {
+    dayStatsSql = `SELECT DATE_FORMAT(created_at, '%Y-%m') as day, COUNT(*) as orders, SUM(total_price) as revenue
+                   FROM orders WHERE YEAR(created_at) = ?
+                   AND status IN ('preparing', 'ready', 'completed', 'refund_pending')
+                   GROUP BY DATE_FORMAT(created_at, '%Y-%m') ORDER BY day ASC`;
+    dayParams = [thisYear];
+  } else {
+    dayStatsSql = `SELECT DATE(created_at) as day, COUNT(*) as orders, SUM(total_price) as revenue
+                   FROM orders WHERE DATE(created_at) = ? AND status IN ('preparing', 'ready', 'completed', 'refund_pending')
+                   GROUP BY DATE(created_at)`;
+    dayParams = [targetDate];
+  }
+
+  const [dayStats] = await pool.execute(dayStatsSql, dayParams);
+
+  // 2. 当月汇总
+  const [[monthSummary]] = await pool.execute(`
+    SELECT COUNT(*) as total_orders, SUM(total_price) as total_revenue
+    FROM orders WHERE DATE_FORMAT(created_at, '%Y-%m') = ?
+    AND status IN ('preparing', 'ready', 'completed', 'refund_pending')
+  `, [thisMonth]);
+
+  // 3. 当年汇总
+  const [[yearSummary]] = await pool.execute(`
+    SELECT COUNT(*) as total_orders, SUM(total_price) as total_revenue
+    FROM orders WHERE YEAR(created_at) = ?
+    AND status IN ('preparing', 'ready', 'completed', 'refund_pending')
+  `, [thisYear]);
+
+  // 4. 商品销量（按日/月/年聚合）
+  let productSalesSql, productSalesParams;
+  if (type === 'year') {
+    productSalesSql = `SELECT o.items FROM orders o WHERE YEAR(o.created_at) = ? AND o.status IN ('preparing','ready','completed','refund_pending')`;
+    productSalesParams = [thisYear];
+  } else if (type === 'month') {
+    productSalesSql = `SELECT o.items FROM orders o WHERE DATE_FORMAT(o.created_at, '%Y-%m') = ? AND o.status IN ('preparing','ready','completed','refund_pending')`;
+    productSalesParams = [thisMonth];
+  } else {
+    productSalesSql = `SELECT o.items FROM orders o WHERE DATE(o.created_at) = ? AND o.status IN ('preparing','ready','completed','refund_pending')`;
+    productSalesParams = [targetDate];
+  }
+  const [productSales] = await pool.execute(productSalesSql, productSalesParams);
+
+  const productMap = {};
+  const salesPeriod = type === 'year' ? thisYear + '年' : type === 'month' ? thisMonth.slice(5) + '月' : targetDate;
+  for (const row of productSales) {
+    const items = typeof row.items === 'string' ? JSON.parse(row.items) : row.items;
+    for (const item of items) {
+      const pid = item.id;
+      if (!productMap[pid]) productMap[pid] = { id: pid, name: item.name, quantity: 0, revenue: 0 };
+      productMap[pid].quantity += item.quantity;
+      productMap[pid].revenue += (item.price || 0) * item.quantity;
+    }
+  }
+
+  // 5. 当日订单详情（供点击查看）
+  const [todayOrders] = await pool.execute(
+    `SELECT id, order_no, status, total_price, items, created_at FROM orders WHERE DATE(created_at) = ? ORDER BY created_at DESC`,
+    [targetDate]
+  );
+
+  // 6. 角标统计（不限日期）
   const [[badgeStats]] = await pool.execute(`
     SELECT
-      SUM(CASE WHEN status = 'preparing' THEN 1 ELSE 0 END) as preparing_count,
-      SUM(CASE WHEN status = 'ready' THEN 1 ELSE 0 END) as ready_count,
-      SUM(CASE WHEN status = 'refund_pending' THEN 1 ELSE 0 END) as refund_pending_count
+      SUM(CASE WHEN status = 'preparing' THEN 1 ELSE 0 END) as preparing,
+      SUM(CASE WHEN status = 'ready' THEN 1 ELSE 0 END) as ready,
+      SUM(CASE WHEN status = 'refund_pending' THEN 1 ELSE 0 END) as refund_pending
     FROM orders
   `);
 
   res.json({
     success: true,
     data: {
-      today,
-      totalOrders: stats.total_orders || 0,
-      pending: stats.pending || 0,
-      preparing: badgeStats.preparing_count || 0,
-      ready: badgeStats.ready_count || 0,
-      completed: stats.completed || 0,
-      refunded: stats.refunded || 0,
-      refundPending: badgeStats.refund_pending_count || 0,
-      revenue: stats.revenue || 0,
+      date: targetDate,
+      monthSummary: { totalOrders: monthSummary.total_orders || 0, totalRevenue: monthSummary.total_revenue || 0 },
+      yearSummary:  { totalOrders: yearSummary.total_orders || 0, totalRevenue: yearSummary.total_revenue || 0 },
+      dayStats,
+      productSales: Object.values(productMap),
+      salesPeriod,
+      todayOrders,
+      badges: { preparing: badgeStats.preparing || 0, ready: badgeStats.ready || 0, refundPending: badgeStats.refund_pending || 0 },
     },
   });
 });
@@ -601,13 +671,13 @@ router.get('/admin/production-list', async (req, res) => {
       String(bj.getDate()).padStart(2, '0');
     const noon = today + ' 12:00:00';
 
-    // 待制作订单：status IN ('pending','preparing')，今日12:00前的纳入制作清单
+    // 待制作订单：仅 preparing 状态，今日12:00前的纳入制作清单
     const [orders] = await pool.execute(
       `SELECT o.id, o.order_no, o.items, o.created_at, o.status,
               u.nickname AS user_nickname, u.phone AS user_phone
        FROM orders o
        LEFT JOIN users u ON o.user_id = u.id
-       WHERE o.status IN ('pending', 'preparing')
+       WHERE o.status = 'preparing'
        ORDER BY o.created_at ASC`
     );
 

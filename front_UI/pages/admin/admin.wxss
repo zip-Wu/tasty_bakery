@@ -666,7 +666,9 @@
   border-bottom: 1rpx solid #f0f0f0;
 }
 .prod-name { font-size: 28rpx; color: #333; }
-.prod-qty  { font-size: 30rpx; font-weight: 700; color: #0ab98e; }
+.prod-qty  { font-size: 26rpx; font-weight: 700; color: #333; }
+.prod-revenue { font-size: 26rpx; font-weight: 700; color: #0ab98e; margin-left: 16rpx; }
+.prod-stats { display: flex; align-items: center; }
 
 .prod-afternoon, .prod-tomorrow {
   margin-top: 20rpx;
@@ -679,3 +681,80 @@
   color: #666;
   border-bottom: 1rpx dashed #eee;
 }
+
+/* ========== 营收看板增强 ========== */
+.dash-date-bar {
+  display: flex;
+  align-items: center;
+  padding: 20rpx 24rpx;
+  gap: 12rpx;
+  background: #fff;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+.date-btn {
+  padding: 10rpx 24rpx;
+  font-size: 24rpx;
+  border-radius: 8rpx;
+  color: #666;
+  background: #f5f5f5;
+}
+.date-btn.active {
+  background: #333;
+  color: #fff;
+}
+.date-btn.today-btn {
+  margin-left: auto;
+  background: #0ab98e;
+  color: #fff;
+  padding: 10rpx 20rpx;
+}
+
+.dash-order-row {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  font-size: 26rpx;
+}
+.dash-order-no { flex: 1; }
+.dash-order-status.s-green  { color: #2e7d32; }
+.dash-order-status.s-red    { color: #e53935; }
+.dash-order-status.s-orange { color: #e65100; }
+.dash-order-items {
+  font-size: 22rpx;
+  color: #999;
+  margin-top: 4rpx;
+}
+.date-picker { flex: 1; text-align: right; }
+.date-pick-text { font-size: 26rpx; color: #333; padding: 10rpx 0; }
+
+.dash-summary {
+  display: flex;
+  gap: 20rpx;
+  padding: 24rpx;
+}
+.dash-sum-card {
+  flex: 1;
+  background: #fff;
+  border-radius: 12rpx;
+  padding: 24rpx;
+  text-align: center;
+  box-shadow: 0 2rpx 12rpx rgba(0,0,0,0.04);
+}
+.dash-num.big { font-size: 36rpx; }
+
+.dash-order-list, .dash-product-list {
+  margin-top: 12rpx;
+}
+
+.dash-order-card {
+  margin: 8rpx 24rpx;
+  padding: 18rpx 20rpx;
+  background: #fff;
+  border-radius: 10rpx;
+  box-shadow: 0 1rpx 6rpx rgba(0,0,0,0.04);
+  border-left: 4rpx solid #e0e0e0;
+}
+.dash-order-card:active {
+  background: #fafafa;
+}
+

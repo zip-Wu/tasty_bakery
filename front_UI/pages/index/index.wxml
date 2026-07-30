@@ -18,11 +18,14 @@
       <view
         class="category-item {{currentCategory === item ? 'active' : ''}}"
         wx:for="{{categories}}"
+        wx:for-index="idx"
         wx:key="*this"
         bindtap="switchCategory"
         data-category="{{item}}"
       >
-        <text class="category-name">{{item}}</text>
+        <block wx:for="{{categoryLines[idx]}}" wx:key="*this" wx:for-item="line">
+          <view class="category-line">{{line}}</view>
+        </block>
       </view>
     </scroll-view>
 

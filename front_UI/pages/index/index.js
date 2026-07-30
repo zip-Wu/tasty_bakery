@@ -190,31 +190,43 @@ Page({
 
     const hasOutOfStock = breadList.some(item => item.stock <= 0);
 
-    // 边界：用户正在看「暂无库存」但商品全部补货 → 自动取消分类选择
+    // 边界：用户正在看「暂无库存」但商品全部补货 → 自动切回第一分类
     let effectiveCategory = currentCategory;
     if (currentCategory === '暂无库存' && !hasOutOfStock) {
-      effectiveCategory = null;
+      const showAllCategory = baseCategories.length > 0 ? baseCategories[0] : null;
+      effectiveCategory = showAllCategory;
+    }
+    // 首次加载：当前无分类时默认选中第一分类（等同显示全部）
+    if (effectiveCategory === null && baseCategories.length > 0) {
+      effectiveCategory = baseCategories[0];
     }
 
     // 打 _show 标记（排序已在 loadProducts 完成，这里仅控制显隐）
+    // 第一分类行为等同"全部"：默认选中、显示所有商品
+    const showAllCategory = baseCategories.length > 0 ? baseCategories[0] : null;
     breadList.forEach(item => {
       if (effectiveCategory === '暂无库存') {
         item._show = item.stock <= 0;
-      } else if (effectiveCategory === null) {
-        item._show = true;  // 未选分类：显示全部
+      } else if (effectiveCategory === null || effectiveCategory === showAllCategory) {
+        item._show = true;  // 未选分类 / 第一分类：显示全部
       } else {
         item._show = item.stock > 0 && item.category === effectiveCategory;
       }
     });
 
     // 动态追加/移除「暂无库存」分类
-    const categories = hasOutOfStock
+    const rawCategories = hasOutOfStock
       ? [...baseCategories, '暂无库存']
       : [...baseCategories];
+
+    const categories = rawCategories;
+    // 按 | 拆分，供侧栏多行显示
+    const categoryLines = rawCategories.map(c => c.split('|'));
 
     this.setData({
       filteredBreadList: [...breadList],
       categories,
+      categoryLines,
       currentCategory: effectiveCategory
     });
   },

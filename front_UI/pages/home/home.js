@@ -12,8 +12,8 @@ Page({
     this._tapCount = 0;
   },
 
-  // 隐藏管理入口：连续点击"储存方法"卡片 7 次唤醒
-  onStorageTap() {
+  // 隐藏管理入口：连续点击"加热方法"卡片 7 次唤醒
+  onHeatingTap() {
     this._tapCount = (this._tapCount || 0) + 1;
     if (this._tapTimer) clearTimeout(this._tapTimer);
     if (this._tapCount >= 7) {

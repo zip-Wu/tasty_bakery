@@ -48,6 +48,7 @@ Page({
 
     // 营收
     dashboard: null,
+    dashType: 'day',     // day | month | year
     orderCounts: {},       // 各状态角标数字（preparing / refund_pending）
 
     // 快速录单
@@ -169,7 +170,7 @@ Page({
   switchTab(e) {
     this._stopPolling();
     const tab = e.currentTarget.dataset.tab;
-    const tabMap = { orders: 0, products: 1, 'quick-sale': 2, production: 3, dashboard: 4 };
+    const tabMap = { orders: 0, production: 1, products: 2, 'quick-sale': 3, dashboard: 4 };
     this.setData({ currentTab: tab, tabIndex: tabMap[tab] });
     if (tab === 'orders') {
       this.loadOrders();
@@ -183,7 +184,7 @@ Page({
   // 主 Tab 滑动切换
   onTabSwipe(e) {
     const idx = e.detail.current;
-    const tabs = ['orders', 'products', 'quick-sale', 'production', 'dashboard'];
+    const tabs = ['orders', 'production', 'products', 'quick-sale', 'dashboard'];
     const tab = tabs[idx];
     if (tab !== this.data.currentTab) {
       this._stopPolling();
@@ -852,22 +853,84 @@ Page({
   // ========== 营收看板 ==========
   loadDashboard() {
     const token = wx.getStorageSync('admin_token');
+    const { dashType, dashboard } = this.data;
+    const date = (dashboard && dashboard.date) || '';
     this._request({
-      url: '/api/admin/dashboard',
+      url: '/api/admin/dashboard?type=' + dashType + (date ? '&date=' + date : ''),
       header: { Authorization: 'Bearer ' + token }
     }).then(res => {
       if (res.success) {
         const d = res.data;
-        this.setData({ dashboard: d });
+        // 为当日订单注入中文状态和商品摘要
+        const statusMap = { pending: '待支付', preparing: '制作中', ready: '待取餐', completed: '已完成', refunded: '已退款', refund_pending: '退款审核中' };
+        (d.todayOrders || []).forEach(order => {
+          order._statusText = statusMap[order.status] || order.status;
+          const items = typeof order.items === 'string' ? JSON.parse(order.items || '[]') : (order.items || []);
+          order._itemsSummary = items.map(i => i.name + 'x' + i.quantity).join(' · ');
+        });
         this.setData({
+          dashboard: d,
           orderCounts: {
-            preparing: d.preparing || 0,
-            ready: d.ready || 0,
-            refund_pending: d.refundPending || 0,
+            preparing: (d.badges && d.badges.preparing) || 0,
+            ready: (d.badges && d.badges.ready) || 0,
+            refund_pending: (d.badges && d.badges.refundPending) || 0,
           },
         });
       }
     }).catch(() => {});
+  },
+
+  setDashType(e) {
+    const type = e.currentTarget.dataset.type;
+    const bj = new Date();
+    const today = bj.getFullYear() + '-' +
+      String(bj.getMonth() + 1).padStart(2, '0') + '-' +
+      String(bj.getDate()).padStart(2, '0');
+    const cur = (this.data.dashboard && this.data.dashboard.date) || today;
+    // 切换模式时归一化：年用 YYYY，月用 YYYY-MM，日用 YYYY-MM-DD
+    // 如果当前日期长度不足以生成目标格式（如年"2026"转月），用今天补齐
+    const normalized =
+      type === 'year' ? cur.slice(0, 4) :
+      type === 'month' ? (cur.length >= 7 ? cur.slice(0, 7) : today.slice(0, 7)) :
+      today;
+    const dash = this.data.dashboard || {};
+    dash.date = normalized;
+    // dateForPicker: 给 mode=date + fields=month/year 用的完整日期垫值
+    if (type === 'year') {
+      dash.dateForPicker = normalized + '-01-01';
+    } else if (type === 'month') {
+      dash.dateForPicker = normalized + '-01';
+    } else {
+      delete dash.dateForPicker;
+    }
+    this.setData({ dashType: type, dashboard: dash }, () => this.loadDashboard());
+  },
+
+  onDateChange(e) {
+    const val = e.detail.value;  // 永远是 YYYY-MM-DD（因为用 mode=date）
+    const dash = this.data.dashboard || {};
+    // 按当前模式截取：年=前4位 / 月=前7位 / 日=全部
+    if (this.data.dashType === 'year') {
+      dash.date = val.slice(0, 4);
+      dash.dateForPicker = val.slice(0, 4) + '-01-01';
+    } else if (this.data.dashType === 'month') {
+      dash.date = val.slice(0, 7);
+      dash.dateForPicker = val.slice(0, 7) + '-01';
+    } else {
+      dash.date = val;
+      delete dash.dateForPicker;
+    }
+    this.setData({ dashboard: dash }, () => this.loadDashboard());
+  },
+
+  goToday() {
+    const bj = new Date();
+    const today = bj.getFullYear() + '-' +
+      String(bj.getMonth() + 1).padStart(2, '0') + '-' +
+      String(bj.getDate()).padStart(2, '0');
+    const dash = this.data.dashboard || {};
+    dash.date = today;
+    this.setData({ dashboard: dash }, () => this.loadDashboard());
   },
 
   // ========== 快速录单 ==========
