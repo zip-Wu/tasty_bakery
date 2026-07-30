@@ -72,7 +72,10 @@
     <view class="order-list">
       <view class="order-card" wx:for="{{orders}}" wx:key="id">
         <view class="order-header">
-          <text class="order-no">{{item.orderNo}}</text>
+          <view class="order-header-left">
+            <text class="order-no">{{item.orderNo}}</text>
+            <text class="order-date-tag tag-{{item.dateLabel === '今日' ? 'today' : item.dateLabel === '昨日' ? 'yest' : item.dateLabel === '前天' ? 'db' : 'old'}}" wx:if="{{item.dateLabel}}">{{item.dateLabel}}</text>
+          </view>
           <text class="order-status status-{{item.status}}">{{item.statusText}}</text>
         </view>
         <view class="order-body">
@@ -81,7 +84,8 @@
           </view>
           <view class="order-bottom">
             <view class="order-bottom-left">
-              <view class="order-info">{{item.userNickname || '顾客'}}<text wx:if="{{item.userPhone}}" class="order-user-phone"> · {{item.userPhone}}</text> · {{item.totalQuantity}}件 · ¥{{item.totalPrice}}</view>
+              <view class="order-info">{{item.userNickname || '顾客'}} · {{item.totalQuantity}}件 · ¥{{item.totalPrice}}</view>
+              <view class="order-phone" wx:if="{{item.userPhone}}">📱 {{item.userPhone}}</view>
               <view class="order-remark" wx:if="{{item.remark}}">备注：{{item.remark}}</view>
               <view class="order-remark refund-reason" wx:if="{{item.status === 'refund_pending' && item.refundReason}}">
                 📝 退款理由：{{item.refundReason}}
@@ -130,31 +134,18 @@
   <swiper-item>
   <!-- ====== 制作清单 ====== -->
   <scroll-view scroll-y class="content" enhanced show-scrollbar="{{true}}">
-    <view class="prod-header">📋 制作清单</view>
-    <view class="prod-empty" wx:if="{{productionList.items.length === 0}}">暂无待制作订单</view>
+    <view class="prod-empty" wx:if="{{productionList.groups.length === 0}}">暂无待制作订单</view>
 
-    <view class="prod-grid" wx:if="{{productionList.items.length > 0}}">
-      <view class="prod-total-row">
-        <text>共 {{productionList.totalKinds}} 种商品待制作</text>
+    <view wx:for="{{productionList.groups}}" wx:key="label" wx:for-item="group">
+      <view class="prod-group-header">
+        <text class="prod-group-tag tag-{{group.label === '今日' ? 'today' : group.label === '昨日' ? 'yest' : group.label === '前天' ? 'db' : 'old'}}">{{group.label}}</text>
+        <text class="prod-group-count">{{group.items.length}} 种 · {{group.customerCount}} 位顾客</text>
       </view>
-      <view class="prod-item" wx:for="{{productionList.items}}" wx:key="id">
-        <text class="prod-name">{{item.name}}</text>
-        <text class="prod-qty">{{item.total}} 个</text>
-      </view>
-    </view>
-
-    <view class="prod-afternoon" wx:if="{{productionList.afterNoonOrders.length > 0}}">
-      <view class="prod-header warn">⚠️ 今日12:00后的新订单（未纳入制作清单）</view>
-      <view class="prod-order" wx:for="{{productionList.afterNoonOrders}}" wx:key="id">
-        <text>{{item.orderNo}} · {{item.userNickname || '顾客'}}</text>
-        <text wx:if="{{item.userPhone}}">📱{{item.userPhone}}</text>
-      </view>
-    </view>
-
-    <view class="prod-tomorrow" wx:if="{{productionList.tomorrowOrders.length > 0}}">
-      <view class="prod-header info">📅 明日订单预览</view>
-      <view class="prod-order" wx:for="{{productionList.tomorrowOrders}}" wx:key="id">
-        <text>{{item.orderNo}} · {{item.status === 'pending' ? '待支付' : '待制作'}}</text>
+      <view class="prod-grid" wx:if="{{group.items.length > 0}}">
+        <view class="prod-item" wx:for="{{group.items}}" wx:key="id" wx:for-item="pi">
+          <text class="prod-name">{{pi.name}}</text>
+          <text class="prod-qty">{{pi.total}} 个</text>
+        </view>
       </view>
     </view>
   </scroll-view>

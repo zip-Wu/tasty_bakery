@@ -200,6 +200,15 @@
 }
 .order-header { display: flex; justify-content: space-between; margin-bottom: 12rpx; }
 .order-no { font-size: 24rpx; color: #999; font-family: monospace; }
+.order-header-left { display: flex; align-items: center; gap: 8rpx; }
+.order-date-tag {
+  padding: 2rpx 12rpx;
+  font-size: 20rpx;
+  font-weight: 600;
+  border-radius: 4rpx;
+  color: #fff;
+  margin: 0 6rpx;
+}
 .order-status { font-size: 22rpx; padding: 4rpx 12rpx; border-radius: 4rpx; }
 .status-pending { background: #fff3cd; color: #856404; }
 .status-preparing { background: #cce5ff; color: #004085; }
@@ -232,6 +241,7 @@
   min-width: 0;
 }
 .order-info { font-size: 24rpx; color: #666; }
+.order-phone { font-size: 22rpx; color: #0ab98e; margin-top: 4rpx; }
 .order-user-phone { color: #0ab98e; font-weight: 500; }
 .order-remark { font-size: 24rpx; color: #ff9800; margin-top: 2rpx; word-break: break-all; }
 .order-time { font-size: 22rpx; color: #999; margin-top: 2rpx; }
@@ -652,12 +662,6 @@
   font-size: 28rpx;
 }
 
-.prod-total-row {
-  font-size: 24rpx;
-  color: #666;
-  padding: 8rpx 30rpx 16rpx;
-}
-
 .prod-item {
   display: flex;
   justify-content: space-between;
@@ -670,10 +674,25 @@
 .prod-revenue { font-size: 26rpx; font-weight: 700; color: #0ab98e; margin-left: 16rpx; }
 .prod-stats { display: flex; align-items: center; }
 
-.prod-afternoon, .prod-tomorrow {
-  margin-top: 20rpx;
-  padding: 0 30rpx 20rpx;
+/* 制作清单分组头 */
+.prod-group-header {
+  display: flex;
+  align-items: center;
+  padding: 18rpx 30rpx 10rpx;
+  gap: 14rpx;
 }
+.prod-group-tag {
+  padding: 4rpx 16rpx;
+  font-size: 22rpx;
+  font-weight: 700;
+  border-radius: 6rpx;
+  color: #fff;
+}
+.tag-today { background: #0ab98e; }
+.tag-yest  { background: #f5a623; }
+.tag-db    { background: #e08855; }
+.tag-old   { background: #999; }
+.prod-group-count { font-size: 22rpx; color: #999; }
 
 .prod-order {
   padding: 12rpx 0;

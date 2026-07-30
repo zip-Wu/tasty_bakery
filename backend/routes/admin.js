@@ -661,67 +661,65 @@ router.put('/admin/store/toggle', async (req, res) => {
   });
 });
 
-// ========== 制作清单（按商品聚合待制作订单，支持当日/次日视图） ==========
+// ========== 制作清单（按商品聚合待制作订单，按今日/昨日/前天/更早分组） ==========
 router.get('/admin/production-list', async (req, res) => {
   try {
-    const now = new Date();
-    const bj = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Shanghai' }));
-    const today = bj.getFullYear() + '-' +
-      String(bj.getMonth() + 1).padStart(2, '0') + '-' +
-      String(bj.getDate()).padStart(2, '0');
-    const noon = today + ' 12:00:00';
+    const bjNow = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Shanghai' }));
+    const fmtDate = d => d.getFullYear() + '-' +
+      String(d.getMonth() + 1).padStart(2, '0') + '-' +
+      String(d.getDate()).padStart(2, '0');
 
-    // 待制作订单：仅 preparing 状态，今日12:00前的纳入制作清单
-    const [orders] = await pool.execute(
-      `SELECT o.id, o.order_no, o.items, o.created_at, o.status,
-              u.nickname AS user_nickname, u.phone AS user_phone
+    const todayStr = fmtDate(bjNow);
+    const yestD = new Date(bjNow); yestD.setDate(yestD.getDate() - 1);
+    const yestStr = fmtDate(yestD);
+    const dbD = new Date(bjNow); dbD.setDate(dbD.getDate() - 2);
+    const dbStr = fmtDate(dbD);
+
+    function getDateLabel(dStr) {
+      const day = (typeof dStr === 'string' ? dStr : '').slice(0, 10);
+      if (day === todayStr) return '今日';
+      if (day === yestStr) return '昨日';
+      if (day === dbStr) return '前天';
+      return '更早';
+    }
+
+    const [rows] = await pool.execute(
+      `SELECT o.id, o.user_id, o.items, o.created_at, o.status
        FROM orders o
-       LEFT JOIN users u ON o.user_id = u.id
        WHERE o.status = 'preparing'
        ORDER BY o.created_at ASC`
     );
 
-    const productionItems = {};  // { productId: { name, total, orders: [...] } }
-    const afterNoonOrders = [];  // 12:00后的订单，单独列出不纳入制作
-    const tomorrowOrders = [];   // 非今日订单（明日）
-
-    for (const order of orders) {
+    // 按日期标签分组：{ label, items(商品聚合), customerCount }
+    const groups = {};
+    for (const order of rows) {
       const createdAt = typeof order.created_at === 'string'
         ? order.created_at
-        : (order.created_at instanceof Date
-            ? order.created_at.toISOString().slice(0, 19).replace('T', ' ')
-            : '');
-
-      const isTomorrow = createdAt.slice(0, 10) !== today;
-      if (isTomorrow) {
-        tomorrowOrders.push({ id: order.id, orderNo: order.order_no, createdAt, status: order.status });
-        continue;
-      }
-
-      const items = typeof order.items === 'string' ? JSON.parse(order.items) : order.items;
+        : order.created_at instanceof Date
+          ? order.created_at.toISOString().slice(0, 19).replace('T', ' ')
+          : '';
+      const label = getDateLabel(createdAt);
+      if (!groups[label]) groups[label] = { label, items: {}, customers: {} };
+      // 商品聚合
+      const items = typeof order.items === 'string' ? JSON.parse(order.items || '[]') : (order.items || []);
       for (const item of items) {
         const pid = item.id;
-        if (!productionItems[pid]) {
-          productionItems[pid] = { id: pid, name: item.name, total: 0, orders: [] };
-        }
-        productionItems[pid].total += item.quantity;
+        if (!groups[label].items[pid]) groups[label].items[pid] = { id: pid, name: item.name, total: 0 };
+        groups[label].items[pid].total += item.quantity;
       }
-
-      if (createdAt >= noon) {
-        afterNoonOrders.push({ id: order.id, orderNo: order.order_no, createdAt, status: order.status,
-          userNickname: order.user_nickname, userPhone: order.user_phone });
-      }
+      // 去重顾客计数
+      if (order.user_id) groups[label].customers[order.user_id] = true;
     }
 
-    res.json({
-      success: true,
-      data: {
-        items: Object.values(productionItems),
-        totalKinds: Object.keys(productionItems).length,
-        afterNoonOrders,
-        tomorrowOrders,
-      },
-    });
+    // 固定顺序：更早 → 前天 → 昨日 → 今日（优先级递增）
+    const ordered = ['更早', '前天', '昨日', '今日'].map(l => {
+      const g = groups[l];
+      return g
+        ? { label: g.label, items: Object.values(g.items), customerCount: Object.keys(g.customers).length }
+        : { label: l, items: [], customerCount: 0 };
+    }).filter(g => g.items.length > 0);
+
+    res.json({ success: true, data: { groups: ordered } });
   } catch (err) {
     console.error('[production-list] 查询失败:', err.message);
     res.status(500).json({ success: false, message: '查询失败' });

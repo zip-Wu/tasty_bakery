@@ -59,7 +59,7 @@ Page({
     qsSubmitting: false,
 
     // 制作清单
-    productionList: { items: [], totalKinds: 0, afterNoonOrders: [], tomorrowOrders: [] },
+    productionList: { groups: [] },
 
     // 订单轮询提醒
     newOrderAlert: false,
@@ -256,6 +256,25 @@ Page({
   },
 
   renderOrders() {
+    const today = new Date();
+    const fmtDate = d => d.getFullYear() + '-' +
+      String(d.getMonth() + 1).padStart(2, '0') + '-' +
+      String(d.getDate()).padStart(2, '0');
+    const todayStr = fmtDate(today);
+    const yestD = new Date(today); yestD.setDate(yestD.getDate() - 1);
+    const yestStr = fmtDate(yestD);
+    const dbD = new Date(today); dbD.setDate(dbD.getDate() - 2);
+    const dbStr = fmtDate(dbD);
+
+    function getDateLabel(dStr) {
+      if (!dStr) return '';
+      const day = (typeof dStr === 'string' ? dStr : '').slice(0, 10);
+      if (day === todayStr) return '今日';
+      if (day === yestStr) return '昨日';
+      if (day === dbStr)  return '前天';
+      return '更早';
+    }
+
     const orders = (this.ordersRaw || []).map(order => {
       order.statusText = this.data.statusMap[order.status] || order.status;
       order.totalQuantity = (order.items || []).reduce((sum, item) => sum + (item.quantity || 0), 0);
@@ -264,6 +283,7 @@ Page({
         item.itemKey = `${item.id}_${idx}`;
       });
       if (order.createdAt) {
+        order.dateLabel = getDateLabel(order.createdAt);
         const d = new Date(order.createdAt);
         order.timeDisplay = (d.getMonth() + 1) + '/' + d.getDate() + ' ' +
           String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
