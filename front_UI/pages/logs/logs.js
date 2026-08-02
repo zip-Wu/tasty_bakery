@@ -1,7 +1,7 @@
 Page({
   data: {
     userInfo: {
-      avatar: 'https://api.dicebear.com/9.x/fun-emoji/svg?seed=default',
+      avatar: '/images/default-avatar.png',
       nickname: '加载中...',
       points: 0
     },
@@ -9,7 +9,9 @@ Page({
       pending: 0, preparing: 0, ready: 0, completed: 0, refund: 0
     },
     userId: null,
-    showCallModal: false      // 联系门店弹窗
+    showCallModal: false,
+    showNicknameModal: false,
+    nicknameInput: ''
   },
 
   onLoad() {
@@ -53,7 +55,6 @@ Page({
     }).then(orders => {
       const count = { pending: 0, preparing: 0, ready: 0, completed: 0, refund: 0 };
       orders.forEach(order => {
-        // 只统计已知状态（未知状态忽略，避免污染计数对象）
         if (count[order.status] !== undefined) count[order.status]++;
       });
       this.setData({ orderCount: count });
@@ -71,9 +72,86 @@ Page({
     wx.switchTab({ url: '/pages/order-list/order-list' });
   },
 
-  goSettings() { wx.showToast({ title: '设置功能开发中', icon: 'none' }); },
+  // ========== 修改头像 ==========
 
-  // 联系客服（复用联系门店弹窗）
+  changeAvatar() {
+    wx.chooseImage({
+      count: 1,
+      sizeType: ['compressed'],
+      sourceType: ['album'],
+      success: (res) => {
+        const tempFilePath = res.tempFilePaths[0];
+        wx.showLoading({ title: '上传中...' });
+
+        const cloudPath = 'avatars/' + this.data.userId + '_' + Date.now() + '.png';
+        wx.cloud.uploadFile({
+          cloudPath,
+          filePath: tempFilePath,
+          success: (uploadRes) => {
+            this.updateProfile({ avatar: uploadRes.fileID });
+          },
+          fail: (err) => {
+            wx.hideLoading();
+            console.error('[logs] 头像上传失败:', err);
+            wx.showToast({ title: '上传失败，请重试', icon: 'none' });
+          }
+        });
+      }
+    });
+  },
+
+  // ========== 修改昵称 ==========
+
+  changeNickname() {
+    this.setData({
+      showNicknameModal: true,
+      nicknameInput: this.data.userInfo.nickname
+    });
+  },
+
+  closeNicknameModal() {
+    this.setData({ showNicknameModal: false });
+  },
+
+  onNicknameInput(e) {
+    this.setData({ nicknameInput: e.detail.value });
+  },
+
+  saveNickname() {
+    const nickname = (this.data.nicknameInput || '').trim();
+    if (!nickname) {
+      wx.showToast({ title: '昵称不能为空', icon: 'none' });
+      return;
+    }
+    this.updateProfile({ nickname });
+  },
+
+  // ========== 统一保存 ==========
+
+  updateProfile(data) {
+    const app = getApp();
+    wx.showLoading({ title: '保存中...' });
+    app.request({
+      url: '/api/user/' + this.data.userId,
+      method: 'POST',
+      data,
+    }).then(result => {
+      wx.hideLoading();
+      this.setData({
+        userInfo: result,
+        showNicknameModal: false
+      });
+      app.globalData.userInfo = result;
+      wx.showToast({ title: '保存成功', icon: 'success' });
+    }).catch(err => {
+      wx.hideLoading();
+      console.error('[logs] 保存失败:', err);
+      wx.showToast({ title: (err && err.message) || '保存失败，请重试', icon: 'none' });
+    });
+  },
+
+  // ========== 原功能 ==========
+
   goContact() {
     this.setData({ showCallModal: true });
   },

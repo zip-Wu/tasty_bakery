@@ -5,11 +5,10 @@
   <view class="user-header">
     <view class="user-bg"></view>
     <view class="user-info">
-      <image class="avatar" src="{{userInfo.avatar}}" mode="aspectFill"></image>
-      <view class="user-detail">
+      <image class="avatar" src="{{userInfo.avatar}}" mode="aspectFill" bindtap="changeAvatar"></image>
+      <view class="user-detail" bindtap="changeNickname">
         <text class="nickname">{{userInfo.nickname}}</text>
       </view>
-      <view class="arrow" bindtap="goSettings">›</view>
     </view>
   </view>
 
@@ -75,7 +74,7 @@
         <text class="tool-arrow">›</text>
       </view>
       <view class="tool-item" bindtap="goPrivacy">
-        <image class="tool-icon" src="/images/svg/tool-contact.svg" mode="aspectFit"></image>
+        <image class="tool-icon" src="/images/svg/clipboard.svg" mode="aspectFit"></image>
         <text class="tool-name">隐私政策</text>
         <text class="tool-arrow">›</text>
       </view>
@@ -88,9 +87,10 @@
   <!-- 自定义悬浮TabBar -->
   <custom-tab-bar></custom-tab-bar>
 
-  <!-- 联系门店弹窗（复用 order-detail 同款） -->
-  <view class="modal-mask" wx:if="{{showCallModal}}" bindtap="closeCallModal">
-    <view class="modal-card" catchtap="">
+  <!-- 联系门店弹窗 -->
+  <view class="modal-mask" wx:if="{{showCallModal}}">
+    <view class="modal-overlay" bindtap="closeCallModal"></view>
+    <view class="modal-card">
       <view class="modal-title">联系门店</view>
       <view class="modal-content">
         <view class="modal-line modal-store-name">大力馒头铺·信息港店</view>
@@ -99,6 +99,21 @@
       <view class="modal-actions">
         <view class="modal-btn cancel" bindtap="closeCallModal">取消</view>
         <view class="modal-btn confirm" bindtap="doCallPhone">拨打</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 修改昵称弹窗 -->
+  <view class="modal-mask" wx:if="{{showNicknameModal}}">
+    <view class="modal-overlay" bindtap="closeNicknameModal"></view>
+    <view class="modal-card">
+      <view class="modal-title">修改昵称</view>
+      <view class="modal-content">
+        <input class="edit-input wide" placeholder="输入新昵称" value="{{nicknameInput}}" bindinput="onNicknameInput" maxlength="20" focus="{{true}}" />
+      </view>
+      <view class="modal-actions">
+        <view class="modal-btn cancel" bindtap="closeNicknameModal">取消</view>
+        <view class="modal-btn confirm" bindtap="saveNickname">保存</view>
       </view>
     </view>
   </view>

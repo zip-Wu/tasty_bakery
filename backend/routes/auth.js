@@ -159,7 +159,7 @@ router.post('/login', async (req, res) => {
       user = {
         id: generateId(),
         openid: openId,
-        avatar: avatar || `https://api.dicebear.com/9.x/fun-emoji/svg?seed=${encodeURIComponent(openId.slice(0,10))}`,
+        avatar: avatar || '/images/default-avatar.png',
         points: 0,
       };
       user = await createUserWithNickNumber(conn, user);
@@ -197,6 +197,21 @@ router.post('/user/:id', async (req, res) => {
     if (updates[key] !== undefined) {
       fields.push(`${key} = ?`);
       values.push(updates[key]);
+    }
+  }
+
+  // 昵称重复检查：不同用户不得使用相同昵称
+  if (updates.nickname !== undefined) {
+    const nickname = (updates.nickname || '').trim();
+    if (!nickname) {
+      return res.json({ success: false, message: '昵称不能为空' });
+    }
+    const [dup] = await pool.execute(
+      'SELECT id FROM users WHERE nickname = ? AND id != ?',
+      [nickname, req.user.id]
+    );
+    if (dup.length > 0) {
+      return res.json({ success: false, message: '该昵称已被使用，请换一个' });
     }
   }
 
