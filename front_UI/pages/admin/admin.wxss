@@ -256,12 +256,14 @@
   padding: 4rpx 12rpx;
   align-self: flex-start;
 }
-.order-actions { margin-top: 16rpx; }
+.order-actions { margin-top: 16rpx; display: flex; gap: 16rpx; justify-content: space-between; }
+.order-actions > button { margin: 0; }
 .action-btn { font-size: 22rpx !important; }
 .ready-btn { background: #27ae60 !important; color: #fff !important; }
 .complete-btn { background: #333 !important; color: #fff !important; }
 .approve-btn { background: #e74c3c !important; color: #fff !important; font-weight: bold !important; }
 .reject-btn { background: #e0e0e0 !important; color: #666 !important; }
+.refund-direct-btn { background: #e74c3c !important; color: #fff !important; }
 
 /* 退款审核 */
 .refund-reason {

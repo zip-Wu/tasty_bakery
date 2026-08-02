@@ -271,6 +271,77 @@ router.post('/admin/orders/:id/refund-reject', async (req, res) => {
   }
 });
 
+// ========== 商家主动退款（无需顾客申请） ==========
+router.post('/admin/orders/:id/direct-refund', async (req, res) => {
+  let conn;
+  try {
+    const [rows] = await pool.execute('SELECT * FROM orders WHERE id = ?', [req.params.id]);
+    if (!rows[0]) return res.json({ success: false, message: '订单不存在' });
+
+    const order = rows[0];
+
+    // 仅允许已支付、未退款的订单
+    const allowedStatuses = ['preparing', 'ready', 'completed'];
+    if (!allowedStatuses.includes(order.status)) {
+      return res.json({ success: false, message: '该订单当前状态不支持直接退款' });
+    }
+
+    // 仅线上支付的订单可以退款（线下录单无微信支付记录）
+    if (!order.pay_out_trade_no && order.source !== 'customer') {
+      return res.json({ success: false, message: '线下录单无法通过微信退款，请线下处理' });
+    }
+    if (!order.pay_out_trade_no) {
+      return res.json({ success: false, message: '该订单无支付记录，无法退款' });
+    }
+
+    const outRefundNo = 'D' + order.order_no + '-' + Date.now().toString(36);
+    const total = Math.round(parseFloat(order.total_price) * 100);
+
+    const refundResult = await refund({
+      outTradeNo: order.pay_out_trade_no,
+      outRefundNo: outRefundNo,
+      totalFee: total,
+      refundFee: total,
+      refundDesc: '商家主动退款',
+    });
+
+    // 退款 API 成功 → 更新订单状态
+    conn = await pool.getConnection();
+    await conn.beginTransaction();
+
+    await conn.execute(
+      'UPDATE orders SET status = ?, refund_id = ?, refunded_at = NOW(), refund_reviewed_at = NOW() WHERE id = ?',
+      ['refunded', refundResult.refund_id, order.id]
+    );
+
+    // 恢复库存
+    const items = typeof order.items === 'string' ? JSON.parse(order.items) : order.items;
+    for (const item of items) {
+      await conn.execute(
+        'UPDATE products SET stock = stock + ? WHERE id = ?',
+        [item.quantity, item.id]
+      );
+    }
+
+    await conn.commit();
+
+    // 退回积分（事务外，非关键路径）
+    const pts = Math.floor(parseFloat(order.total_price));
+    if (pts > 0) {
+      await pool.execute('UPDATE users SET points = GREATEST(points - ?, 0) WHERE id = ?', [pts, order.user_id]);
+    }
+
+    console.log(`[direct-refund] 订单 ${order.order_no} 已主动退款`);
+    res.json({ success: true, message: '退款已发起，将以原支付方式退回' });
+  } catch (err) {
+    if (conn) await conn.rollback();
+    console.error('[direct-refund] 退款失败:', err.message);
+    res.json({ success: false, message: err.message || '退款操作失败，请稍后重试' });
+  } finally {
+    if (conn) conn.release();
+  }
+});
+
 // ========== 获取全部商品 ==========
 router.get('/admin/products', async (req, res) => {
   const [products] = await pool.execute(

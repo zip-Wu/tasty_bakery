@@ -414,6 +414,41 @@ Page({
     });
   },
 
+  // ========== 商家主动退款（无需顾客申请） ==========
+  directRefund(e) {
+    const id = e.currentTarget.dataset.id;
+    const orderNo = e.currentTarget.dataset.orderno;
+    const token = wx.getStorageSync('admin_token');
+
+    wx.showModal({
+      title: '确认退款',
+      content: '将对订单 ' + orderNo + ' 发起原路退款，确认？',
+      confirmText: '确认退款',
+      confirmColor: '#e74c3c',
+      success: (r) => {
+        if (!r.confirm) return;
+        wx.showLoading({ title: '退款中...' });
+        this._request({
+          url: '/api/admin/orders/' + id + '/direct-refund',
+          method: 'POST',
+          header: { Authorization: 'Bearer ' + token }
+        }).then(res => {
+          wx.hideLoading();
+          if (res.success) {
+            wx.showToast({ title: '退款已发起', icon: 'success' });
+            this.loadOrders();
+            this.loadDashboard();
+          } else {
+            wx.showToast({ title: res.message || '退款失败', icon: 'none' });
+          }
+        }).catch(() => {
+          wx.hideLoading();
+          wx.showToast({ title: '网络错误', icon: 'none' });
+        });
+      }
+    });
+  },
+
   // ========== 商品管理 ==========
   loadProducts() {
     const token = wx.getStorageSync('admin_token');
