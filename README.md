@@ -1,6 +1,6 @@
 # 大力馒头铺 — 预定取餐小程序
 
-> 覆盖完整的预定-支付-通知-取餐全链路，为珠海「大力馒头铺·信息港店」开发，已在门店实际使用。
+> 覆盖完整的预定-支付-通知-取餐流程，为珠海「大力馒头铺·信息港店」开发，已在门店实际使用。
 > 顾客下单支付后授权微信订阅通知或预留手机号，商家制作完成时自动推送取餐提醒——顾客无需盯着进度，等通知到店即可。
 
 [![MiniProgram](https://img.shields.io/badge/前端-微信小程序原生-07c160)](https://developers.weixin.qq.com/miniprogram/dev/framework/)
@@ -324,7 +324,7 @@ erDiagram
     }
 ```
 
-`database.js` 实现了自动建表 + 冷启动守护：先检查 orders 表是否存在，已存在则跳过建表，避免云托管缩容到 0 后每次冷启动都执行一遍建表 SQL。`seed.js` 提供初始种子数据（1 个门店 + 1 个测试商品）。
+`database.js` 实现了自动建表：先检查 orders 表是否存在，已存在则跳过建表，避免云托管缩容到 0 后每次冷启动都执行一遍建表 SQL。`seed.js` 提供初始种子数据（1 个门店 + 1 个测试商品）。
 
 ---
 
@@ -336,12 +336,12 @@ erDiagram
 
 ```
 settings 表用途：
-  ├─ order_seq_ORD{YYMMDD}    → 线上订单日序号（原子递增 → 订单号 ORD260730001）
-  ├─ order_seq_OFF{YYMMDD}    → 线下录单日序号（原子递增 → 订单号 OFF260730001）
+  ├─ order_seq_ORD{YYMMDD}    → 线上订单日序号（自增 → 订单号 ORD260730001）
+  ├─ order_seq_OFF{YYMMDD}    → 线下录单日序号（自增 → 订单号 OFF260730001）
   └─ category_order           → 分类显示顺序（JSON 数组 → ["面包","蛋糕","饮品"]）
 ```
 
-序号生成的原子性通过 MySQL 的 `INSERT ... ON DUPLICATE KEY UPDATE` 保证——一条 SQL 完成"键不存在则插入 seq=1，存在则 seq+1"，无竞态条件。
+序号生成通过 MySQL 的 `INSERT ... ON DUPLICATE KEY UPDATE` 保证无竞态条件——一条 SQL 完成"键不存在则插入 seq=1，存在则 seq+1"。
 
 ### 分类动态排序
 
@@ -437,13 +437,13 @@ node app.js             # 启动 Express（默认 80 端口）
 
 **优雅关闭** — 缩容或重新部署时云托管发送 `SIGTERM` 信号。app.js 中注册了该信号：先调用 `server.close()` 停止接收新请求，等待当前请求处理完毕，再执行 `pool.end()` 释放数据库连接池。防止支付回调在写入数据库中途被强杀。
 
-**健康检查** — `/health` 端点并非简单返回 200，而是实际执行 `SELECT 1` 探测 MySQL。如果数据库挂了但 Node 进程仍存活，负载均衡能检测到并将流量切走。
+**健康检查** — `/health` 端点执行 `SELECT 1` 探测 MySQL 连接。如果数据库不可用，负载均衡会检测到并将流量切走。
 
-**异步异常兜底** — Express 4 不会自动捕获 async 路由中抛出的异常。引入 `express-async-errors` 将所有未捕获的异步异常转发到全局错误处理，避免请求挂起无响应。
+**异步错误处理** — Express 4 不会自动捕获 async 路由中抛出的异常。引入 `express-async-errors` 将所有未捕获的异步异常转发到全局错误处理，避免请求挂起无响应。
 
 **CORS** — 仅允许 `https://servicewechat.com` 跨域访问。
 
-**密钥启动校验** — `ADMIN_PASSWORD` 和 `JWT_SECRET` 未配置时直接 `process.exit(1)` 拒绝启动，不会带着空密码跑起来。
+**启动环境校验** — `ADMIN_PASSWORD` 和 `JWT_SECRET` 未配置时直接 `process.exit(1)` 拒绝启动，不会带着空密码跑起来。
 
 ---
 
