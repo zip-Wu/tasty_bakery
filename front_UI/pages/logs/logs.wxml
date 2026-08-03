@@ -8,6 +8,7 @@
       <image class="avatar" src="{{userInfo.avatar}}" mode="aspectFill" bindtap="changeAvatar"></image>
       <view class="user-detail" bindtap="changeNickname">
         <text class="nickname">{{userInfo.nickname}}</text>
+        <image class="nickname-edit-icon" src="/images/svg/edit-pencil.svg" mode="aspectFit"></image>
       </view>
     </view>
   </view>
@@ -68,14 +69,14 @@
         <text class="tool-name">联系客服</text>
         <text class="tool-arrow">›</text>
       </view>
-      <view class="tool-item" bindtap="goAbout">
-        <image class="tool-icon" src="/images/svg/tool-about.svg" mode="aspectFit"></image>
-        <text class="tool-name">关于我们</text>
-        <text class="tool-arrow">›</text>
-      </view>
       <view class="tool-item" bindtap="goPrivacy">
         <image class="tool-icon" src="/images/svg/clipboard.svg" mode="aspectFit"></image>
         <text class="tool-name">隐私政策</text>
+        <text class="tool-arrow">›</text>
+      </view>
+      <view class="tool-item" bindtap="goAbout">
+        <image class="tool-icon" src="/images/svg/tool-about.svg" mode="aspectFit"></image>
+        <text class="tool-name">关于我们</text>
         <text class="tool-arrow">›</text>
       </view>
     </view>
@@ -103,12 +104,34 @@
     </view>
   </view>
 
-  <!-- 修改昵称弹窗 -->
+  <!-- 关于我们弹窗 -->
+  <view class="modal-mask" wx:if="{{showAboutModal}}">
+    <view class="modal-overlay" bindtap="closeAboutModal"></view>
+    <view class="modal-card">
+      <view class="modal-title">关于我们</view>
+      <view class="modal-content">
+        <view class="modal-line modal-store-name">大力馒头铺·信息港店</view>
+        <view class="modal-line">纯手工馒头·健康无添加·每日现做现蒸</view>
+        <view class="modal-line modal-store-phone">门店地址：珠海市香洲区信息港</view>
+        <view class="modal-line modal-store-phone">联系电话：189-2427-3942</view>
+        <view class="modal-line modal-store-phone">版本：v2.0.4</view>
+      </view>
+      <view class="modal-actions">
+        <view class="modal-btn confirm" bindtap="closeAboutModal">知道了</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 编辑个人资料弹窗 -->
   <view class="modal-mask" wx:if="{{showNicknameModal}}">
     <view class="modal-overlay" bindtap="closeNicknameModal"></view>
     <view class="modal-card">
-      <view class="modal-title">修改昵称</view>
+      <view class="modal-title">编辑个人资料</view>
       <view class="modal-content">
+        <view class="modal-avatar-row" bindtap="changeAvatarInModal">
+          <image class="modal-avatar" src="{{tempAvatarPath || userInfo.avatar}}" mode="aspectFill"></image>
+          <text class="modal-avatar-hint">更换头像</text>
+        </view>
         <input class="edit-input wide" placeholder="输入新昵称" value="{{nicknameInput}}" bindinput="onNicknameInput" maxlength="20" focus="{{true}}" />
       </view>
       <view class="modal-actions">

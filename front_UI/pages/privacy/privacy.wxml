@@ -7,6 +7,7 @@
     <view class="privacy-text">为提供门店点单、距离计算和订单管理服务，我们会申请获取以下信息：</view>
     <view class="privacy-text">• 微信OpenID：用于识别您的身份，关联订单记录和积分</view>
     <view class="privacy-text">• 位置信息：用于展示附近门店并计算您与门店的距离</view>
+    <view class="privacy-text">• 头像：用于个性化您的个人主页展示，图片存储于微信云存储平台</view>
     <view class="privacy-text">• 相册/相机：用于商家管理商品时上传商品图片</view>
   </view>
 

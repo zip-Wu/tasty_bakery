@@ -47,8 +47,16 @@ page {
   font-size: 36rpx;
   font-weight: bold;
   color: #1a1a1a;
-  display: block;
+  display: inline;
   padding: 6rpx 0;
+}
+
+.nickname-edit-icon {
+  width: 28rpx;
+  height: 28rpx;
+  margin-left: 8rpx;
+  opacity: 0.7;
+  vertical-align: middle;
 }
 
 /* ========== 积分卡片 ========== */
@@ -57,7 +65,7 @@ page {
   background: #fff;
   border-radius: 16rpx;
   padding: 32rpx 0 28rpx;
-  box-shadow: 0 4rpx 16rpx rgba(0,0,0,0.06);
+  box-shadow: 0 8rpx 30rpx rgba(0,0,0,0.10);
   position: relative;
   z-index: 2;
 }
@@ -88,7 +96,7 @@ page {
   background: #fff;
   border-radius: 16rpx;
   overflow: hidden;
-  box-shadow: 0 2rpx 12rpx rgba(0,0,0,0.04);
+  box-shadow: 0 8rpx 30rpx rgba(0,0,0,0.10);
 }
 
 .section-header {
@@ -271,6 +279,26 @@ page {
 }
 
 /* ========== 昵称弹窗输入框 ========== */
+.modal-avatar-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20rpx 0 30rpx;
+}
+
+.modal-avatar {
+  width: 100rpx;
+  height: 100rpx;
+  border-radius: 50%;
+  background: #eee;
+}
+
+.modal-avatar-hint {
+  font-size: 26rpx;
+  color: #576b95;
+  margin-left: 24rpx;
+}
+
 .edit-input.wide {
   width: 100%;
   font-size: 28rpx;

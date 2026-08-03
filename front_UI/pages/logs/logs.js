@@ -10,8 +10,10 @@ Page({
     },
     userId: null,
     showCallModal: false,
+    showAboutModal: false,
     showNicknameModal: false,
-    nicknameInput: ''
+    nicknameInput: '',
+    tempAvatarPath: ''
   },
 
   onLoad() {
@@ -105,7 +107,19 @@ Page({
   changeNickname() {
     this.setData({
       showNicknameModal: true,
-      nicknameInput: this.data.userInfo.nickname
+      nicknameInput: this.data.userInfo.nickname,
+      tempAvatarPath: ''
+    });
+  },
+
+  changeAvatarInModal() {
+    wx.chooseImage({
+      count: 1,
+      sizeType: ['compressed'],
+      sourceType: ['album'],
+      success: (res) => {
+        this.setData({ tempAvatarPath: res.tempFilePaths[0] });
+      }
     });
   },
 
@@ -123,7 +137,26 @@ Page({
       wx.showToast({ title: '昵称不能为空', icon: 'none' });
       return;
     }
-    this.updateProfile({ nickname });
+    const tempPath = this.data.tempAvatarPath;
+    if (tempPath) {
+      wx.showLoading({ title: '上传头像...' });
+      const cloudPath = 'avatars/' + this.data.userId + '_' + Date.now() + '.png';
+      wx.cloud.uploadFile({
+        cloudPath,
+        filePath: tempPath,
+        success: (uploadRes) => {
+          wx.hideLoading();
+          this.updateProfile({ nickname, avatar: uploadRes.fileID });
+        },
+        fail: (err) => {
+          wx.hideLoading();
+          console.error('[logs] 头像上传失败:', err);
+          wx.showToast({ title: '上传失败，请重试', icon: 'none' });
+        }
+      });
+    } else {
+      this.updateProfile({ nickname });
+    }
   },
 
   // ========== 统一保存 ==========
@@ -168,11 +201,11 @@ Page({
   },
 
   goAbout() {
-    wx.showModal({
-      title: '关于我们',
-      content: '大力馒头铺·信息港店\n\n用心烘焙每一份美味\n\n版本：v1.0.0',
-      showCancel: false, confirmText: '知道了'
-    });
+    this.setData({ showAboutModal: true });
+  },
+
+  closeAboutModal() {
+    this.setData({ showAboutModal: false });
   },
 
   goPrivacy() {
