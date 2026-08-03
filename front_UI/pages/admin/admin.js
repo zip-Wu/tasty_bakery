@@ -18,8 +18,8 @@ Page({
     // 订单
     orderFilter: 'preparing',
     orderFilters: [
-      { key: 'all', label: '全部' },
       { key: 'refund_pending', label: '退款审核' },
+      { key: 'all', label: '全部' },
       { key: 'preparing', label: '制作中' },
       { key: 'ready', label: '待取餐' },
       { key: 'completed', label: '已完成' },
@@ -1027,6 +1027,21 @@ Page({
     let qty = cart[id] || 0;
     qty += delta;
     if (qty < 0) qty = 0;
+
+    if (qty > 0) {
+      cart[id] = qty;
+    } else {
+      delete cart[id];
+    }
+
+    this.setData({ qsCart: cart });
+    this.qsUpdateSummary();
+  },
+
+  qsInputQty(e) {
+    const id = e.currentTarget.dataset.id;
+    const qty = parseInt(e.detail.value) || 0;
+    const cart = { ...this.data.qsCart };
 
     if (qty > 0) {
       cart[id] = qty;

@@ -338,7 +338,8 @@
         <view class="qs-qty-ctrl">
           <view class="qs-qty-btn minus {{qsCart[item.id] ? '' : 'disabled'}}"
             bindtap="qsChange" data-id="{{item.id}}" data-delta="-1">−</view>
-          <text class="qs-qty-num">{{qsCart[item.id] || 0}}</text>
+          <input class="qs-qty-input" type="number" value="{{qsCart[item.id] || ''}}" placeholder="0"
+            bindinput="qsInputQty" data-id="{{item.id}}" />
           <view class="qs-qty-btn plus"
             bindtap="qsChange" data-id="{{item.id}}" data-delta="1">+</view>
         </view>

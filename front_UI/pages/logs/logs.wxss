@@ -65,7 +65,7 @@ page {
   background: #fff;
   border-radius: 16rpx;
   padding: 32rpx 0 28rpx;
-  box-shadow: 0 8rpx 30rpx rgba(0,0,0,0.10);
+  box-shadow: 0 4rpx 16rpx rgba(0,0,0,0.06);
   position: relative;
   z-index: 2;
 }
@@ -96,7 +96,7 @@ page {
   background: #fff;
   border-radius: 16rpx;
   overflow: hidden;
-  box-shadow: 0 8rpx 30rpx rgba(0,0,0,0.10);
+  box-shadow: 0 2rpx 12rpx rgba(0,0,0,0.04);
 }
 
 .section-header {

@@ -604,6 +604,18 @@
 .qs-qty-btn.minus.disabled { opacity: 0.4; }
 .qs-qty-btn.plus { background: #f5a623; color: #fff; }
 .qs-qty-num { font-size: 28rpx; font-weight: bold; min-width: 36rpx; text-align: center; }
+.qs-qty-input {
+  width: 88rpx;
+  height: 48rpx;
+  text-align: center;
+  font-size: 28rpx;
+  font-weight: bold;
+  background: #f8f8f8;
+  border: 1rpx solid #e0e0e0;
+  border-radius: 8rpx;
+  padding: 0 4rpx;
+  box-sizing: border-box;
+}
 
 .qs-summary {
   position: fixed;
