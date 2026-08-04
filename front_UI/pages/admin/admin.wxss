@@ -256,6 +256,17 @@
   padding: 4rpx 12rpx;
   align-self: flex-start;
 }
+.refund-direct-btn.order-bottom-refund {
+  flex-shrink: 0;
+  align-self: flex-end;
+  margin: 0 !important;
+  background: rgba(229, 57, 53, 0.08) !important;
+  color: #e53935 !important;
+  border: none !important;
+}
+.refund-direct-btn.order-bottom-refund::after {
+  border: none !important;
+}
 .order-actions { margin-top: 16rpx; display: flex; gap: 16rpx; justify-content: space-between; }
 .order-actions > button { margin: 0; }
 .action-btn { font-size: 22rpx !important; }
