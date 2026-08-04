@@ -209,6 +209,15 @@
   color: #fff;
   margin: 0 6rpx;
 }
+.order-source-tag {
+  padding: 2rpx 12rpx;
+  font-size: 20rpx;
+  font-weight: 500;
+  border-radius: 4rpx;
+  color: #333;
+  background: #E2E8F0;
+  margin: 0 6rpx;
+}
 .order-status { font-size: 22rpx; padding: 4rpx 12rpx; border-radius: 4rpx; }
 .status-pending { background: #fff3cd; color: #856404; }
 .status-preparing { background: #cce5ff; color: #004085; }
