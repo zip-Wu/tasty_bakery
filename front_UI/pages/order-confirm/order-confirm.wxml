@@ -42,7 +42,7 @@
   <view class="pay-section">
     <view class="pay-title">支付方式</view>
     <view class="pay-method selected">
-      <image class="method-icon" src="/images/svg/credit-card.svg" mode="aspectFit"></image>
+      <image class="method-icon" src="/images/svg/wechat-pay.svg" mode="aspectFit"></image>
       <text class="method-name">微信支付</text>
       <image class="check-icon" src="/images/svg/check.svg" mode="aspectFit"></image>
     </view>
