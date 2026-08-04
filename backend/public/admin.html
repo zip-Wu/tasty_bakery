@@ -729,7 +729,6 @@ async function loadQuickSale() {
   qsCart = {};
 
   const productsHtml = res.data
-    .filter(p => p.is_available)
     .map(p => `
       <div class="qs-product-item" id="qs-item-${p.id}">
         <img src="${p.image}" alt="${p.name}" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 52 52%22><rect fill=%22%23eee%22 width=%2252%22 height=%2252%22 rx=%228%22/><text x=%2226%22 y=%2230%22 text-anchor=%22middle%22 fill=%22%23ccc%22 font-size=%2216%22>🍞</text></svg>'">

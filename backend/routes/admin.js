@@ -578,16 +578,12 @@ router.post('/admin/quick-sale', async (req, res) => {
     [id, orderNo, 'merchant', JSON.stringify(orderItems), totalPrice, now, now]
   );
 
-  // 5. 扣库存 + 累加销量
+  // 5. 累加销量（快速录单不扣库存）
   for (const item of items) {
     if (!item.quantity || item.quantity < 1) continue;
     await pool.execute(
-      `UPDATE products
-       SET sales = sales + ?,
-           stock = GREATEST(stock - ?, 0),
-           is_available = CASE WHEN stock - ? <= 0 THEN 0 ELSE is_available END
-       WHERE id = ?`,
-      [item.quantity, item.quantity, item.quantity, item.id]
+      `UPDATE products SET sales = sales + ? WHERE id = ?`,
+      [item.quantity, item.id]
     );
   }
 

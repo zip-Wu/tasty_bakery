@@ -999,9 +999,7 @@ Page({
     }).then(res => {
       wx.hideLoading();
       if (res.success) {
-        // 只显示在售商品
         const products = (res.data || [])
-          .filter(p => p.is_available)
           .map(p => ({
             ...p,
             stock: p.stock || 0,
