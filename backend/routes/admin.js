@@ -683,7 +683,7 @@ router.get('/admin/dashboard', async (req, res) => {
 
   // 5. 当日订单详情（供点击查看）
   const [todayOrders] = await pool.execute(
-    `SELECT id, order_no, status, total_price, items, created_at FROM orders WHERE DATE(created_at) = ? ORDER BY created_at DESC`,
+    `SELECT id, order_no, status, total_price, items, created_at, source FROM orders WHERE DATE(created_at) = ? ORDER BY created_at DESC`,
     [targetDate]
   );
 

@@ -409,6 +409,7 @@
       <view class="dash-order-card" wx:for="{{dashboard.todayOrders}}" wx:key="id">
         <view class="dash-order-row">
           <text class="dash-order-no">{{item.order_no}}</text>
+          <text class="order-source-tag" wx:if="{{item.source === 'offline'}}">线下</text>
           <text class="dash-order-status {{item.status === 'completed' ? 's-green' : item.status === 'refunded' ? 's-red' : item.status === 'refund_pending' ? 's-orange' : ''}}">{{item._statusText}}</text>
           <text class="dash-order-price">¥{{item.total_price}}</text>
         </view>
