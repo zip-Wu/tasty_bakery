@@ -102,7 +102,7 @@
               </view>
             </view>
             <view class="order-pickup" wx:if="{{item.status === 'ready' || item.status === 'preparing'}}">取餐码：{{item.pickupCode}}</view>
-            <button class="action-btn refund-direct-btn order-bottom-refund" wx:if="{{item.status === 'completed'}}" size="mini"
+            <button class="action-btn refund-direct-btn order-bottom-refund" wx:if="{{item.status === 'completed' && item.source !== 'offline'}}" size="mini"
               bindtap="directRefund" data-id="{{item.id}}" data-orderno="{{item.orderNo}}">退款</button>
           </view>
         </view>
