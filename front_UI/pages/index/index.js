@@ -154,6 +154,18 @@ Page({
       this.setData({ cart: {}, cartCount: 0, cartTotal: 0 });
     }
 
+    // 售罄/库存不足返回：精确移除购物车里那件商品（其余保留，顾客可重新加购）
+    if (app.globalData.removeCartItemId) {
+      const rid = app.globalData.removeCartItemId;
+      app.globalData.removeCartItemId = null;
+      const cart = { ...this.data.cart };
+      if (cart[rid]) {
+        delete cart[rid];
+        this.updateCart(cart);
+        wx.showToast({ title: '已移除售罄商品，请重新选择', icon: 'none' });
+      }
+    }
+
     // 更新TabBar选中状态
     if (typeof this.getTabBar === 'function' && this.getTabBar()) {
       const tabBar = this.getTabBar();

@@ -91,9 +91,15 @@ Page({
           isNewOrder: false
         });
         that.doPayForOrder(created.id);
-      }).catch(() => {
+      }).catch(err => {
         that.setData({ isPaying: false });
-        wx.showToast({ title: '创建订单失败', icon: 'none' });
+        const msg = (err && err.message) || '创建订单失败';
+        wx.showToast({ title: msg, icon: 'none' });
+        // 创建订单时售罄/库存不足 → 让点单页删掉这件商品，再跳回去重新选
+        if (err && err.outOfStockId) {
+          app.globalData.removeCartItemId = err.outOfStockId;
+          setTimeout(() => { wx.switchTab({ url: '/pages/index/index' }); }, 1200);
+        }
       });
     } else {
       // 已有订单：直接支付
@@ -131,14 +137,20 @@ Page({
       });
     }).catch(err => {
       that.setData({ isPaying: false });
-      app.globalData.clearCartOnReturn = true;
       const msg = (err && err.message) || '发起支付失败';
       wx.showToast({ title: msg, icon: 'none' });
-      // 库存不足（预扣失败）→ 回点单页重新加购；其他失败 → 回订单列表找待支付订单
       const isStockShort = msg.indexOf('库存不足') !== -1;
-      setTimeout(() => {
-        wx.switchTab({ url: isStockShort ? '/pages/index/index' : '/pages/order-list/order-list' });
-      }, 1200);
+      if (isStockShort) {
+        // 库存不足：精确删掉购物车里这件商品，回点单页重新加购
+        if (err && err.outOfStockId) {
+          app.globalData.removeCartItemId = err.outOfStockId;
+        }
+        setTimeout(() => { wx.switchTab({ url: '/pages/index/index' }); }, 1200);
+      } else {
+        // 其他失败（含用户取消）：订单已创建，清空购物车防止重复下单，回订单列表
+        app.globalData.clearCartOnReturn = true;
+        setTimeout(() => { wx.switchTab({ url: '/pages/order-list/order-list' }); }, 1200);
+      }
     });
   }
 });

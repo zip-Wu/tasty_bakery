@@ -62,7 +62,7 @@ router.post('/orders', async (req, res) => {
       // 库存为 0 的商品禁止下单
       const dbStock = stockMap[item.id];
       if (dbStock != null && dbStock <= 0) {
-        return res.json({ success: false, message: `${item.name || '商品'}已售罄，请返回点单页刷新` });
+        return res.json({ success: false, message: `${item.name || '商品'}已售罄，请返回点单页刷新`, outOfStockId: item.id });
       }
       serverTotal += dbPrice * item.quantity;
     }
@@ -185,11 +185,11 @@ router.post('/orders/refund/notify', async (req, res) => {
         ['refunded', refundId, order.id]
       );
 
-      // 恢复库存
+      // 恢复库存（不碰 is_available，上下架由商家决定）
       const items = typeof order.items === 'string' ? JSON.parse(order.items) : order.items;
       for (const item of items) {
         await conn.execute(
-          'UPDATE products SET stock = stock + ?, is_available = 1 WHERE id = ?',
+          'UPDATE products SET stock = stock + ? WHERE id = ?',
           [item.quantity, item.id]
         );
       }
@@ -445,15 +445,14 @@ router.post('/pay/:orderId', async (req, res) => {
         await conn.beginTransaction();
         for (const item of items) {
           const [r] = await conn.execute(
-            `UPDATE products SET stock = stock - ?, is_available = CASE WHEN stock - ? <= 0 THEN 0 ELSE is_available END
-             WHERE id = ? AND stock >= ?`,
-            [item.quantity, item.quantity, item.id, item.quantity]
+            `UPDATE products SET stock = stock - ? WHERE id = ? AND stock >= ?`,
+            [item.quantity, item.id, item.quantity]
           );
           // 单条 UPDATE 自带行锁 + 原子性：条件不满足（库存不足）时影响 0 行
           if (r.affectedRows === 0) {
             await conn.rollback();
             console.warn(`[pay] 订单 ${order.order_no} 库存不足: id=${item.id}`);
-            return res.json({ success: false, message: `${item.name || '商品'}库存不足，请重新选择` });
+            return res.json({ success: false, message: `${item.name || '商品'}库存不足，请重新选择`, outOfStockId: item.id });
           }
         }
         await conn.commit();
@@ -588,7 +587,7 @@ async function restoreStockForItems(items, conn) {
   const exec = conn || pool;
   for (const item of items) {
     await exec.execute(
-      'UPDATE products SET stock = stock + ?, is_available = 1 WHERE id = ?',
+      'UPDATE products SET stock = stock + ? WHERE id = ?',
       [item.quantity, item.id]
     );
   }
