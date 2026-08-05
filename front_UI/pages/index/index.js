@@ -231,7 +231,7 @@ Page({
     });
   },
 
-  // 加入购物车
+  // 加入购物车（上限 = 当前库存，防止单用户超买）
   addToCart(e) {
     const id = e.currentTarget.dataset.id;
     const bread = this.data.breadList.find(item => item.id == id);
@@ -240,7 +240,12 @@ Page({
       return;
     }
     const cart = { ...this.data.cart };
-    cart[id] = (cart[id] || 0) + 1;
+    const next = (cart[id] || 0) + 1;
+    if (bread && next > bread.stock) {
+      wx.showToast({ title: '已达库存上限', icon: 'none' });
+      return;
+    }
+    cart[id] = next;
     this.updateCart(cart);
   },
 
@@ -270,7 +275,7 @@ Page({
     this.setData({ cart, cartCount: count, cartTotal: parseFloat(total.toFixed(2)) });
   },
 
-  // 供商品详情页调用的批量加购（跨页面共享购物车）
+  // 供商品详情页调用的批量加购（跨页面共享购物车，同样受库存上限约束）
   addProductToCart(productId, quantity) {
     const bread = this.data.breadList.find(item => item.id == productId);
     if (bread && bread.stock <= 0) {
@@ -278,7 +283,12 @@ Page({
       return;
     }
     const cart = { ...this.data.cart };
-    cart[productId] = (cart[productId] || 0) + quantity;
+    const next = (cart[productId] || 0) + quantity;
+    if (bread && next > bread.stock) {
+      wx.showToast({ title: '已达库存上限', icon: 'none' });
+      return;
+    }
+    cart[productId] = next;
     this.updateCart(cart);
   },
 

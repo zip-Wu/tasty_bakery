@@ -248,6 +248,12 @@ page {
   color: #333;
 }
 
+/* 数量达到库存上限时的灰态加号（不可再点） */
+.count-btn.plus.disabled {
+  background: #e0e0e0;
+  color: #aaa;
+}
+
 .goods-count {
   font-size: 26rpx;
   color: #333;

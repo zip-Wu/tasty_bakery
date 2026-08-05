@@ -132,8 +132,13 @@ Page({
     }).catch(err => {
       that.setData({ isPaying: false });
       app.globalData.clearCartOnReturn = true;
-      wx.showToast({ title: (err && err.message) || '发起支付失败', icon: 'none' });
-      setTimeout(() => { wx.switchTab({ url: '/pages/order-list/order-list' }); }, 1200);
+      const msg = (err && err.message) || '发起支付失败';
+      wx.showToast({ title: msg, icon: 'none' });
+      // 库存不足（预扣失败）→ 回点单页重新加购；其他失败 → 回订单列表找待支付订单
+      const isStockShort = msg.indexOf('库存不足') !== -1;
+      setTimeout(() => {
+        wx.switchTab({ url: isStockShort ? '/pages/index/index' : '/pages/order-list/order-list' });
+      }, 1200);
     });
   }
 });

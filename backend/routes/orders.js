@@ -299,7 +299,7 @@ router.post('/orders/:id/status', async (req, res) => {
 });
 
 // ========== 微信支付 — 云托管封装方案（免证书、免签名、免公网回调） ==========
-const { createJsapiOrder, config: payConfig } = require('../services/wechat-pay');
+const { createJsapiOrder, queryOrder, config: payConfig } = require('../services/wechat-pay');
 
 const isRealPay = !!payConfig.sub_mch_id;
 
@@ -342,7 +342,8 @@ router.post('/pay/notify', async (req, res) => {
 
     const order = orders[0];
 
-    // 事务：订单状态更新 + 库存扣减
+    // 事务：订单状态更新
+    // 库存已在"确认支付"时原子预扣，这里不再操作库存 —— 库存不足的回滚重试路径已整体移除
     // 事务内用 SELECT...FOR UPDATE 二次确认状态，并发回调只有一个能拿到 pending 行锁
     const conn = await pool.getConnection();
     try {
@@ -360,21 +361,6 @@ router.post('/pay/notify', async (req, res) => {
         'UPDATE orders SET status = ?, paid_at = ? WHERE id = ?',
         ['preparing', now, order.id]
       );
-
-      const items = typeof order.items === 'string' ? JSON.parse(order.items) : order.items;
-      for (const item of items) {
-        const [[row]] = await conn.execute(
-          'SELECT stock FROM products WHERE id = ? FOR UPDATE',
-          [item.id]
-        );
-        if (!row || row.stock < item.quantity) {
-          throw new Error(`库存不足: id=${item.id}`);
-        }
-        await conn.execute(
-          'UPDATE products SET stock = stock - ?, is_available = CASE WHEN stock - ? <= 0 THEN 0 ELSE is_available END WHERE id = ?',
-          [item.quantity, item.quantity, item.id]
-        );
-      }
 
       await conn.commit();
       console.log(`[pay-notify] 订单 ${outTradeNo} 已更新为 preparing, 支付流水: ${transactionId}`);
@@ -451,14 +437,54 @@ router.post('/pay/:orderId', async (req, res) => {
     }
     const total = Math.round(order.total_price * 100); // 元 → 分
 
+    // ===== 预扣库存（原子，防并发超卖）=====
+    // 幂等：pay_out_trade_no 非空 = 本单已发起过支付（库存已预扣），重复确认支付不再扣
+    if (!order.pay_out_trade_no) {
+      const conn = await pool.getConnection();
+      try {
+        await conn.beginTransaction();
+        for (const item of items) {
+          const [r] = await conn.execute(
+            `UPDATE products SET stock = stock - ?, is_available = CASE WHEN stock - ? <= 0 THEN 0 ELSE is_available END
+             WHERE id = ? AND stock >= ?`,
+            [item.quantity, item.quantity, item.id, item.quantity]
+          );
+          // 单条 UPDATE 自带行锁 + 原子性：条件不满足（库存不足）时影响 0 行
+          if (r.affectedRows === 0) {
+            await conn.rollback();
+            console.warn(`[pay] 订单 ${order.order_no} 库存不足: id=${item.id}`);
+            return res.json({ success: false, message: `${item.name || '商品'}库存不足，请重新选择` });
+          }
+        }
+        await conn.commit();
+        console.log(`[pay] 订单 ${order.order_no} 库存预扣成功`);
+      } catch (preErr) {
+        await conn.rollback();
+        console.error('[pay] 预扣库存异常:', preErr.message);
+        return res.json({ success: false, message: '库存预扣失败，请稍后重试' });
+      } finally {
+        conn.release();
+      }
+    }
+
     // 统一下单 — out_trade_no 加时间戳后缀，避免取消后重试时商户订单号重复
     const outTradeNo = order.order_no + '-' + Date.now();
-    const respdata = await createJsapiOrder({
-      outTradeNo,
-      total,
-      description,
-      openid: openid,
-    });
+    let respdata;
+    try {
+      respdata = await createJsapiOrder({
+        outTradeNo,
+        total,
+        description,
+        openid: openid,
+      });
+    } catch (payErr) {
+      // 创建支付单失败 → 归还本次预扣的库存（若本单刚预扣）
+      if (!order.pay_out_trade_no) {
+        await restoreStockForItems(items);
+      }
+      console.error('[pay] 统一下单失败:', payErr.message);
+      return res.json({ success: false, message: '发起支付失败，请稍后重试' });
+    }
 
     // 记录本次支付使用的 out_trade_no（带后缀），退款时需要它来匹配微信支付订单
     await pool.execute('UPDATE orders SET pay_out_trade_no = ? WHERE id = ?', [outTradeNo, order.id]);
@@ -556,14 +582,99 @@ function formatOrder(row) {
 
 module.exports = router;
 
+// ========== 库存返还（按订单商品回加，恢复可售） ==========
+// 预扣模型下，凡"订单取消/超时未付/支付单创建失败"，都靠这里把预扣的库存还回去
+async function restoreStockForItems(items, conn) {
+  const exec = conn || pool;
+  for (const item of items) {
+    await exec.execute(
+      'UPDATE products SET stock = stock + ?, is_available = 1 WHERE id = ?',
+      [item.quantity, item.id]
+    );
+  }
+}
+
+// ========== 补处理"微信已支付但回调未到"的订单 ==========
+// 云托管回调最多重试约 2 天，超期停发；若顾客已扣款而回调丢失，订单会永远卡在 pending。
+// 定时器发现微信侧 SUCCESS 时主动补转 preparing（与回调逻辑同款幂等），避免钱货两空。
+async function compensatePaidOrder(order) {
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+    const [[current]] = await conn.execute('SELECT status FROM orders WHERE id = ? FOR UPDATE', [order.id]);
+    if (current.status !== 'pending') {
+      await conn.rollback();
+      return;
+    }
+    await conn.execute(
+      'UPDATE orders SET status = ?, paid_at = ? WHERE id = ?',
+      ['preparing', mysqlNow(), order.id]
+    );
+    await conn.commit();
+
+    const earnedPoints = Math.floor(parseFloat(order.total_price));
+    if (earnedPoints > 0) {
+      await pool.execute('UPDATE users SET points = points + ? WHERE id = ?', [earnedPoints, order.user_id]);
+    }
+    console.warn(`[auto-delete] 订单 ${order.order_no} 微信已支付但回调未到，已补转 preparing`);
+  } catch (err) {
+    await conn.rollback();
+    console.error(`[auto-delete] 补处理失败 ${order.order_no}:`, err.message);
+  } finally {
+    conn.release();
+  }
+}
+
 // ========== 自动清理定时器：待支付超过 30 分钟的订单自动删除 ==========
+// 预扣模型下三类 pending 单的处置：
+//  ① pay_out_trade_no 为空 → 从未发起支付，库存未预扣 → 直接删
+//  ② pay_out_trade_no 非空且微信侧未支付 → 已预扣库存 → 查微信确认后"还库存+删单"
+//  ③ pay_out_trade_no 非空且微信侧已支付 → 回调丢失/延迟 → 不删，补转 preparing
 setInterval(async () => {
   try {
-    const [result] = await pool.execute(
-      `DELETE FROM orders WHERE status = 'pending' AND created_at < DATE_SUB(NOW(), INTERVAL 30 MINUTE)`
+    const [rows] = await pool.execute(
+      `SELECT * FROM orders WHERE status = 'pending' AND created_at < DATE_SUB(NOW(), INTERVAL 30 MINUTE)`
     );
-    if (result.affectedRows > 0) {
-      console.log(`[auto-delete] ${result.affectedRows} 笔过期订单已清理`);
+
+    for (const order of rows) {
+      // ① 从未发起支付：没预扣过库存，直接删
+      if (!order.pay_out_trade_no) {
+        await pool.execute('DELETE FROM orders WHERE id = ?', [order.id]);
+        console.log(`[auto-delete] 清理未发起支付的订单 ${order.order_no}`);
+        continue;
+      }
+
+      // ②③ 发起过支付：先问微信这笔钱到底到没到（以微信为唯一裁判）
+      let tradeState = null;
+      try {
+        const respdata = await queryOrder(order.pay_out_trade_no);
+        tradeState = respdata.trade_state;
+      } catch (qErr) {
+        console.warn(`[auto-delete] 查询微信状态失败，本单跳过: ${order.order_no}`, qErr.message);
+        continue; // 查询异常 → 保守跳过，下轮再试，绝不盲删
+      }
+
+      if (tradeState === 'SUCCESS') {
+        // ③ 已支付：回调丢失/延迟 → 补转 preparing，等顾客取餐
+        await compensatePaidOrder(order);
+        continue;
+      }
+
+      // ② 确认未支付（NOTPAY / CLOSED 等）→ 还库存 + 删单，同一事务
+      const conn = await pool.getConnection();
+      try {
+        await conn.beginTransaction();
+        const items = typeof order.items === 'string' ? JSON.parse(order.items) : order.items;
+        await restoreStockForItems(items, conn);
+        await conn.execute('DELETE FROM orders WHERE id = ?', [order.id]);
+        await conn.commit();
+        console.log(`[auto-delete] 清理超时未付订单 ${order.order_no}，库存已返还`);
+      } catch (innerErr) {
+        await conn.rollback();
+        console.error(`[auto-delete] 清理 ${order.order_no} 失败:`, innerErr.message);
+      } finally {
+        conn.release();
+      }
     }
   } catch (err) {
     console.error('[auto-delete] 定时器异常:', err.message);
