@@ -10,9 +10,19 @@ const router = express.Router();
 router.get('/products', async (req, res) => {
   const { category } = req.query;
 
+  // 新品窗口天数：settings 表可配（new_product_days），默认 7 天。
+  // 超过窗口自动不再标「新品」，无需商家维护标记开关。
+  const [cfgRows] = await pool.execute(
+    "SELECT value FROM settings WHERE kkey = 'new_product_days'"
+  );
+  const newDays = Math.min(Math.max(parseInt(cfgRows?.[0]?.value, 10) || 7, 1), 90);
+
   // 去掉 `AND stock > 0` 过滤：让所有上架商品都显示（包括 0 库存 / 售罄），
   // 否则商家在管理端新加未填库存的商品会看不见。
-  let sql = 'SELECT id, name, price, image, category, description, gallery, sales, stock FROM products WHERE is_available = 1';
+  // is_new：created_at 在窗口内即为新品（NOW() 与 created_at 同为 UTC+8 会话时区，相对比较正确）
+  let sql = `SELECT id, name, price, image, category, description, gallery, sales, stock,
+             (created_at >= DATE_SUB(NOW(), INTERVAL ${newDays} DAY)) AS is_new
+             FROM products WHERE is_available = 1`;
   const params = [];
 
   if (category && category !== '全部') {
@@ -37,6 +47,7 @@ router.get('/products', async (req, res) => {
   }
   for (const p of products) {
     p.monthlySales = monthlyMap[p.id] || 0;
+    p.is_new = !!p.is_new;  // 布尔表达式结果转 true/false，语义明确
   }
 
   res.json({ success: true, data: products });

@@ -1,5 +1,9 @@
 // pages/index/index.js
 
+// 虚拟分类「近期新品」：与后端分类并列展示（排在「暂无库存」上面），
+// is_new 窗口内出现、过期自动消失，逻辑见 filterBreadList
+const NEW_CATEGORY = '🆕 近期新品';
+
 Page({
   data: {
     // 分类数据（从后端动态加载，初始仅「全部」；「暂无库存」由 filterBreadList 动态追加）
@@ -200,24 +204,28 @@ Page({
   filterBreadList() {
     const { breadList, baseCategories, currentCategory } = this.data;
 
+    // 虚拟分类的成员判定：新品 = is_new（后端按 created_at 窗口计算）；暂无库存 = stock <= 0
+    const hasNew = breadList.some(item => item.is_new);
     const hasOutOfStock = breadList.some(item => item.stock <= 0);
+    // 第一分类行为等同"全部"：默认选中、显示所有商品
+    const showAllCategory = baseCategories.length > 0 ? baseCategories[0] : null;
 
-    // 边界：用户正在看「暂无库存」但商品全部补货 → 自动切回第一分类
+    // 边界：用户正停在「暂无库存」/「近期新品」，但该分类已无成员 → 自动切回第一分类
     let effectiveCategory = currentCategory;
-    if (currentCategory === '暂无库存' && !hasOutOfStock) {
-      const showAllCategory = baseCategories.length > 0 ? baseCategories[0] : null;
+    if ((currentCategory === '暂无库存' && !hasOutOfStock) ||
+        (currentCategory === NEW_CATEGORY && !hasNew)) {
       effectiveCategory = showAllCategory;
     }
     // 首次加载：当前无分类时默认选中第一分类（等同显示全部）
-    if (effectiveCategory === null && baseCategories.length > 0) {
-      effectiveCategory = baseCategories[0];
+    if (effectiveCategory === null) {
+      effectiveCategory = showAllCategory;
     }
 
     // 打 _show 标记（排序已在 loadProducts 完成，这里仅控制显隐）
-    // 第一分类行为等同"全部"：默认选中、显示所有商品
-    const showAllCategory = baseCategories.length > 0 ? baseCategories[0] : null;
     breadList.forEach(item => {
-      if (effectiveCategory === '暂无库存') {
+      if (effectiveCategory === NEW_CATEGORY) {
+        item._show = !!item.is_new;
+      } else if (effectiveCategory === '暂无库存') {
         item._show = item.stock <= 0;
       } else if (effectiveCategory === null || effectiveCategory === showAllCategory) {
         item._show = true;  // 未选分类 / 第一分类：显示全部
@@ -226,18 +234,18 @@ Page({
       }
     });
 
-    // 动态追加/移除「暂无库存」分类
-    const rawCategories = hasOutOfStock
-      ? [...baseCategories, '暂无库存']
-      : [...baseCategories];
+    // 动态追加虚拟分类：新品在前、暂无库存在后（真实分类都排在它们前面）
+    const virtualCategories = [];
+    if (hasNew) virtualCategories.push(NEW_CATEGORY);
+    if (hasOutOfStock) virtualCategories.push('暂无库存');
+    const rawCategories = [...baseCategories, ...virtualCategories];
 
-    const categories = rawCategories;
     // 按 | 拆分，供侧栏多行显示
     const categoryLines = rawCategories.map(c => c.split('|'));
 
     this.setData({
       filteredBreadList: [...breadList],
-      categories,
+      categories: rawCategories,
       categoryLines,
       currentCategory: effectiveCategory
     });

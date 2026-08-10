@@ -107,6 +107,7 @@ page {
   color: #666;
   line-height: 1.4;
   text-align: center;
+  white-space: nowrap;  /* 防「🆕」等 emoji 宽度导致意外换行 */
 }
 
 .category-item.active .category-line {
@@ -138,6 +139,11 @@ page {
   border-bottom: 2rpx solid #f5f5f5;
 }
 
+.goods-img-wrap {
+  position: relative;  /* 新品角标的定位容器（image 为自闭合组件，不能包角标） */
+  flex-shrink: 0;
+}
+
 .goods-img {
   width: 180rpx;
   height: 180rpx;
@@ -145,6 +151,24 @@ page {
   margin-right: 20rpx;
   background: #f5f5f5;
   flex-shrink: 0;
+}
+
+/* 新品角标（v1 + 轻阴影）：左上角，z-index:2 高于售罄遮罩(1) → 售罄时仍可见；
+   轻阴影与 cart-bar 阴影同语言但力度收敛一档 */
+.new-tag {
+  position: absolute;
+  top: 8rpx;
+  left: 8rpx;
+  font-size: 20rpx;
+  font-weight: bold;
+  color: #fff;
+  background: #e53935;
+  padding: 4rpx 14rpx;
+  border-radius: 20rpx;
+  z-index: 2;
+  line-height: 1.2;
+  box-shadow: 0 4rpx 10rpx rgba(229, 57, 53, 0.3);
+  pointer-events: none;
 }
 
 /* 右侧区域：上方名称简介（可点详情），下方销售/温度/价格/操作（不可点） */

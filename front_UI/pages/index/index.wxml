@@ -36,9 +36,12 @@
         <view class="goods-item {{item.stock <= 0 ? 'out-of-stock' : ''}} {{!item._show ? 'goods-hidden' : ''}}">
           <!-- 售罄灰色遮罩（覆盖整张卡片，pointer-events: none 透传点击到详情页） -->
           <view class="stock-overlay" wx:if="{{item.stock <= 0}}"></view>
-          <!-- 图片单独一格：可点进详情 -->
-          <image class="goods-img" src="{{item.image}}" mode="aspectFill"
-            bindtap="navigateToProductDetail" data-id="{{item.id}}"></image>
+          <!-- 图片单独一格：可点进详情；新品角标定位在图片左上角 -->
+          <view class="goods-img-wrap">
+            <image class="goods-img" src="{{item.image}}" mode="aspectFill"
+              bindtap="navigateToProductDetail" data-id="{{item.id}}"></image>
+            <view class="new-tag" wx:if="{{item.is_new}}">新品</view>
+          </view>
           <!-- 右侧区域：上方名称简介（可点详情），下方销售/温度/价格/操作（不可点） -->
           <view class="goods-right">
             <view class="goods-click-area" bindtap="navigateToProductDetail" data-id="{{item.id}}">
