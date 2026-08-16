@@ -518,11 +518,16 @@
 .p-action-btn.delete { background: #fff !important; color: #999 !important; border: 1px solid #ddd !important; }
 
 /* 排序箭头（商品信息区右侧） */
+.info-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  margin-left: 12rpx;
+}
 .sort-handle {
   display: flex;
   flex-direction: row;
   gap: 4rpx;
-  margin-left: 12rpx;
 }
 .sort-arrow {
   width: 40rpx; height: 40rpx;
@@ -530,6 +535,16 @@
   font-size: 20rpx; color: #999;
   background: #f5f5f5; border-radius: 6rpx;
 }
+
+/* 售罄商品（上架但库存为 0） */
+.product-card.sold-out { background: #fff3d9; }
+.sold-out-badge {
+  background: #e74c3c; color: #fff;
+  font-size: 18rpx; line-height: 1;
+  padding: 6rpx 10rpx; border-radius: 6rpx;
+  margin-bottom: 8rpx;
+}
+.product-stock.sold-out { color: #e74c3c; font-weight: bold; }
 .product-info-top {
   display: flex; align-items: flex-start;
 }

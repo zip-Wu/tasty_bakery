@@ -210,7 +210,7 @@
 
     <!-- 商品列表 -->
     <view class="product-list">
-      <view class="product-card {{item.is_available ? '' : 'disabled'}} {{editingId === item.id ? 'editing' : ''}}"
+      <view class="product-card {{item.is_available ? '' : 'disabled'}} {{item.is_available && !item.stock ? 'sold-out' : ''}} {{editingId === item.id ? 'editing' : ''}}"
         wx:for="{{products}}" wx:key="id">
         <!-- 正常模式：小图 -->
         <image wx:if="{{editingId !== item.id}}" class="product-img" src="{{item.image}}" mode="aspectFill" />
@@ -221,11 +221,14 @@
               <view class="product-info-text">
                 <text class="product-name">{{item.name}}</text>
                 <text class="product-cat">{{item.category}}</text>
-                <text class="product-stock">库存：{{item.stock || 0}}</text>
+                <text class="product-stock {{item.is_available && !item.stock ? 'sold-out' : ''}}">{{item.is_available && !item.stock ? '已售罄' : '库存：' + (item.stock || 0)}}</text>
               </view>
-              <view class="sort-handle">
-                <view class="sort-arrow" catchtap="moveProductUp" data-id="{{item.id}}">▲</view>
-                <view class="sort-arrow" catchtap="moveProductDown" data-id="{{item.id}}">▼</view>
+              <view class="info-right">
+                <text class="sold-out-badge" wx:if="{{item.is_available && !item.stock}}">售罄</text>
+                <view class="sort-handle">
+                  <view class="sort-arrow" catchtap="moveProductUp" data-id="{{item.id}}">▲</view>
+                  <view class="sort-arrow" catchtap="moveProductDown" data-id="{{item.id}}">▼</view>
+                </view>
               </view>
             </view>
             <view class="product-price-row">
