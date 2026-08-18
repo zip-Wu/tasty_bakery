@@ -114,7 +114,7 @@
         <view class="modal-line">纯手工馒头·健康无添加·每日现做现蒸</view>
         <view class="modal-line modal-store-phone">门店地址：珠海市香洲区信息港</view>
         <view class="modal-line modal-store-phone">联系电话：189-2427-3942</view>
-        <view class="modal-line modal-store-phone">版本：v2.0.4</view>
+        <view class="modal-line modal-store-phone">版本：v2.3.0</view>
       </view>
       <view class="modal-actions">
         <view class="modal-btn confirm" bindtap="closeAboutModal">知道了</view>
