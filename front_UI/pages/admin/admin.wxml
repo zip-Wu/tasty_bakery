@@ -165,6 +165,7 @@
       <text class="section-title">全部商品（{{products.length}}）</text>
       <view class="header-btns">
         <button class="reset-btn" size="mini" bindtap="resetProducts">清空</button>
+        <button class="stock-panel-btn" size="mini" bindtap="openStockPanel">快捷调库存</button>
         <button class="add-btn" size="mini" bindtap="toggleAddForm">+ 新增商品</button>
       </view>
     </view>
@@ -218,10 +219,28 @@
           <!-- 正常显示 -->
           <block wx:if="{{editingId !== item.id}}">
             <view class="product-info-top">
-              <view class="product-info-text">
+            <view class="product-info-text">
                 <text class="product-name">{{item.name}}</text>
                 <text class="product-cat">{{item.category}}</text>
-                <text class="product-stock {{item.is_available && !item.stock ? 'sold-out' : ''}}">{{item.is_available && !item.stock ? '已售罄' : '库存：' + (item.stock || 0)}}</text>
+                <view class="product-stock-row">
+                  <text class="product-stock {{item.is_available && !item.stock ? 'sold-out' : ''}}">{{item.is_available && !item.stock ? '已售罄' : '库存'}}</text>
+                  <!-- 行内步进器：+/- 直接保存，点数字弹输入框 -->
+                  <view class="stock-stepper" wx:if="{{editingStockId !== item.id}}">
+                    <view class="stock-btn {{quickStockSaving[item.id] || !item.stock ? 'disabled' : ''}}"
+                      catchtap="quickStockChange" data-id="{{item.id}}" data-delta="-1">−</view>
+                    <view class="stock-num {{!item.stock ? 'zero' : ''}}"
+                      catchtap="startQuickStockEdit" data-id="{{item.id}}">{{item.stock || 0}}</view>
+                    <view class="stock-btn plus {{quickStockSaving[item.id] ? 'disabled' : ''}}"
+                      catchtap="quickStockChange" data-id="{{item.id}}" data-delta="1">+</view>
+                  </view>
+                  <!-- 行内库存输入：失焦/回车即存 -->
+                  <view class="stock-stepper" wx:else>
+                    <input class="stock-input" type="number" value="{{quickStockInput}}" focus="{{true}}"
+                      bindinput="onQuickStockInput" bindconfirm="saveQuickStock" bindblur="onQuickStockBlur" />
+                    <view class="stock-btn ok" catchtap="saveQuickStock">✓</view>
+                    <view class="stock-btn cancel" catchtap="cancelQuickStock">✕</view>
+                  </view>
+                </view>
               </view>
               <view class="info-right">
                 <text class="sold-out-badge" wx:if="{{item.is_available && !item.stock}}">售罄</text>
@@ -436,4 +455,38 @@
   </scroll-view>
   </swiper-item>
 </swiper>
+
+  <!-- ====== 快捷调库存 · 批量面板（方案B） ======
+       放在 swiper 外面：swiper-item 内部有 transform，fixed 定位会被裁剪/偏移 -->
+  <view class="stock-panel-mask" wx:if="{{showStockPanel}}" bindtap="closeStockPanel" catchtouchmove="noop">
+    <view class="stock-panel" catchtap="noop">
+      <view class="stock-panel-header">
+        <text class="stock-panel-title">快捷调库存</text>
+        <text class="stock-panel-close" bindtap="closeStockPanel">✕</text>
+      </view>
+      <view class="stock-panel-presets">
+        <text class="preset-label">常用值</text>
+        <view class="preset-chip" wx:for="{{stockPresets}}" wx:key="*this"
+          bindtap="fillStockValue" data-value="{{item}}">{{item}}</view>
+      </view>
+      <view class="stock-panel-tip">🔒 锁定（🔓→🔒）的商品不参与常用值填充和保存，适合"展示但不卖"的置0商品</view>
+      <scroll-view scroll-y class="stock-panel-list">
+        <view class="stock-panel-row {{item.locked ? 'locked' : ''}}" wx:for="{{stockPanelRows}}" wx:key="id">
+          <text class="sp-name">{{item.name}}</text>
+          <text class="sp-locked-tag" wx:if="{{item.locked}}">保持0</text>
+          <text class="sp-origin" wx:if="{{item.dirty && !item.locked}}">原{{item.stock}}</text>
+          <input class="sp-input" type="number" value="{{item.value}}"
+            data-idx="{{index}}" bindinput="onStockPanelInput"
+            disabled="{{item.locked}}" />
+          <view class="sp-lock {{item.locked ? 'locked' : ''}}" catchtap="toggleStockLock"
+            data-idx="{{index}}">{{item.locked ? '🔒' : '🔓'}}</view>
+        </view>
+        <view class="empty" wx:if="{{stockPanelRows.length === 0}}">暂无商品</view>
+      </scroll-view>
+      <view class="stock-panel-footer">
+        <button class="sp-save-btn" size="mini" bindtap="saveStockPanel"
+          disabled="{{stockPanelSaving}}" loading="{{stockPanelSaving}}">全部保存</button>
+      </view>
+    </view>
+  </view>
 </view>

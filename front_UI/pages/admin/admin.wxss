@@ -443,6 +443,49 @@
 .product-name { font-size: 28rpx; font-weight: bold; display: block; }
 .product-cat { font-size: 22rpx; color: #999; }
 .product-stock { font-size: 22rpx; color: #999; margin-top: 2rpx; display: block; }
+
+/* 行内快捷库存（方案A） */
+.product-stock-row {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  margin-top: 2rpx;
+}
+.stock-stepper {
+  display: flex;
+  align-items: center;
+  gap: 6rpx;
+  flex-shrink: 0;
+}
+.stock-btn {
+  width: 40rpx; height: 40rpx;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 6rpx;
+  font-size: 24rpx;
+  background: #f5f5f5;
+  color: #666;
+}
+.stock-btn.plus { background: #fff3e0; color: #f57c00; }
+.stock-btn.ok { background: #e8f5e9; color: #27ae60; }
+.stock-btn.cancel { background: #fce4ec; color: #e91e63; }
+.stock-btn.disabled { opacity: 0.35; }
+.stock-num {
+  min-width: 48rpx;
+  text-align: center;
+  font-size: 26rpx;
+  font-weight: bold;
+  color: #333;
+}
+.stock-num.zero { color: #e74c3c; }
+.stock-input {
+  width: 100rpx; height: 44rpx;
+  border: 1px solid #e0e0e0;
+  border-radius: 6rpx;
+  text-align: center;
+  font-size: 24rpx;
+  box-sizing: border-box;
+  padding: 0 8rpx;
+}
 .product-price-row { display: flex; align-items: center; justify-content: space-between; margin-top: 4rpx; }
 .product-price { font-size: 28rpx; color: #e74c3c; font-weight: bold; }
 .product-sales { font-size: 22rpx; color: #999; }
@@ -825,4 +868,127 @@
 .dash-order-card:active {
   background: #fafafa;
 }
+
+/* ========== 快捷调库存 · 批量面板（方案B） ========== */
+.stock-panel-btn {
+  background: #f5a623 !important;
+  color: #333 !important;
+  font-size: 22rpx !important;
+}
+.stock-panel-mask {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.45);
+  z-index: 200;
+  display: flex;
+  align-items: flex-end;
+}
+.stock-panel {
+  width: 100%;
+  background: #fff;
+  border-radius: 24rpx 24rpx 0 0;
+  max-height: 75vh;
+  display: flex;
+  flex-direction: column;
+}
+.stock-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 28rpx 32rpx 16rpx;
+}
+.stock-panel-title { font-size: 32rpx; font-weight: bold; color: #333; }
+.stock-panel-close { font-size: 32rpx; color: #999; padding: 0 8rpx; }
+.stock-panel-presets {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  padding: 8rpx 32rpx 16rpx;
+  border-bottom: 1rpx solid #f0f0f0;
+  flex-wrap: wrap;
+}
+.preset-label { font-size: 24rpx; color: #999; }
+.preset-chip {
+  padding: 6rpx 22rpx;
+  background: #f0f0f0;
+  border-radius: 24rpx;
+  font-size: 24rpx;
+  color: #333;
+}
+.preset-chip:active { background: #f5a623; color: #333; }
+.stock-panel-tip {
+  font-size: 22rpx;
+  color: #999;
+  padding: 12rpx 32rpx;
+  border-bottom: 1rpx solid #f0f0f0;
+  background: #fafafa;
+}
+.stock-panel-list {
+  flex: 1;
+  min-height: 0;
+  max-height: 50vh;
+  padding: 8rpx 0;
+}
+.stock-panel-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16rpx 32rpx;
+  border-bottom: 1rpx solid #f5f5f5;
+}
+.stock-panel-row.locked { opacity: 0.5; }
+.sp-lock {
+  width: 48rpx; height: 48rpx;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 8rpx;
+  font-size: 24rpx;
+  background: #f5f5f5;
+  margin-left: 12rpx;
+  flex-shrink: 0;
+}
+.sp-lock.locked { background: #fff3e0; }
+.sp-locked-tag {
+  font-size: 20rpx;
+  color: #f57c00;
+  background: #fff3e0;
+  border-radius: 6rpx;
+  padding: 2rpx 10rpx;
+  margin-right: 12rpx;
+  flex-shrink: 0;
+}
+.sp-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 28rpx;
+  color: #333;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sp-origin { font-size: 20rpx; color: #999; margin: 0 12rpx; flex-shrink: 0; }
+.sp-input {
+  width: 120rpx;
+  height: 56rpx;
+  border: 1px solid #e0e0e0;
+  border-radius: 8rpx;
+  text-align: center;
+  font-size: 28rpx;
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+.stock-panel-footer {
+  padding: 16rpx 32rpx;
+  border-top: 1rpx solid #f0f0f0;
+}
+.sp-save-btn {
+  width: 100% !important;
+  background: #f5a623 !important;
+  color: #333 !important;
+  border-radius: 40rpx !important;
+  font-size: 28rpx !important;
+  font-weight: bold !important;
+  height: 80rpx !important;
+  line-height: 80rpx !important;
+}
+.sp-save-btn[disabled] { background: #ccc !important; color: #fff !important; }
 

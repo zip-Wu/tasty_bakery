@@ -46,6 +46,17 @@ Page({
     newProduct: { name: '', price: '', category: '', image: '', stock: '', description: '', gallery: [] },
     // 分类无需硬编码，管理页手动输入，顾客页自动提取
 
+    // 快捷调库存 · 行内步进（方案A）
+    editingStockId: null,   // 正在行内编辑库存的商品 id，null=无
+    quickStockInput: '',    // 行内库存输入框的值
+    quickStockSaving: {},   // { [商品id]: true } 保存中标记，用于禁用按钮防并发
+
+    // 快捷调库存 · 批量面板（方案B）
+    showStockPanel: false,  // 批量面板开关
+    stockPanelRows: [],     // 面板行：{ id, name, stock(原库存), value(输入值), dirty(是否手动改过) }
+    stockPanelSaving: false,// 批量保存中
+    stockPresets: [5, 10, 20, 50],  // 常用库存值，一键填充未手动改过的行
+
     // 营收
     dashboard: null,
     dashType: 'day',     // day | month | year
@@ -553,6 +564,222 @@ Page({
     }).then(res => {
       if (res.success) this.loadProducts();
     });
+  },
+
+  // ========== 快捷调库存 · 行内步进（方案A） ==========
+  // 复用现有 PUT /api/admin/products/:id 部分更新：只传 stock 不碰其他字段
+  quickStockChange(e) {
+    const id = parseInt(e.currentTarget.dataset.id);
+    const delta = parseInt(e.currentTarget.dataset.delta) || 0;
+    const product = this.data.products.find(p => p.id === id);
+    if (!product || this.data.quickStockSaving[id]) return;
+    const next = (product.stock || 0) + delta;
+    if (next < 0) return; // 后端也校验非负，前端先拦住
+    this._saveQuickStock(id, next);
+  },
+
+  // 点库存数字 → 原地变成输入框
+  startQuickStockEdit(e) {
+    const id = parseInt(e.currentTarget.dataset.id);
+    const product = this.data.products.find(p => p.id === id);
+    if (!product) return;
+    // 重置上次可能的"取消"残留标志，避免误跳过本次失焦保存
+    this._quickStockCancel = false;
+    this.setData({ editingStockId: id, quickStockInput: String(product.stock || 0) });
+  },
+
+  onQuickStockInput(e) {
+    this.setData({ quickStockInput: e.detail.value });
+  },
+
+  // 失焦 / 回车 保存行内库存
+  saveQuickStock() {
+    const id = this.data.editingStockId;
+    if (id === null || id === undefined) return;
+    const raw = String(this.data.quickStockInput || '').trim();
+    if (raw === '') {
+      wx.showToast({ title: '请输入库存', icon: 'none' });
+      return;
+    }
+    const next = parseInt(raw);
+    if (isNaN(next) || next < 0) {
+      wx.showToast({ title: '库存不能为负数', icon: 'none' });
+      return;
+    }
+    this.setData({ editingStockId: null, quickStockInput: '' });
+    this._saveQuickStock(id, next);
+  },
+
+  // 失焦保存：blur 先于 tap 触发，延迟 100ms 等 ✕/✓ 的点击先落定，
+  // 若点了 ✕（_quickStockCancel=true）则跳过保存，实现真正的"取消"
+  onQuickStockBlur() {
+    setTimeout(() => {
+      if (this._quickStockCancel) {
+        this._quickStockCancel = false;
+        return;
+      }
+      this.saveQuickStock();
+    }, 100);
+  },
+
+  cancelQuickStock() {
+    this._quickStockCancel = true;
+    this.setData({ editingStockId: null, quickStockInput: '' });
+  },
+
+  // 通用：保存单个商品库存（行内步进和批量面板共用）
+  _saveQuickStock(id, stock) {
+    const token = wx.getStorageSync('admin_token');
+    this.setData({ ['quickStockSaving.' + id]: true });
+    this._request({
+      url: '/api/admin/products/' + id,
+      method: 'PUT',
+      data: { stock },
+      header: { Authorization: 'Bearer ' + token }
+    }).then(res => {
+      this.setData({ ['quickStockSaving.' + id]: false });
+      if (res.success) {
+        // 自愈：锁定商品被行内改成有库存，说明商家要卖了，解除锁定
+        if (stock > 0) this._unlockStock(id);
+        this.loadProducts();
+      } else {
+        wx.showToast({ title: res.message || '修改失败', icon: 'none' });
+      }
+    }).catch(() => {
+      this.setData({ ['quickStockSaving.' + id]: false });
+      wx.showToast({ title: '网络错误', icon: 'none' });
+    });
+  },
+
+  // 从锁定清单移除某商品（storage 同步）
+  _unlockStock(id) {
+    let ids = [];
+    try { ids = wx.getStorageSync('admin_stock_locked') || []; } catch (_) {}
+    if (!Array.isArray(ids)) ids = [];
+    const idx = ids.indexOf(id);
+    if (idx === -1) return;
+    ids.splice(idx, 1);
+    try { wx.setStorageSync('admin_stock_locked', ids); } catch (_) {}
+  },
+
+  // ========== 快捷调库存 · 批量面板（方案B） ==========
+  // 锁定机制：商家把"置0=展示但不卖"的商品锁定（storage 记忆），
+  // 锁定行不参与常用值填充、不参与保存，避免批量操作误改它们
+  openStockPanel() {
+    let lockedIds = [];
+    try {
+      lockedIds = wx.getStorageSync('admin_stock_locked') || [];
+    } catch (_) {}
+    const lockedSet = {};
+    (Array.isArray(lockedIds) ? lockedIds : []).forEach(id => { lockedSet[id] = true; });
+
+    const rows = (this.data.products || []).map(p => ({
+      id: p.id,
+      name: p.name,
+      stock: p.stock || 0,
+      value: String(p.stock || 0),
+      dirty: false,
+      locked: !!lockedSet[p.id],
+    }));
+    // 售罄（0 库存）排最前，方便一眼看到要补货的
+    rows.sort((a, b) => (a.stock === 0 ? 0 : 1) - (b.stock === 0 ? 0 : 1));
+    this.setData({ showStockPanel: true, stockPanelRows: rows, stockPanelSaving: false });
+  },
+
+  closeStockPanel() {
+    this.setData({ showStockPanel: false, stockPanelRows: [] });
+  },
+
+  // 空处理函数：用于 catchtap / catchtouchmove 阻止事件冒泡或滚动穿透
+  noop() {},
+
+  // 锁定/解锁单行，并同步到本地 storage（下次打开面板仍生效）
+  toggleStockLock(e) {
+    const idx = e.currentTarget.dataset.idx;
+    const rows = this.data.stockPanelRows;
+    const row = rows[idx];
+    if (!row) return;
+    rows[idx] = { ...row, locked: !row.locked };
+    this.setData({ stockPanelRows: rows });
+
+    const ids = rows.filter(r => r.locked).map(r => r.id);
+    try {
+      wx.setStorageSync('admin_stock_locked', ids);
+    } catch (_) {}
+  },
+
+  onStockPanelInput(e) {
+    const idx = e.currentTarget.dataset.idx;
+    if (this.data.stockPanelRows[idx] && this.data.stockPanelRows[idx].locked) return;
+    this.setData({
+      ['stockPanelRows[' + idx + '].value']: e.detail.value,
+      ['stockPanelRows[' + idx + '].dirty']: true
+    });
+  },
+
+  // 常用值：只填充未手动改过（dirty=false）且未锁定（locked=false）的行
+  fillStockValue(e) {
+    const val = parseInt(e.currentTarget.dataset.value);
+    if (isNaN(val) || val < 0) return;
+    const rows = this.data.stockPanelRows.map(r =>
+      (r.dirty || r.locked) ? r : { ...r, value: String(val) }
+    );
+    this.setData({ stockPanelRows: rows });
+  },
+
+  async saveStockPanel() {
+    if (this.data.stockPanelSaving) return;
+
+    const rows = this.data.stockPanelRows;
+    const invalid = [];
+    const changed = [];
+    rows.forEach(r => {
+      if (r.locked) return; // 锁定行不参与校验与提交
+      const v = parseInt(r.value);
+      if (isNaN(v) || v < 0) {
+        invalid.push(r.name);
+      } else if (v !== r.stock) {
+        changed.push({ id: r.id, name: r.name, stock: v });
+      }
+    });
+
+    if (invalid.length > 0) {
+      wx.showToast({ title: '「' + invalid[0] + '」库存无效', icon: 'none' });
+      return;
+    }
+    if (changed.length === 0) {
+      wx.showToast({ title: '没有修改', icon: 'none' });
+      return;
+    }
+
+    this.setData({ stockPanelSaving: true });
+    const token = wx.getStorageSync('admin_token');
+    const failed = [];
+
+    // 串行提交：循环调现有单个更新接口，后端零改动
+    for (const c of changed) {
+      try {
+        const res = await this._request({
+          url: '/api/admin/products/' + c.id,
+          method: 'PUT',
+          data: { stock: c.stock },
+          header: { Authorization: 'Bearer ' + token }
+        });
+        if (!res || !res.success) failed.push(c.name);
+      } catch (e) {
+        failed.push(c.name);
+      }
+    }
+
+    this.setData({ stockPanelSaving: false });
+
+    if (failed.length === 0) {
+      wx.showToast({ title: '已保存 ' + changed.length + ' 项', icon: 'success' });
+      this.closeStockPanel();
+      this.loadProducts();
+    } else {
+      wx.showToast({ title: failed.length + ' 项保存失败', icon: 'none' });
+    }
   },
 
   startEdit(e) {
