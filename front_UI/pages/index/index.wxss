@@ -425,15 +425,23 @@ page {
   color: #999;
 }
 
-/* ========== 关店标签（store-bar 内） ========== */
-.store-closed-tag {
+/* ========== 预定状态标签（store-bar 右上角，配色与门店导航页一致） ========== */
+.store-status-tag {
   font-size: 24rpx;
   font-weight: bold;
-  color: #fff;
-  background: linear-gradient(135deg, #ff7043, #f4511e);
   padding: 6rpx 20rpx;
   border-radius: 20rpx;
   flex-shrink: 0;
+}
+
+.store-status-tag.open {
+  background: #e8f5e9;
+  color: #4caf50;
+}
+
+.store-status-tag.closed {
+  background: #fdecea;
+  color: #e53935;
 }
 
 /* ========== 售罄状态 ========== */
