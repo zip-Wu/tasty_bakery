@@ -116,7 +116,7 @@ const ready = (async () => {
         name      VARCHAR(128) NOT NULL UNIQUE,
         address   VARCHAR(256) DEFAULT '',
         phone     VARCHAR(20) DEFAULT '',
-        hours     VARCHAR(32) DEFAULT '10:00-18:00',
+        hours     VARCHAR(32) DEFAULT '周一至周五 11:00~18:30',
         latitude  DOUBLE DEFAULT 0,
         longitude DOUBLE DEFAULT 0,
         is_open   TINYINT DEFAULT 1
@@ -162,7 +162,7 @@ const ready = (async () => {
     // 4. 初始化门店
     await c.query(`
       INSERT IGNORE INTO stores (name, address, phone, hours, latitude, longitude, is_open) VALUES
-      ('大力馒头铺·信息港店', '珠海市高新区唐家湾镇香山路88号2栋1层101-10室（信息港711便利店后面）', '189-2427-3942', '10:00-18:00', 22.367042, 113.554996, 1)
+      ('大力馒头铺·信息港店', '珠海市高新区唐家湾镇香山路88号2栋1层101-10室（信息港711便利店后面）', '189-2427-3942', '周一至周五 11:00~18:30', 22.367042, 113.554996, 1)
     `);
 
     console.log('[db] 初始化完成（首次建表）');
