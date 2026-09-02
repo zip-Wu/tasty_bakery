@@ -20,11 +20,11 @@
         <view class="store-left">
           <view class="store-name">{{item.name}}</view>
           <view class="store-addr">{{item.address}}</view>
-          <view class="store-hours">营业时间：{{item.hours}}</view>
+          <view class="store-hours {{item.open ? 'open' : 'closed'}}">营业时间：{{item.hours}}</view>
         </view>
         <view class="store-right">
           <view class="store-dist">{{item.distance}}</view>
-          <view class="store-status {{item.open ? 'open' : ''}}">{{item.open ? '营业中' : '已打烊'}}</view>
+          <view class="store-status {{item.open ? 'open' : 'closed'}}">{{item.open ? '接受预定中' : '暂无法预定'}}</view>
           <view class="nav-btn" catchtap="openNavigation" data-id="{{item.id}}">导航</view>
         </view>
       </view>
