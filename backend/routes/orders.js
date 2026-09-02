@@ -28,10 +28,10 @@ router.post('/orders', async (req, res) => {
     const userId = req.user.id;
     const { items, totalPrice, storeId, storeName, pickupTime, remark } = req.body;
 
-    // 关店检查
+    // 关店检查（关店只拦新预定，不影响已下单的订单）
     const [storeRows] = await pool.execute('SELECT is_open FROM stores LIMIT 1');
     if (storeRows[0] && !storeRows[0].is_open) {
-      return res.json({ success: false, message: '门店已打烊，暂无法下单' });
+      return res.json({ success: false, message: '门店暂无法预定' });
     }
 
     // 验证 items 结构
