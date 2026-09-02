@@ -723,7 +723,7 @@ router.put('/admin/store/toggle', async (req, res) => {
     success: true,
     data: {
       open: !!newStatus,
-      notice: newStatus ? '' : `${row[0].name}已打烊`
+      notice: newStatus ? '' : `${row[0].name}暂无法预定`
     }
   });
 });
