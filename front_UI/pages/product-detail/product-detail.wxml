@@ -15,9 +15,9 @@
     <image wx:if="{{gallery.length === 0 && product.image}}" class="single-img" src="{{product.image}}" mode="aspectFill" />
   </view>
 
-  <!-- 关店提示 -->
+  <!-- 暂停接单提示 -->
   <view class="closed-tip" wx:if="{{storeClosed}}">
-    <text>😴 店家已打烊，暂时无法下单</text>
+    <text>😴 店家暂未开放预定，感谢您的理解</text>
   </view>
 
   <!-- ====== 商品信息 ====== -->
@@ -39,7 +39,7 @@
   <!-- ====== 底部操作栏 ====== -->
   <view class="bottom-bar">
     <block wx:if="{{storeClosed}}">
-      <view class="b-closed-msg">店家已打烊，暂无法下单</view>
+      <view class="b-closed-msg">店家暂未开放预定，感谢您的理解</view>
     </block>
     <block wx:elif="{{product.stock <= 0}}">
       <view class="b-closed-msg">该商品已售罄</view>
