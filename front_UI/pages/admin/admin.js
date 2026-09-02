@@ -1506,9 +1506,9 @@ Page({
     const next = !this.data.storeOpen;
     const token = wx.getStorageSync('admin_token');
     wx.showModal({
-      title: next ? '确认开店' : '确认关店',
-      content: next ? '开店后顾客可以正常下单' : '关店后顾客将无法下单',
-      confirmText: next ? '开店' : '关店',
+      title: next ? '确认开始接单' : '确认停止接单',
+      content: next ? '开始接单后顾客可以正常预定' : '停止接单后顾客将无法预定',
+      confirmText: next ? '开始接单' : '停止接单',
       confirmColor: next ? '#07c160' : '#e74c3c',
       success(res) {
         if (!res.confirm) return;
@@ -1519,7 +1519,7 @@ Page({
         }).then(res => {
           if (res.success) {
             that.setData({ storeOpen: res.data.open });
-            wx.showToast({ title: res.data.open ? '已开店' : '已关店', icon: 'success' });
+            wx.showToast({ title: res.data.open ? '已开始接单' : '已停止接单', icon: 'success' });
           } else {
             wx.showToast({ title: res.message || '操作失败', icon: 'none' });
           }
