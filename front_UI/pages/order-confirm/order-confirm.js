@@ -120,8 +120,8 @@ Page({
         package: payParams.package, signType: payParams.signType, paySign: payParams.paySign,
         success() {
           app.globalData.clearCartOnReturn = true;
-          // 跳转通知授权页，引导用户授权取餐提醒后再进订单详情
-          wx.redirectTo({ url: '/pages/notify-auth/notify-auth?orderId=' + orderId });
+          // 支付成功直接进订单详情（制作中页）；授权引导已内置在详情页通知卡片内
+          wx.redirectTo({ url: '/pages/order-detail/order-detail?id=' + orderId });
         },
         fail(err) {
           that.setData({ isPaying: false });

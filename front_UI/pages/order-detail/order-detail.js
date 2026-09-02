@@ -58,6 +58,13 @@ Page({
       if (data.status === 'completed' || data.status === 'refunded') {
         this._stopPolling();
       }
+      // 自动静默订阅：一次性订阅每单都需要新额度，制作中/待取餐时进页静默订一次。
+      // 老顾客勾过「总是保持以上选择」时微信直接返回 accept、无弹窗；新客只弹一次原生弹窗。
+      // 本页生命周期只做一次（_notifySubscribed），且只在 loadOrder 回调里调，避免 5 秒轮询反复触发。
+      if (!this._notifySubscribed && (data.status === 'preparing' || data.status === 'ready')) {
+        this._notifySubscribed = true;
+        this.requestNotify(true);
+      }
     }).catch(() => {
       wx.showToast({ title: '加载订单失败', icon: 'none' });
     });
@@ -186,17 +193,22 @@ Page({
 
   // ========== 通知订阅 / 手机号 ==========
 
-  // 微信订阅消息授权
-  requestNotify() {
+  /**
+   * 微信订阅消息授权
+   * @param {boolean} silent 静默模式：进页自动订阅时传 true，
+   *                         拒绝/失败/取消不再弹 modal 或 toast，不打断顾客看订单
+   */
+  requestNotify(silent) {
     wx.requestSubscribeMessage({
       tmplIds: ['Haa7KsPUk2pnHUS3akqjZ5J8TQgKxoHu5Yq088bdRE4'],
       success: (res) => {
         if (res['Haa7KsPUk2pnHUS3akqjZ5J8TQgKxoHu5Yq088bdRE4'] === 'accept') {
           wx.setStorageSync('notify_authorized', true);
           this.setData({ notifyAuthorized: true });
-          wx.showToast({ title: '已授权取餐通知' });
+          if (!silent) wx.showToast({ title: '已授权取餐通知' });
         } else if (res['Haa7KsPUk2pnHUS3akqjZ5J8TQgKxoHu5Yq088bdRE4'] === 'reject') {
           // 用户点了拒绝（可能勾选了"总是拒绝"→ 以后不会再弹窗）
+          if (silent) return;
           wx.showModal({
             title: '无法发送通知',
             content: '您可能勾选了"总是拒绝"，通知权限已被系统关闭。可前往小程序设置重新开启。',
@@ -207,11 +219,13 @@ Page({
             }
           });
         } else {
+          if (silent) return;
           wx.showToast({ title: '已取消授权', icon: 'none' });
         }
       },
       fail: (err) => {
         console.warn('[requestNotify] 授权失败:', err);
+        if (silent) return;
         wx.showModal({
           title: '无法发送通知',
           content: '通知权限已被系统关闭。可前往小程序设置重新开启。',
