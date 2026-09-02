@@ -321,7 +321,7 @@ Page({
   // 去结算（缓存购物车数据，确认支付时才创建订单）
   goToCheckout() {
     if (this.data.storeClosed) {
-      wx.showToast({ title: '店家已打烊，暂无法下单', icon: 'none' });
+      wx.showToast({ title: '店家暂未开放预定，请稍后再来', icon: 'none' });
       return;
     }
     if (this.data.cartCount === 0) {
