@@ -86,7 +86,7 @@ Page({
   // 数量加减
   addQty() {
     if (this.data.storeClosed) {
-      wx.showToast({ title: '店家已打烊', icon: 'none' });
+      wx.showToast({ title: '店家暂未开放预定', icon: 'none' });
       return;
     }
     this.setData({ qty: this.data.qty + 1 });
@@ -94,7 +94,7 @@ Page({
   },
   minusQty() {
     if (this.data.storeClosed) {
-      wx.showToast({ title: '店家已打烊', icon: 'none' });
+      wx.showToast({ title: '店家暂未开放预定', icon: 'none' });
       return;
     }
     if (this.data.qty > 0) {
@@ -106,7 +106,7 @@ Page({
   // 加入购物车
   addToCart() {
     if (this.data.storeClosed) {
-      wx.showToast({ title: '店家已打烊，暂无法下单', icon: 'none' });
+      wx.showToast({ title: '店家暂未开放预定，请稍后再来', icon: 'none' });
       return;
     }
     if (this.data.product.stock <= 0) {
