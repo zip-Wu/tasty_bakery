@@ -34,11 +34,11 @@
     <view class="store-toggle-left">
       <text class="store-toggle-dot {{storeOpen ? 'on' : 'off'}}"></text>
       <view class="store-toggle-text">
-        <text class="store-toggle-label">{{storeOpen ? '营业中' : '已打烊'}}</text>
-        <text class="store-toggle-hint">{{storeOpen ? '店铺正在接受顾客下单' : '顾客无法下单'}}</text>
+        <text class="store-toggle-label">{{storeOpen ? '接受预定中' : '暂无法预定'}}</text>
+        <text class="store-toggle-hint">{{storeOpen ? '顾客可正常下单预定' : '顾客暂时无法下单'}}</text>
       </view>
     </view>
-    <view class="store-toggle-btn">{{storeOpen ? '关店' : '开店'}}</view>
+    <view class="store-toggle-btn">{{storeOpen ? '停止接单' : '开始接单'}}</view>
   </view>
 
   <swiper class="admin-swiper" current="{{tabIndex}}" bindchange="onTabSwipe" duration="250">
