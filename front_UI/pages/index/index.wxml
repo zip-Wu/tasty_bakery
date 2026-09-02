@@ -8,7 +8,7 @@
         <view class="locate-btn" wx:if="{{store.distance === '未知距离'}}" catchtap="tryCalcDistance">获取距离</view>
       </view>
     </view>
-    <view class="store-closed-tag" wx:if="{{storeClosed}}">已打烊</view>
+    <view class="store-status-tag {{storeClosed ? 'closed' : 'open'}}">{{storeClosed ? '暂无法预定' : '接受预定中'}}</view>
   </view>
 
   <!-- 主内容区：左分类 + 右商品 -->
@@ -85,9 +85,9 @@
         <view class="cart-icon">
           <image class="cart-icon-img" src="/images/svg/cart.svg" mode="aspectFit"></image>
         </view>
-        <text class="cart-count-text">店家已打烊</text>
+        <text class="cart-count-text">暂无法预定</text>
       </view>
-      <view class="checkout-btn disabled">暂不可下单</view>
+      <view class="checkout-btn disabled">暂不可预定</view>
     </block>
     <block wx:else>
     <view class="cart-info">
