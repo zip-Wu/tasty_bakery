@@ -98,6 +98,22 @@ page {
 .store-hours {
   font-size: 22rpx;
   color: #888;
+  /* 与右侧状态标签同款的胶囊：内边距 + 圆角，背景只包裹文字宽度 */
+  display: inline-block;
+  padding: 4rpx 12rpx;
+  border-radius: 20rpx;
+  margin-top: 2rpx;
+}
+
+/* 营业时间跟随门店可预定状态，胶囊配色与右侧状态标签保持一致 */
+.store-hours.open {
+  background: #e8f5e9;
+  color: #4caf50;
+}
+
+.store-hours.closed {
+  background: #fdecea;
+  color: #e53935;
 }
 
 .store-right {
@@ -122,6 +138,11 @@ page {
 .store-status.open {
   background: #e8f5e9;
   color: #4caf50;
+}
+
+.store-status.closed {
+  background: #fdecea;
+  color: #e53935;
 }
 
 .nav-btn {
