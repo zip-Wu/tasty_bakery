@@ -31,7 +31,7 @@ router.get('/stores', async (req, res) => {
   const userLng = parseFloat(req.query.lng);
 
   const [stores] = await pool.execute(
-    // 不再过滤 is_open：顾客端关店后也要展示门店信息（地址/电话/营业时间），由前端根据 open 字段提示已打烊
+    // 不再过滤 is_open：顾客端停接单后也要展示门店信息（地址/电话/营业时间），由前端根据 open 字段提示暂无法预定
     'SELECT id, name, address, phone, hours, latitude, longitude, is_open as open FROM stores'
   );
 
@@ -64,9 +64,10 @@ router.get('/store/status', async (req, res) => {
     return res.json({ success: true, data: { open: false, name: '', hours: '', notice: '门店未配置' } });
   }
   const s = rows[0];
+  // 关店只影响是否接受新预定；营业时间照常展示（本店为预定制，非营业时间同样接受预定）
   const notice = s.is_open
     ? ''
-    : `${s.name}已打烊，${s.hours || '次日'} 恢复营业`;
+    : `${s.name}暂无法预定，营业时间 ${s.hours || '请咨询门店'}`;
   res.json({
     success: true,
     data: { open: !!s.is_open, name: s.name, hours: s.hours, notice }
