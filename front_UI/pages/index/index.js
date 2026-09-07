@@ -36,6 +36,10 @@ Page({
     // 门店开关状态
     storeClosed: false,
     storeNotice: '',
+    storeHours: '',
+
+    // 预定状态说明弹窗
+    showStatusModal: false,
   },
 
   onLoad() {
@@ -376,4 +380,23 @@ Page({
       console.error('[index] 查询门店状态失败:', err);
     });
   },
+
+  // ========== 预定状态说明弹窗 ==========
+  // 关店态下加号按钮会直接隐藏，胶囊是唯一的解释入口，点开后告知营业时间与联系方式
+  showStoreStatus() {
+    this.setData({ showStatusModal: true });
+  },
+
+  hideStoreStatus() {
+    this.setData({ showStatusModal: false });
+  },
+
+  callStorePhone() {
+    const phone = ((this.data.store && this.data.store.phone) || '').replace(/[^\d]/g, '');
+    if (!phone) return;
+    wx.makePhoneCall({ phoneNumber: phone, fail: () => {} });
+  },
+
+  // 弹窗打开时吞掉滑动事件，避免滚动穿透到下层商品列表
+  noop() {},
 });

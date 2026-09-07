@@ -8,7 +8,12 @@
         <view class="locate-btn" wx:if="{{store.distance === '未知距离'}}" catchtap="tryCalcDistance">获取距离</view>
       </view>
     </view>
-    <view class="store-status-tag {{storeClosed ? 'closed' : 'open'}}">{{storeClosed ? '暂无法预定' : '接受预定中'}}</view>
+    <!-- 点击弹出预定状态说明：关店时解释原因与营业时间，开店时说明取餐方式 -->
+    <!-- 箭头放在胶囊外部，只作「可展开」的提示，不进胶囊配色 -->
+    <view class="store-status" bindtap="showStoreStatus" hover-class="tag-press" hover-stay-time="80">
+      <view class="store-status-tag {{storeClosed ? 'closed' : 'open'}}">{{storeClosed ? '暂无法预定' : '接受预定中'}}</view>
+      <view class="status-arrow">›</view>
+    </view>
   </view>
 
   <!-- 主内容区：左分类 + 右商品 -->
@@ -102,6 +107,45 @@
     </view>
     <view class="checkout-btn {{cartCount > 0 ? 'active' : ''}}" bindtap="goToCheckout">去结算</view>
     </block>
+  </view>
+
+  <!-- 预定状态说明弹窗（点击右上角胶囊触发） -->
+  <view class="status-modal-mask" wx:if="{{showStatusModal}}" catchtouchmove="noop">
+    <view class="status-modal-overlay" bindtap="hideStoreStatus"></view>
+    <view class="status-modal-card">
+      <view class="status-modal-close" bindtap="hideStoreStatus">×</view>
+
+      <!-- 状态图标：对勾=可预定，感叹号=暂停，纯 CSS 绘制，不依赖带固定配色的图标文件 -->
+      <view class="status-modal-hero">
+        <view class="status-icon {{storeClosed ? 'closed' : 'open'}}">
+          <view class="status-icon-mark" wx:if="{{!storeClosed}}"></view>
+          <text class="status-icon-text" wx:else>!</text>
+        </view>
+        <view class="status-modal-title">{{storeClosed ? '暂无法预定' : '接受预定中'}}</view>
+        <view class="status-modal-desc">{{storeClosed ? '店家已暂时关闭线上预定，恢复后会立即开放' : '线上预定已开启，非营业时间也可下单'}}</view>
+      </view>
+
+      <view class="status-modal-info">
+        <view class="status-info-row">
+          <text class="status-info-label">营业时间</text>
+          <text class="status-info-value">{{store.hours || storeHours || '请咨询门店'}}</text>
+        </view>
+        <!-- 开放态：说明怎么取餐；关闭态：给电话，顾客可直接问店家何时恢复 -->
+        <view class="status-info-row" wx:if="{{!storeClosed}}">
+          <text class="status-info-label">取餐方式</text>
+          <text class="status-info-value">到店自提，凭取餐码取餐</text>
+        </view>
+        <view class="status-info-row" wx:if="{{storeClosed && store.phone}}">
+          <text class="status-info-label">联系电话</text>
+          <text class="status-info-value">{{store.phone}}</text>
+        </view>
+      </view>
+
+      <view class="status-modal-actions">
+        <view class="status-btn call" wx:if="{{storeClosed && store.phone}}" bindtap="callStorePhone">拨打电话</view>
+        <view class="status-btn primary" bindtap="hideStoreStatus">知道了</view>
+      </view>
+    </view>
   </view>
 
   <!-- 自定义悬浮TabBar -->

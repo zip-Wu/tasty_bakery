@@ -432,6 +432,7 @@ page {
   padding: 6rpx 20rpx;
   border-radius: 20rpx;
   flex-shrink: 0;
+  transition: opacity 0.15s;
 }
 
 .store-status-tag.open {
@@ -466,6 +467,171 @@ page {
   background: #eee;
   border-radius: 8rpx;
   flex-shrink: 0;
+}
+
+/* ========== 预定状态说明弹窗 ========== */
+/* 点按反馈与门店名一致；胶囊外侧的箭头只作「可展开」提示 */
+.tag-press {
+  opacity: 0.6;
+}
+.store-status {
+  display: flex;
+  align-items: center;
+  gap: 4rpx;
+  flex-shrink: 0;
+}
+.status-arrow {
+  font-size: 28rpx;
+  color: #c9c9c9;
+  line-height: 1;
+  transform: translateY(-2rpx);
+}
+
+.status-modal-mask {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;  /* 高于自定义 tabBar(999)，否则弹窗打开时 tabBar 会浮在遮罩上 */
+  /* 底部有自定义 tabBar 与结算栏，几何中心会显得偏下；用下内边距把弹窗整体上抬 */
+  padding-bottom: 180rpx;
+  animation: mask-fade 0.2s ease-out;
+}
+.status-modal-overlay {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.45);
+}
+.status-modal-card {
+  position: relative;
+  width: 78%;
+  padding: 44rpx 36rpx 32rpx;
+  background: #fff;
+  border-radius: 28rpx;
+  box-shadow: 0 16rpx 48rpx rgba(0, 0, 0, 0.16);
+  animation: card-pop 0.24s cubic-bezier(0.2, 0.9, 0.3, 1.15);
+}
+.status-modal-close {
+  position: absolute;
+  top: 16rpx;
+  right: 20rpx;
+  width: 52rpx;
+  height: 52rpx;
+  line-height: 48rpx;
+  text-align: center;
+  font-size: 36rpx;
+  color: #c4c4c4;
+}
+.status-modal-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.status-icon {
+  width: 96rpx;
+  height: 96rpx;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20rpx;
+}
+.status-icon.open {
+  background: #e8f5e9;
+}
+.status-icon.closed {
+  background: #fdecea;
+}
+/* 对勾用两条边框旋转而成，避免引入自带固定配色的图标文件 */
+.status-icon-mark {
+  width: 26rpx;
+  height: 13rpx;
+  border-left: 5rpx solid #4caf50;
+  border-bottom: 5rpx solid #4caf50;
+  border-radius: 2rpx;
+  transform: rotate(-45deg) translate(2rpx, -3rpx);
+}
+.status-icon-text {
+  font-size: 44rpx;
+  font-weight: bold;
+  color: #e53935;
+  line-height: 1;
+}
+.status-modal-title {
+  font-size: 34rpx;
+  font-weight: bold;
+  color: #222;
+}
+.status-modal-desc {
+  margin-top: 10rpx;
+  font-size: 26rpx;
+  color: #999;
+  line-height: 1.5;
+  text-align: center;
+}
+/* 信息区用浅灰底卡片包起来，和白色卡面分层，避免整块留白显得干 */
+.status-modal-info {
+  margin-top: 28rpx;
+  padding: 4rpx 24rpx;
+  background: #f7f8f7;
+  border-radius: 16rpx;
+}
+.status-info-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20rpx 0;
+  border-bottom: 1rpx solid #ececec;
+}
+.status-info-row:last-child {
+  border-bottom: none;
+}
+.status-info-label {
+  font-size: 26rpx;
+  color: #999;
+  flex-shrink: 0;
+}
+.status-info-value {
+  font-size: 26rpx;
+  font-weight: bold;
+  color: #222;
+  text-align: right;
+  margin-left: 24rpx;
+}
+.status-modal-actions {
+  display: flex;
+  gap: 16rpx;
+  margin-top: 28rpx;
+}
+.status-btn {
+  flex: 1;
+  height: 80rpx;
+  line-height: 80rpx;
+  text-align: center;
+  border-radius: 44rpx;
+  font-size: 30rpx;
+  box-sizing: border-box;
+}
+/* 克制版：浅绿底 + 绿字，和开放态图标底色同系，不与黄色主按钮抢视觉 */
+.status-btn.call {
+  background: #e8f5e9;
+  color: #3d9b46;
+  border: 1rpx solid #c5e6cb;
+  line-height: 78rpx;
+}
+.status-btn.primary {
+  background: #F3D624;
+  color: #222;
+  font-weight: bold;
+}
+@keyframes mask-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes card-pop {
+  from { opacity: 0; transform: scale(0.88) translateY(20rpx); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
 }
 
 /* 分类切换时隐藏不匹配的商品（display:none 保持 DOM 不销毁，图片不重载） */
