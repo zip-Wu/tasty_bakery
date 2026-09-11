@@ -4,6 +4,18 @@
 // is_new 窗口内出现、过期自动消失，逻辑见 filterBreadList
 const NEW_CATEGORY = '🆕 近期新品';
 
+// 关店副标题：按「原因 + 恢复时间」拼一句短的，两者都没填才退回营业时间。
+// 不用后端 notice —— 那是给外部调用方的完整长句，塞进胶囊里会撑破布局。
+function buildClosedSubText(data) {
+  if (data.open) return '';
+  const reason = data.closeReason || '';
+  const resume = data.resumeAt || '';
+  if (reason && resume) return `${reason}，${resume}开始接单`;
+  if (reason) return reason;
+  if (resume) return `${resume}开始接单`;
+  return `营业时间 ${data.hours || '请咨询门店'}`;
+}
+
 Page({
   data: {
     // 分类数据（从后端动态加载，初始仅「全部」；「暂无库存」由 filterBreadList 动态追加）
@@ -35,8 +47,10 @@ Page({
 
     // 门店开关状态
     storeClosed: false,
-    storeNotice: '',
     storeHours: '',
+    storeSubText: '',
+    storeCloseReason: '',
+    storeResumeAt: '',
 
     // 预定状态说明弹窗
     showStatusModal: false,
@@ -255,6 +269,15 @@ Page({
     });
   },
 
+  // 商品卡片的加号：关店时位置保留但置灰，点它改为弹出恢复时间说明，而不是静默无反应
+  onPlusTap(e) {
+    if (this.data.storeClosed) {
+      this.showStoreStatus();
+      return;
+    }
+    this.addToCart(e);
+  },
+
   // 加入购物车（上限 = 当前库存，防止单用户超买）
   addToCart(e) {
     const id = e.currentTarget.dataset.id;
@@ -325,7 +348,7 @@ Page({
   // 去结算（缓存购物车数据，确认支付时才创建订单）
   goToCheckout() {
     if (this.data.storeClosed) {
-      wx.showToast({ title: '店家暂未开放预定，请稍后再来', icon: 'none' });
+      this.showStoreStatus();
       return;
     }
     if (this.data.cartCount === 0) {
@@ -366,15 +389,18 @@ Page({
   // ========== 门店开关状态检查 ==========
   checkStoreStatus() {
     const app = getApp();
-    console.log('[index] 查询门店状态...');
     app.request({
       url: '/api/store/status',
     }).then(data => {
-      console.log('[index] 门店状态:', data);
+      const closed = !data.open;
+      const hasNote = !!(data.closeReason || data.resumeAt);
       this.setData({
-        storeClosed: !data.open,
-        storeNotice: data.notice || '',
-        storeHours: data.hours || ''
+        storeClosed: closed,
+        storeHours: data.hours || '',
+        // 胶囊空间小：只有商家填过说明才显示副标题，纯营业时间兜底太长，会挤掉右侧按钮
+        storeSubText: (closed && hasNote) ? buildClosedSubText(data) : '',
+        storeCloseReason: data.closeReason || '',
+        storeResumeAt: data.resumeAt || '',
       });
     }).catch(err => {
       console.error('[index] 查询门店状态失败:', err);

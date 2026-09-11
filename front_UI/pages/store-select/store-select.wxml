@@ -24,7 +24,7 @@
         </view>
         <view class="store-right">
           <view class="store-dist">{{item.distance}}</view>
-          <view class="store-status {{item.open ? 'open' : 'closed'}}">{{item.open ? '接受预定中' : '暂无法预定'}}</view>
+          <view class="store-status {{item.open ? 'open' : 'closed'}}">{{item.open ? '接受预定中' : '本周预定已结束'}}</view>
           <view class="nav-btn" catchtap="openNavigation" data-id="{{item.id}}">导航</view>
         </view>
       </view>

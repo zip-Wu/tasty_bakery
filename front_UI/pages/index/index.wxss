@@ -278,6 +278,12 @@ page {
   color: #aaa;
 }
 
+/* 关店态加号：位置留着但退成浅灰，点下去有反馈（弹说明），不是点不动的坏按钮 */
+.count-btn.plus.frozen {
+  background: #ececec;
+  color: #bdbdbd;
+}
+
 .goods-count {
   font-size: 26rpx;
   color: #333;
@@ -355,12 +361,16 @@ page {
 .cart-info {
   display: flex;
   align-items: center;
+  /* 占满剩余宽度并允许收缩，否则关店态的长副标题会把右侧按钮挤出胶囊 */
+  flex: 1;
+  min-width: 0;
 }
 
 .cart-icon {
   position: relative;
   width: 80rpx;
   height: 80rpx;
+  flex-shrink: 0;
   background: #333;
   border-radius: 50%;
   display: flex;
@@ -408,7 +418,28 @@ page {
   margin-top: 4rpx;
 }
 
+/* 关店态购物车栏文案：标题说状态，副标题给原因与恢复时间 */
+.cart-closed {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.cart-closed-title {
+  font-size: 28rpx;
+  font-weight: bold;
+  color: #333;
+}
+.cart-closed-sub {
+  font-size: 20rpx;
+  color: #999;
+  margin-top: 4rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .checkout-btn {
+  flex-shrink: 0;
   background: #ccc;
   color: #333;
   font-size: 30rpx;
@@ -423,6 +454,12 @@ page {
 .checkout-btn.disabled {
   background: #e0e0e0;
   color: #999;
+}
+/* 关店态按钮：点了会弹说明，所以不能沿用 disabled 的灰，用浅红底红字暗示可点。
+   配色与商品详情页的「查看说明」、右上角状态胶囊保持同一套 */
+.checkout-btn.closed {
+  background: #fdecea;
+  color: #e53935;
 }
 
 /* ========== 预定状态标签（store-bar 右上角，配色与门店导航页一致） ========== */
@@ -476,9 +513,30 @@ page {
 }
 .store-status {
   display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6rpx;
+  flex-shrink: 0;
+}
+.store-status-line {
+  display: flex;
   align-items: center;
   gap: 4rpx;
-  flex-shrink: 0;
+}
+/* 营业时间摘要：颜色跟随可预定状态，与胶囊、门店选择页共用同一套配色 */
+.store-hours-mini {
+  font-size: 20rpx;
+  padding: 2rpx 12rpx;
+  border-radius: 16rpx;
+  transition: opacity 0.15s;
+}
+.store-hours-mini.open {
+  background: #e8f5e9;
+  color: #4caf50;
+}
+.store-hours-mini.closed {
+  background: #fdecea;
+  color: #e53935;
 }
 .status-arrow {
   font-size: 28rpx;

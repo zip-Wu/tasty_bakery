@@ -8,11 +8,15 @@
         <view class="locate-btn" wx:if="{{store.distance === '未知距离'}}" catchtap="tryCalcDistance">获取距离</view>
       </view>
     </view>
-    <!-- 点击弹出预定状态说明：关店时解释原因与营业时间，开店时说明取餐方式 -->
+    <!-- 点击弹出预定状态说明：关店时给出原因与恢复时间，开店时说明取餐方式 -->
     <!-- 箭头放在胶囊外部，只作「可展开」的提示，不进胶囊配色 -->
     <view class="store-status" bindtap="showStoreStatus" hover-class="tag-press" hover-stay-time="80">
-      <view class="store-status-tag {{storeClosed ? 'closed' : 'open'}}">{{storeClosed ? '暂无法预定' : '接受预定中'}}</view>
-      <view class="status-arrow">›</view>
+      <view class="store-status-line">
+        <view class="store-status-tag {{storeClosed ? 'closed' : 'open'}}">{{storeClosed ? '本周预定已结束' : '接受预定中'}}</view>
+        <view class="status-arrow">›</view>
+      </view>
+      <!-- 营业时间常驻露出：开店绿、关店红，配色跟胶囊同步，省得顾客点进去才知道 -->
+      <view class="store-hours-mini {{storeClosed ? 'closed' : 'open'}}" wx:if="{{storeHours}}">{{storeHours}}</view>
     </view>
   </view>
 
@@ -63,10 +67,11 @@
                 </view>
                 <view class="goods-action">
                   <!-- 减号/数量不依赖 stock>0：售罄商品已在购物车时仍可减掉删除（遮罩 pointer-events:none 不挡点击） -->
-                  <view class="count-btn minus" wx:if="{{!storeClosed && cart[item.id] > 0}}" catchtap="minusFromCart" data-id="{{item.id}}"><text>−</text></view>
-                  <text class="goods-count" wx:if="{{!storeClosed && cart[item.id] > 0}}">{{cart[item.id]}}</text>
-                  <view class="count-btn plus" wx:if="{{!storeClosed && item.stock > 0 && (cart[item.id] || 0) < item.stock}}" catchtap="addToCart" data-id="{{item.id}}"><text>+</text></view>
-                  <view class="count-btn plus disabled" wx:elif="{{!storeClosed && item.stock > 0}}"><text>+</text></view>
+                  <view class="count-btn minus" wx:if="{{cart[item.id] > 0}}" catchtap="minusFromCart" data-id="{{item.id}}"><text>−</text></view>
+                  <text class="goods-count" wx:if="{{cart[item.id] > 0}}">{{cart[item.id]}}</text>
+                  <!-- 关店时加号不隐藏而是置灰：位置留着，顾客才看得懂"这里本来能加"，点了弹出恢复时间 -->
+                  <view class="count-btn plus {{storeClosed ? 'frozen' : ''}}" wx:if="{{item.stock > 0 && (cart[item.id] || 0) < item.stock}}" catchtap="onPlusTap" data-id="{{item.id}}"><text>+</text></view>
+                  <view class="count-btn plus disabled" wx:elif="{{item.stock > 0}}"><text>+</text></view>
                   <text class="sold-out-tag" wx:if="{{item.stock <= 0}}">售罄</text>
                 </view>
               </view>
@@ -90,9 +95,13 @@
         <view class="cart-icon">
           <image class="cart-icon-img" src="/images/svg/cart.svg" mode="aspectFit"></image>
         </view>
-        <text class="cart-count-text">暂无法预定</text>
+        <!-- 关店态四层：状态 + 原因与恢复时间 + 下一步入口 -->
+        <view class="cart-closed">
+          <text class="cart-closed-title">本周预定已结束</text>
+          <text class="cart-closed-sub" wx:if="{{storeSubText}}">{{storeSubText}}</text>
+        </view>
       </view>
-      <view class="checkout-btn disabled">暂不可预定</view>
+      <view class="checkout-btn closed" bindtap="showStoreStatus">查看详情</view>
     </block>
     <block wx:else>
     <view class="cart-info">
@@ -121,14 +130,24 @@
           <view class="status-icon-mark" wx:if="{{!storeClosed}}"></view>
           <text class="status-icon-text" wx:else>!</text>
         </view>
-        <view class="status-modal-title">{{storeClosed ? '暂无法预定' : '接受预定中'}}</view>
-        <view class="status-modal-desc">{{storeClosed ? '店家已暂时关闭线上预定，恢复后会立即开放' : '线上预定已开启，非营业时间也可下单'}}</view>
+        <view class="status-modal-title">{{storeClosed ? '本周预定已结束' : '接受预定中'}}</view>
+        <view class="status-modal-desc">{{storeClosed ? '本店为预定制，下单后次日到店自提' : '线上预定已开启，非营业时间也可下单'}}</view>
       </view>
 
       <view class="status-modal-info">
+        <!-- 关店说明：商家关店时填的，说明这次为什么停 -->
+        <view class="status-info-row" wx:if="{{storeClosed && storeCloseReason}}">
+          <text class="status-info-label">关店说明</text>
+          <text class="status-info-value">{{storeCloseReason}}</text>
+        </view>
+        <!-- 恢复时间：四层里的「什么时候能订」，商家没填就不占位 -->
+        <view class="status-info-row" wx:if="{{storeClosed && storeResumeAt}}">
+          <text class="status-info-label">恢复接单</text>
+          <text class="status-info-value">{{storeResumeAt}}</text>
+        </view>
         <view class="status-info-row">
           <text class="status-info-label">营业时间</text>
-          <text class="status-info-value">{{store.hours || storeHours || '请咨询门店'}}</text>
+          <text class="status-info-value">{{storeHours || store.hours || '请咨询门店'}}</text>
         </view>
         <!-- 开放态：说明怎么取餐；关闭态：给电话，顾客可直接问店家何时恢复 -->
         <view class="status-info-row" wx:if="{{!storeClosed}}">

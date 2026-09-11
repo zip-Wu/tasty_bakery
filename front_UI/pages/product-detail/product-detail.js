@@ -1,6 +1,29 @@
 // pages/product-detail/product-detail.js
 const app = getApp();
 
+// 关店文案：原因 + 恢复时间先拼成一句，两种容器都基于它
+function buildClosedHead(data) {
+  const reason = data.closeReason || '';
+  const resume = data.resumeAt || '';
+  if (reason && resume) return `${reason}，${resume}开始接单`;
+  if (reason) return reason;
+  if (resume) return `${resume}开始接单`;
+  return '';
+}
+
+// 顶部副标题：商家没填说明时退回营业时间，至少让顾客知道门店营业时段
+function buildClosedSubText(data) {
+  if (data.open) return '';
+  return buildClosedHead(data) || `营业时间 ${data.hours || '请咨询门店'}`;
+}
+
+// 说明弹窗正文：showModal 的 content 不解析 \n，只能拼成一句带标点的话
+function buildClosedDetailText(data) {
+  const head = buildClosedHead(data);
+  const hours = data.hours || '请咨询门店';
+  return head ? `${head}。营业时间：${hours}` : `营业时间：${hours}`;
+}
+
 Page({
   data: {
     product: {
@@ -12,6 +35,9 @@ Page({
     subtotal: '0.00',  // 预计算 qty * price，WXML 不支持 .toFixed()
     storeClosed: false,
     storeHours: '',
+    storeSubText: '',
+    storeDetailText: '',
+    storeResumeAt: '',
   },
 
   onLoad(options) {
@@ -30,10 +56,23 @@ Page({
     }).then(data => {
       this.setData({
         storeClosed: !data.open,
-        storeHours: data.hours || ''
+        storeHours: data.hours || '',
+        storeSubText: buildClosedSubText(data),
+        storeDetailText: buildClosedDetailText(data),
+        storeResumeAt: data.resumeAt || '',
       });
     }).catch(err => {
       console.error('[product-detail] 查询门店状态失败:', err);
+    });
+  },
+
+  // 关店态底部「查看说明」：把原因、恢复时间、营业时间一次说完，比一闪而过的 toast 清楚
+  showClosedDetail() {
+    wx.showModal({
+      title: '本周预定已结束',
+      content: this.data.storeDetailText || '店家暂停接单中',
+      showCancel: false,
+      confirmText: '知道了',
     });
   },
 
@@ -86,7 +125,7 @@ Page({
   // 数量加减
   addQty() {
     if (this.data.storeClosed) {
-      wx.showToast({ title: '店家暂未开放预定', icon: 'none' });
+      wx.showToast({ title: '本周预定已结束', icon: 'none' });
       return;
     }
     this.setData({ qty: this.data.qty + 1 });
@@ -94,7 +133,7 @@ Page({
   },
   minusQty() {
     if (this.data.storeClosed) {
-      wx.showToast({ title: '店家暂未开放预定', icon: 'none' });
+      wx.showToast({ title: '本周预定已结束', icon: 'none' });
       return;
     }
     if (this.data.qty > 0) {
@@ -106,7 +145,7 @@ Page({
   // 加入购物车
   addToCart() {
     if (this.data.storeClosed) {
-      wx.showToast({ title: '店家暂未开放预定，请稍后再来', icon: 'none' });
+      wx.showToast({ title: '本周预定已结束，请稍后再来', icon: 'none' });
       return;
     }
     if (this.data.product.stock <= 0) {

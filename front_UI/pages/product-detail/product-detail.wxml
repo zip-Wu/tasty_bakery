@@ -15,9 +15,10 @@
     <image wx:if="{{gallery.length === 0 && product.image}}" class="single-img" src="{{product.image}}" mode="aspectFill" />
   </view>
 
-  <!-- 暂停接单提示 -->
+  <!-- 关店提示：说清状态与什么时候恢复，比一句没头没尾的道歉有用 -->
   <view class="closed-tip" wx:if="{{storeClosed}}">
-    <text>😴 店家暂未开放预定，感谢您的理解</text>
+    <text class="closed-tip-title">本周预定已结束</text>
+    <text class="closed-tip-sub" wx:if="{{storeSubText}}">{{storeSubText}}</text>
   </view>
 
   <!-- ====== 商品信息 ====== -->
@@ -39,7 +40,13 @@
   <!-- ====== 底部操作栏 ====== -->
   <view class="bottom-bar">
     <block wx:if="{{storeClosed}}">
-      <view class="b-closed-msg">店家暂未开放预定，感谢您的理解</view>
+      <!-- 保留可下单时的两段式版式，只把左边换成时间信息、右边换成说明入口，
+           位置不变，顾客才看得出这里本来是下单的地方 -->
+      <view class="b-closed-info">
+        <text class="b-closed-label">{{storeResumeAt ? '恢复接单' : '营业时间'}}</text>
+        <text class="b-closed-value">{{storeResumeAt || storeHours || '请咨询门店'}}</text>
+      </view>
+      <view class="b-cart-btn closed" bindtap="showClosedDetail">查看说明</view>
     </block>
     <block wx:elif="{{product.stock <= 0}}">
       <view class="b-closed-msg">该商品已售罄</view>
