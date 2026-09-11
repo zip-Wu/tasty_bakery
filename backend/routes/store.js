@@ -31,7 +31,7 @@ router.get('/stores', async (req, res) => {
   const userLng = parseFloat(req.query.lng);
 
   const [stores] = await pool.execute(
-    // 不再过滤 is_open：顾客端停接单后也要展示门店信息（地址/电话/营业时间），由前端根据 open 字段提示暂无法预定
+    // 不再过滤 is_open：顾客端停接单后也要展示门店信息（地址/电话/营业时间），由前端根据 open 字段提示当前无法预定
     'SELECT id, name, address, phone, hours, latitude, longitude, is_open as open FROM stores'
   );
 
@@ -64,13 +64,37 @@ router.get('/store/status', async (req, res) => {
     return res.json({ success: true, data: { open: false, name: '', hours: '', notice: '门店未配置' } });
   }
   const s = rows[0];
+
+  // 关店说明与恢复时间由商家在后台关店时填写，存 settings 键值表。
+  // 只有两个短字符串，不值得单开一张表，复用 settings 即可。
+  const [cfgRows] = await pool.execute(
+    "SELECT kkey, value FROM settings WHERE kkey IN ('close_reason', 'resume_at')"
+  );
+  const cfg = {};
+  cfgRows.forEach(r => { cfg[r.kkey] = (r.value || '').trim(); });
+
   // 关店只影响是否接受新预定；营业时间照常展示（本店为预定制，非营业时间同样接受预定）
-  const notice = s.is_open
-    ? ''
-    : `${s.name}暂无法预定，营业时间 ${s.hours || '请咨询门店'}`;
+  // notice 是关店提示的补充说明，前端拿它当副标题：商家填了就用商家的，没填则退回营业时间。
+  // 这里不重复"预定已结束"之类的状态词——状态由前端标题统一表达。
+  let notice = '';
+  if (!s.is_open) {
+    if (cfg.close_reason) {
+      notice = cfg.resume_at ? `${cfg.close_reason}，${cfg.resume_at}开始接单` : cfg.close_reason;
+    } else {
+      notice = `营业时间 ${s.hours || '请咨询门店'}`;
+    }
+  }
+
   res.json({
     success: true,
-    data: { open: !!s.is_open, name: s.name, hours: s.hours, notice }
+    data: {
+      open: !!s.is_open,
+      name: s.name,
+      hours: s.hours,
+      notice,
+      closeReason: cfg.close_reason || '',
+      resumeAt: cfg.resume_at || '',
+    }
   });
 });
 

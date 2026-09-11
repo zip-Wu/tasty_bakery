@@ -718,12 +718,26 @@ router.put('/admin/store/toggle', async (req, res) => {
     return res.json({ success: false, message: '门店未配置' });
   }
   const newStatus = row[0].is_open ? 0 : 1;
+
+  // 关店说明 / 恢复时间：商家关店时可填，都允许留空，存 settings 键值表（不新增表列）。
+  // 开店时一并清空——不然下次关店会沿用上一轮的过期文案。
+  const reason = String((req.body && req.body.reason) || '').trim().slice(0, 60);
+  const resumeAt = String((req.body && req.body.resumeAt) || '').trim().slice(0, 30);
+
+  const saveSetting = (k, v) => pool.execute(
+    'INSERT INTO settings (kkey, value) VALUES (?, ?) ON DUPLICATE KEY UPDATE value = ?',
+    [k, v, v]
+  );
+  await saveSetting('close_reason', newStatus ? '' : reason);
+  await saveSetting('resume_at', newStatus ? '' : resumeAt);
+
   await pool.execute('UPDATE stores SET is_open = ? WHERE id = ?', [newStatus, row[0].id]);
   res.json({
     success: true,
     data: {
       open: !!newStatus,
-      notice: newStatus ? '' : `${row[0].name}暂无法预定`
+      closeReason: newStatus ? '' : reason,
+      resumeAt: newStatus ? '' : resumeAt,
     }
   });
 });
