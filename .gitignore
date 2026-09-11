@@ -23,3 +23,6 @@ Thumbs.db
 
 # 代码审查报告（仅本地使用）
 code-review-report.md
+
+# git 目录备份
+.git.bak/
