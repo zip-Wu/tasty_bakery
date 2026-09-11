@@ -992,3 +992,96 @@
 }
 .sp-save-btn[disabled] { background: #ccc !important; color: #fff !important; }
 
+/* ========== 停接单提示填写弹窗 ========== */
+.close-note-mask {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.45);
+  z-index: 200;
+  display: flex;
+  align-items: flex-end;
+}
+.close-note {
+  width: 100%;
+  background: #fff;
+  border-radius: 24rpx 24rpx 0 0;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.close-note-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 28rpx 32rpx 12rpx;
+}
+.close-note-title { font-size: 32rpx; font-weight: bold; color: #333; }
+.close-note-tip {
+  font-size: 22rpx;
+  color: #999;
+  padding: 0 32rpx 16rpx;
+}
+.close-note-field {
+  display: flex;
+  align-items: center;
+  padding: 12rpx 32rpx;
+  gap: 20rpx;
+}
+.close-note-label {
+  font-size: 26rpx;
+  color: #666;
+  width: 130rpx;
+  flex-shrink: 0;
+}
+.close-note-input {
+  flex: 1;
+  height: 72rpx;
+  background: #f7f7f7;
+  border-radius: 12rpx;
+  padding: 0 20rpx;
+  font-size: 26rpx;
+  color: #333;
+  box-sizing: border-box;
+}
+/* 预览块跟顾客端关店提示同色，商家填的时候就能对上顾客看到的样子 */
+.close-note-preview {
+  margin: 16rpx 32rpx 0;
+  padding: 16rpx 20rpx;
+  background: #fdecea;
+  border-radius: 12rpx;
+}
+.close-note-preview-label {
+  display: block;
+  font-size: 20rpx;
+  color: #b25a54;
+}
+.close-note-preview-text {
+  display: block;
+  font-size: 24rpx;
+  color: #e53935;
+  margin-top: 6rpx;
+}
+.close-note-footer {
+  display: flex;
+  gap: 20rpx;
+  padding: 28rpx 32rpx;
+}
+.close-note-btn {
+  flex: 1;
+  text-align: center;
+  height: 80rpx;
+  line-height: 80rpx;
+  border-radius: 40rpx;
+  font-size: 28rpx;
+  font-weight: bold;
+}
+.close-note-btn.ghost {
+  background: #f0f0f0;
+  color: #666;
+}
+.close-note-btn.primary {
+  background: #e74c3c;
+  color: #fff;
+}
+.close-note-btn.primary.disabled {
+  background: #ccc;
+}
+

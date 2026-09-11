@@ -11,6 +11,12 @@ Page({
     // 门店开关状态
     storeOpen: true,
 
+    // 停接单提示填写（关店时弹，两项都可以留空）
+    showCloseNote: false,
+    closeReasonInput: '',
+    closeResumeInput: '',
+    closeNoteSaving: false,
+
     // 当前标签页
     currentTab: 'orders',   // orders | quick-sale | products | dashboard
     tabIndex: 0,
@@ -1496,35 +1502,78 @@ Page({
       method: 'GET'
     }).then(res => {
       if (res.success) {
-        this.setData({ storeOpen: res.data.open });
+        this.setData({
+          storeOpen: res.data.open,
+          // 回显上次填的停接单说明，商家重新关店时不用重打一遍
+          closeReasonInput: res.data.closeReason || '',
+          closeResumeInput: res.data.resumeAt || '',
+        });
       }
     }).catch(() => {});
   },
 
+  // 停接单时先弹填写框：说清这次为什么停、什么时候恢复，顾客才不会以为小程序坏了
   toggleStore() {
+    if (this.data.storeOpen) {
+      this.setData({ showCloseNote: true });
+      return;
+    }
     const that = this;
-    const next = !this.data.storeOpen;
-    const token = wx.getStorageSync('admin_token');
     wx.showModal({
-      title: next ? '确认开始接单' : '确认停止接单',
-      content: next ? '开始接单后顾客可以正常预定' : '停止接单后顾客将无法预定',
-      confirmText: next ? '开始接单' : '停止接单',
-      confirmColor: next ? '#07c160' : '#e74c3c',
+      title: '确认开始接单',
+      content: '开始接单后顾客可以正常预定，之前的停接单说明会一并清空',
+      confirmText: '开始接单',
+      confirmColor: '#07c160',
       success(res) {
         if (!res.confirm) return;
-        that._request({
-          url: '/api/admin/store/toggle',
-          method: 'PUT',
-          header: { Authorization: 'Bearer ' + token }
-        }).then(res => {
-          if (res.success) {
-            that.setData({ storeOpen: res.data.open });
-            wx.showToast({ title: res.data.open ? '已开始接单' : '已停止接单', icon: 'success' });
-          } else {
-            wx.showToast({ title: res.message || '操作失败', icon: 'none' });
-          }
-        }).catch(() => {});
+        that._submitStoreToggle('', '');
       }
+    });
+  },
+
+  onCloseReasonInput(e) {
+    this.setData({ closeReasonInput: e.detail.value });
+  },
+
+  onCloseResumeInput(e) {
+    this.setData({ closeResumeInput: e.detail.value });
+  },
+
+  cancelCloseNote() {
+    this.setData({ showCloseNote: false, closeNoteSaving: false });
+  },
+
+  confirmCloseNote() {
+    if (this.data.closeNoteSaving) return;
+    this.setData({ closeNoteSaving: true });
+    this._submitStoreToggle(this.data.closeReasonInput.trim(), this.data.closeResumeInput.trim());
+  },
+
+  // 开店时传空字符串，后端会顺手清掉上一轮的说明
+  _submitStoreToggle(reason, resumeAt) {
+    const that = this;
+    const token = wx.getStorageSync('admin_token');
+    this._request({
+      url: '/api/admin/store/toggle',
+      method: 'PUT',
+      header: { Authorization: 'Bearer ' + token },
+      data: { reason, resumeAt }
+    }).then(res => {
+      if (res.success) {
+        that.setData({
+          storeOpen: res.data.open,
+          showCloseNote: false,
+          closeNoteSaving: false,
+          closeReasonInput: res.data.closeReason || '',
+          closeResumeInput: res.data.resumeAt || '',
+        });
+        wx.showToast({ title: res.data.open ? '已开始接单' : '已停止接单', icon: 'success' });
+      } else {
+        that.setData({ closeNoteSaving: false });
+        wx.showToast({ title: res.message || '操作失败', icon: 'none' });
+      }
+    }).catch(() => {
+      that.setData({ closeNoteSaving: false });
     });
   }
 });

@@ -34,7 +34,7 @@
     <view class="store-toggle-left">
       <text class="store-toggle-dot {{storeOpen ? 'on' : 'off'}}"></text>
       <view class="store-toggle-text">
-        <text class="store-toggle-label">{{storeOpen ? '接受预定中' : '暂无法预定'}}</text>
+        <text class="store-toggle-label">{{storeOpen ? '接受预定中' : '本周预定已结束'}}</text>
         <text class="store-toggle-hint">{{storeOpen ? '顾客可正常下单预定' : '顾客暂时无法下单'}}</text>
       </view>
     </view>
@@ -486,6 +486,40 @@
       <view class="stock-panel-footer">
         <button class="sp-save-btn" size="mini" bindtap="saveStockPanel"
           disabled="{{stockPanelSaving}}" loading="{{stockPanelSaving}}">全部保存</button>
+      </view>
+    </view>
+  </view>
+
+  <!-- ====== 停接单提示填写（点开关条停接单时弹） ======
+       关店时顾客看到什么，由商家自己用人话讲清楚；两项都留空则前端退回营业时间兜底 -->
+  <view class="close-note-mask" wx:if="{{showCloseNote}}" catchtouchmove="noop">
+    <view class="close-note" catchtap="noop">
+      <view class="close-note-header">
+        <text class="close-note-title">停止接单</text>
+        <text class="stock-panel-close" bindtap="cancelCloseNote">✕</text>
+      </view>
+      <view class="close-note-tip">下面的内容顾客能看到，留空则只显示营业时间</view>
+
+      <view class="close-note-field">
+        <text class="close-note-label">关店说明</text>
+        <input class="close-note-input" value="{{closeReasonInput}}" maxlength="30"
+          placeholder="例如：周末店休" bindinput="onCloseReasonInput" />
+      </view>
+
+      <view class="close-note-field">
+        <text class="close-note-label">恢复接单</text>
+        <input class="close-note-input" value="{{closeResumeInput}}" maxlength="20"
+          placeholder="例如：周日 11:00" bindinput="onCloseResumeInput" />
+      </view>
+
+      <view class="close-note-preview">
+        <text class="close-note-preview-label">顾客看到</text>
+        <text class="close-note-preview-text">本周预定已结束{{closeReasonInput ? '｜' + closeReasonInput : ''}}{{closeResumeInput ? '，' + closeResumeInput + '开始接单' : ''}}</text>
+      </view>
+
+      <view class="close-note-footer">
+        <view class="close-note-btn ghost" bindtap="cancelCloseNote">取消</view>
+        <view class="close-note-btn primary {{closeNoteSaving ? 'disabled' : ''}}" bindtap="confirmCloseNote">{{closeNoteSaving ? '提交中…' : '确认停止接单'}}</view>
       </view>
     </view>
   </view>
