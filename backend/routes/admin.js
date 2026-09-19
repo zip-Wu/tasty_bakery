@@ -742,6 +742,24 @@ router.put('/admin/store/toggle', async (req, res) => {
   });
 });
 
+// ========== 门店营业时间 ==========
+// 纯展示文案：顾客端门店列表、首页、商品详情都直接读 stores.hours，
+// 改完即时生效，不涉及下单判断（本店预定制，非营业时间同样接单）。
+router.put('/admin/store/hours', async (req, res) => {
+  const hours = String((req.body && req.body.hours) || '').trim().slice(0, 32);
+  if (!hours) {
+    return res.json({ success: false, message: '营业时间不能为空' });
+  }
+
+  const [row] = await pool.execute('SELECT id FROM stores LIMIT 1');
+  if (!row[0]) {
+    return res.json({ success: false, message: '门店未配置' });
+  }
+
+  await pool.execute('UPDATE stores SET hours = ? WHERE id = ?', [hours, row[0].id]);
+  res.json({ success: true, data: { hours } });
+});
+
 // ========== 制作清单（按商品聚合待制作订单，按今日/昨日/前天/更早分组） ==========
 router.get('/admin/production-list', async (req, res) => {
   try {
