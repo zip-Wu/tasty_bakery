@@ -1085,3 +1085,48 @@
   background: #ccc;
 }
 
+/* ========== 营业时间 ========== */
+/* 营业时间行：与开关条平级，点它只改文案，不会误触开关店 */
+.store-hours-bar {
+  display: flex;
+  align-items: center;
+  padding: 16rpx 24rpx;
+  margin: 0 20rpx 12rpx;
+  background: #fff;
+  border-radius: 16rpx;
+  box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.04);
+}
+.store-hours-label {
+  font-size: 26rpx;
+  color: #666;
+  margin-right: 16rpx;
+  flex-shrink: 0;
+}
+.store-hours-value {
+  flex: 1;
+  font-size: 26rpx;
+  color: #333;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.store-hours-edit {
+  font-size: 24rpx;
+  color: #07c160;
+  padding-left: 16rpx;
+  flex-shrink: 0;
+}
+.hours-presets {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  padding: 16rpx 32rpx 4rpx;
+  flex-wrap: wrap;
+}
+/* 预览块沿用关店弹窗那一套版式，但营业时间不是告警，换成中性色 */
+.hours-preview { background: #f2f6ff; }
+.hours-preview .close-note-preview-label { color: #7b8db3; }
+.hours-preview .close-note-preview-text { color: #3a6fd8; }
+.close-note-btn.primary.save { background: #07c160; }
+.close-note-btn.primary.save.disabled { background: #ccc; }
+

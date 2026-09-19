@@ -11,6 +11,18 @@ Page({
     // 门店开关状态
     storeOpen: true,
 
+    // 营业时间（纯展示文案，顾客端门店列表/首页/商品详情都读它）
+    storeHours: '',
+    showHoursEdit: false,
+    hoursInput: '',
+    hoursSaving: false,
+    hoursPresets: [
+      '周一至周五 11:00~18:30',
+      '周一至周六 11:00~18:30',
+      '每天 10:00~20:00',
+      '周一至周五 11:00~18:30，节假日除外'
+    ],
+
     // 停接单提示填写（关店时弹，两项都可以留空）
     showCloseNote: false,
     closeReasonInput: '',
@@ -1495,6 +1507,57 @@ Page({
     });
   },
 
+  // ========== 营业时间 ==========
+  // 纯展示文案：存 stores.hours，顾客端门店列表/首页/商品详情立刻跟着变，不参与下单判断
+  openHoursEditor() {
+    this.setData({ showHoursEdit: true, hoursInput: this.data.storeHours });
+  },
+
+  onHoursInput(e) {
+    this.setData({ hoursInput: e.detail.value });
+  },
+
+  fillHours(e) {
+    this.setData({ hoursInput: e.currentTarget.dataset.value });
+  },
+
+  cancelHoursEdit() {
+    this.setData({ showHoursEdit: false, hoursSaving: false });
+  },
+
+  confirmHoursEdit() {
+    if (this.data.hoursSaving) return;
+    const hours = this.data.hoursInput.trim();
+    if (!hours) {
+      wx.showToast({ title: '营业时间不能为空', icon: 'none' });
+      return;
+    }
+
+    this.setData({ hoursSaving: true });
+    const that = this;
+    const token = wx.getStorageSync('admin_token');
+    this._request({
+      url: '/api/admin/store/hours',
+      method: 'PUT',
+      header: { Authorization: 'Bearer ' + token },
+      data: { hours }
+    }).then(res => {
+      if (res.success) {
+        that.setData({
+          storeHours: res.data.hours,
+          showHoursEdit: false,
+          hoursSaving: false,
+        });
+        wx.showToast({ title: '已保存', icon: 'success' });
+      } else {
+        that.setData({ hoursSaving: false });
+        wx.showToast({ title: res.message || '保存失败', icon: 'none' });
+      }
+    }).catch(() => {
+      that.setData({ hoursSaving: false });
+    });
+  },
+
   // ========== 门店开关 ==========
   loadStoreStatus() {
     this._request({
@@ -1504,6 +1567,7 @@ Page({
       if (res.success) {
         this.setData({
           storeOpen: res.data.open,
+          storeHours: res.data.hours || '',
           // 回显上次填的停接单说明，商家重新关店时不用重打一遍
           closeReasonInput: res.data.closeReason || '',
           closeResumeInput: res.data.resumeAt || '',

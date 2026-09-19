@@ -41,6 +41,13 @@
     <view class="store-toggle-btn">{{storeOpen ? '停止接单' : '开始接单'}}</view>
   </view>
 
+  <!-- 营业时间（纯展示文案，顾客端门店列表/首页/商品详情都读它，改完即时生效） -->
+  <view class="store-hours-bar" bindtap="openHoursEditor">
+    <text class="store-hours-label">营业时间</text>
+    <text class="store-hours-value">{{storeHours || '未设置'}}</text>
+    <text class="store-hours-edit">修改</text>
+  </view>
+
   <swiper class="admin-swiper" current="{{tabIndex}}" bindchange="onTabSwipe" duration="250">
   <swiper-item>
   <!-- ====== 订单管理 ====== -->
@@ -520,6 +527,40 @@
       <view class="close-note-footer">
         <view class="close-note-btn ghost" bindtap="cancelCloseNote">取消</view>
         <view class="close-note-btn primary {{closeNoteSaving ? 'disabled' : ''}}" bindtap="confirmCloseNote">{{closeNoteSaving ? '提交中…' : '确认停止接单'}}</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- ====== 营业时间编辑（点营业时间行弹） ======
+       存 stores.hours，顾客端三处展示都读它；纯文案，不影响下单判断 -->
+  <view class="close-note-mask" wx:if="{{showHoursEdit}}" catchtouchmove="noop">
+    <view class="close-note" catchtap="noop">
+      <view class="close-note-header">
+        <text class="close-note-title">营业时间</text>
+        <text class="stock-panel-close" bindtap="cancelHoursEdit">✕</text>
+      </view>
+      <view class="close-note-tip">顾客在门店列表、首页、商品详情都能看到这行字</view>
+
+      <view class="close-note-field">
+        <text class="close-note-label">营业时间</text>
+        <input class="close-note-input" value="{{hoursInput}}" maxlength="32"
+          placeholder="例如：周一至周五 11:00~18:30" bindinput="onHoursInput" />
+      </view>
+
+      <view class="hours-presets">
+        <text class="preset-label">常用值</text>
+        <view class="preset-chip" wx:for="{{hoursPresets}}" wx:key="*this"
+          bindtap="fillHours" data-value="{{item}}">{{item}}</view>
+      </view>
+
+      <view class="close-note-preview hours-preview">
+        <text class="close-note-preview-label">顾客看到</text>
+        <text class="close-note-preview-text">{{hoursInput || '营业时间待更新'}}</text>
+      </view>
+
+      <view class="close-note-footer">
+        <view class="close-note-btn ghost" bindtap="cancelHoursEdit">取消</view>
+        <view class="close-note-btn primary save {{hoursSaving ? 'disabled' : ''}}" bindtap="confirmHoursEdit">{{hoursSaving ? '保存中…' : '保存'}}</view>
       </view>
     </view>
   </view>
